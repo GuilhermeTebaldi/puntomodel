@@ -1,0 +1,198 @@
+import React, { useEffect, useState } from 'react';
+import Logo from './Logo';
+import { useI18n } from '../translations/i18n';
+
+interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  createdAt: string;
+}
+
+interface AdminModel {
+  id: string;
+  name: string;
+  email: string;
+  age?: number | null;
+  phone?: string;
+  featured?: boolean;
+  createdAt?: string;
+}
+
+const AdminPage: React.FC = () => {
+  const { t, translateError, locale } = useI18n();
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [models, setModels] = useState<AdminModel[]>([]);
+  const [tab, setTab] = useState<'users' | 'models'>('users');
+  const [error, setError] = useState('');
+  const [resetting, setResetting] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const load = async () => {
+      try {
+        const [usersRes, modelsRes] = await Promise.all([
+          fetch('/api/admin/users'),
+          fetch('/api/admin/models'),
+        ]);
+        const usersData = await usersRes.json();
+        const modelsData = await modelsRes.json();
+
+        if (!usersRes.ok) throw new Error(usersData?.error || t('errors.loadUsers'));
+        if (!modelsRes.ok) throw new Error(modelsData?.error || t('errors.loadModels'));
+
+        if (!mounted) return;
+        setUsers(usersData.users || []);
+        setModels(modelsData.models || []);
+        setError('');
+      } catch (err) {
+        if (!mounted) return;
+        setError(err instanceof Error ? translateError(err.message) : t('errors.loadData'));
+      }
+    };
+
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [t, translateError]);
+
+  const handleReset = async () => {
+    const confirmed = window.confirm(t('adminPage.confirmReset'));
+    if (!confirmed) return;
+    setResetting(true);
+    try {
+      const response = await fetch('/api/admin/reset', { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || t('errors.resetFailed'));
+      setUsers([]);
+      setModels([]);
+      setError('');
+    } catch (err) {
+      setError(err instanceof Error ? translateError(err.message) : t('errors.resetError'));
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const handleBackToSite = () => {
+    window.history.pushState({}, '', '/');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b border-gray-100">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Logo />
+          <button onClick={handleBackToSite} className="text-sm font-bold text-[#e3262e]">
+            {t('common.backToSite')}
+          </button>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-6 py-10">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-black text-gray-900">{t('adminPage.title')}</h1>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleReset}
+              disabled={resetting}
+              className="px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest bg-gray-900 text-white disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {resetting ? t('adminPage.resetting') : t('adminPage.resetDb')}
+            </button>
+            <button
+              onClick={() => setTab('users')}
+              className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${
+                tab === 'users' ? 'bg-[#e3262e] text-white' : 'bg-white text-gray-500 border border-gray-200'
+              }`}
+            >
+              {t('adminPage.usersTab')}
+            </button>
+            <button
+              onClick={() => setTab('models')}
+              className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${
+                tab === 'models' ? 'bg-[#e3262e] text-white' : 'bg-white text-gray-500 border border-gray-200'
+              }`}
+            >
+              {t('adminPage.modelsTab')}
+            </button>
+          </div>
+        </div>
+
+        {error && (
+          <div className="bg-white border border-red-100 text-red-500 text-sm font-semibold px-4 py-3 rounded-xl mb-6">
+            {error}
+          </div>
+        )}
+
+        {tab === 'users' ? (
+          <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-500">
+                <tr>
+                  <th className="text-left px-4 py-3">{t('adminPage.table.name')}</th>
+                  <th className="text-left px-4 py-3">{t('adminPage.table.email')}</th>
+                  <th className="text-left px-4 py-3">{t('adminPage.table.role')}</th>
+                  <th className="text-left px-4 py-3">{t('adminPage.table.createdAt')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-gray-400 text-center">{t('adminPage.emptyUsers')}</td>
+                  </tr>
+                )}
+                {users.map((user) => (
+                  <tr key={user.id} className="border-t border-gray-100">
+                    <td className="px-4 py-3 font-semibold text-gray-800">{user.name}</td>
+                    <td className="px-4 py-3 text-gray-600">{user.email}</td>
+                    <td className="px-4 py-3 text-gray-600">{user.role}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">
+                      {user.createdAt ? new Date(user.createdAt).toLocaleString(locale) : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-500">
+                <tr>
+                  <th className="text-left px-4 py-3">{t('adminPage.table.name')}</th>
+                  <th className="text-left px-4 py-3">{t('adminPage.table.email')}</th>
+                  <th className="text-left px-4 py-3">{t('adminPage.table.age')}</th>
+                  <th className="text-left px-4 py-3">{t('adminPage.table.phone')}</th>
+                  <th className="text-left px-4 py-3">{t('adminPage.table.featured')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {models.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-6 text-gray-400 text-center">{t('adminPage.emptyModels')}</td>
+                  </tr>
+                )}
+                {models.map((model) => (
+                  <tr key={model.id} className="border-t border-gray-100">
+                    <td className="px-4 py-3 font-semibold text-gray-800">{model.name}</td>
+                    <td className="px-4 py-3 text-gray-600">{model.email}</td>
+                    <td className="px-4 py-3 text-gray-600">{model.age ?? '-'}</td>
+                    <td className="px-4 py-3 text-gray-600">{model.phone || '-'}</td>
+                    <td className="px-4 py-3 text-gray-600">{model.featured ? t('adminPage.featuredYes') : t('adminPage.featuredNo')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+};
+
+export default AdminPage;

@@ -1,0 +1,10 @@
+
+{
+  "name": "Fatal Model Replica",
+  "description": "A high-fidelity replica of the Fatal Model landing page, featuring a responsive design, modern UI/UX with Tailwind CSS, and interactive components.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
