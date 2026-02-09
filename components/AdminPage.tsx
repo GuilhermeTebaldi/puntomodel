@@ -21,6 +21,16 @@ interface AdminModel {
   createdAt?: string;
 }
 
+const readJsonSafe = async <T,>(response: Response): Promise<T | null> => {
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+};
+
 const AdminPage: React.FC = () => {
   const { t, translateError, locale } = useI18n();
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -40,15 +50,15 @@ const AdminPage: React.FC = () => {
           apiFetch('/api/admin/users'),
           apiFetch('/api/admin/models'),
         ]);
-        const usersData = await usersRes.json();
-        const modelsData = await modelsRes.json();
+        const usersData = await readJsonSafe<{ users?: AdminUser[]; error?: string }>(usersRes);
+        const modelsData = await readJsonSafe<{ models?: AdminModel[]; error?: string }>(modelsRes);
 
         if (!usersRes.ok) throw new Error(usersData?.error || t('errors.loadUsers'));
         if (!modelsRes.ok) throw new Error(modelsData?.error || t('errors.loadModels'));
 
         if (!mounted) return;
-        setUsers(usersData.users || []);
-        setModels(modelsData.models || []);
+        setUsers(usersData?.users || []);
+        setModels(modelsData?.models || []);
         setError('');
       } catch (err) {
         if (!mounted) return;
@@ -68,7 +78,7 @@ const AdminPage: React.FC = () => {
     setResetting(true);
     try {
       const response = await apiFetch('/api/admin/reset', { method: 'POST' });
-      const data = await response.json();
+      const data = await readJsonSafe<{ error?: string }>(response);
       if (!response.ok) throw new Error(data?.error || t('errors.resetFailed'));
       setUsers([]);
       setModels([]);
@@ -89,7 +99,7 @@ const AdminPage: React.FC = () => {
     setError('');
     try {
       const response = await apiFetch(`/api/admin/users/${user.id}`, { method: 'DELETE' });
-      const data = await response.json();
+      const data = await readJsonSafe<{ error?: string }>(response);
       if (!response.ok) throw new Error(data?.error || t('errors.deleteFailed'));
       setUsers((prev) => prev.filter((item) => item.id !== user.id));
     } catch (err) {
@@ -108,7 +118,7 @@ const AdminPage: React.FC = () => {
     setError('');
     try {
       const response = await apiFetch(`/api/admin/models/${model.id}`, { method: 'DELETE' });
-      const data = await response.json();
+      const data = await readJsonSafe<{ error?: string }>(response);
       if (!response.ok) throw new Error(data?.error || t('errors.deleteFailed'));
       setModels((prev) => prev.filter((item) => item.id !== model.id));
     } catch (err) {
