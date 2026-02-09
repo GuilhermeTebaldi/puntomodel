@@ -29,6 +29,7 @@ const AdminPage: React.FC = () => {
   const [error, setError] = useState('');
   const [resetting, setResetting] = useState(false);
   const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -76,6 +77,25 @@ const AdminPage: React.FC = () => {
       setError(err instanceof Error ? translateError(err.message) : t('errors.resetError'));
     } finally {
       setResetting(false);
+    }
+  };
+
+  const handleDeleteUser = async (user: AdminUser) => {
+    const confirmed = window.confirm(
+      `${t('adminPage.confirmDeleteUser')}\n${user.name} (${user.email})`
+    );
+    if (!confirmed) return;
+    setDeletingUserId(user.id);
+    setError('');
+    try {
+      const response = await apiFetch(`/api/admin/users/${user.id}`, { method: 'DELETE' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || t('errors.deleteFailed'));
+      setUsers((prev) => prev.filter((item) => item.id !== user.id));
+    } catch (err) {
+      setError(err instanceof Error ? translateError(err.message) : t('errors.deleteFailed'));
+    } finally {
+      setDeletingUserId(null);
     }
   };
 
@@ -159,12 +179,13 @@ const AdminPage: React.FC = () => {
                   <th className="text-left px-4 py-3">{t('adminPage.table.email')}</th>
                   <th className="text-left px-4 py-3">{t('adminPage.table.role')}</th>
                   <th className="text-left px-4 py-3">{t('adminPage.table.createdAt')}</th>
+                  <th className="text-right px-4 py-3">{t('adminPage.table.actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-gray-400 text-center">{t('adminPage.emptyUsers')}</td>
+                    <td colSpan={5} className="px-4 py-6 text-gray-400 text-center">{t('adminPage.emptyUsers')}</td>
                   </tr>
                 )}
                 {users.map((user) => (
@@ -174,6 +195,15 @@ const AdminPage: React.FC = () => {
                     <td className="px-4 py-3 text-gray-600">{user.role}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
                       {user.createdAt ? new Date(user.createdAt).toLocaleString(locale) : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => handleDeleteUser(user)}
+                        disabled={deletingUserId === user.id}
+                        className="text-xs font-bold uppercase tracking-widest text-red-600 hover:text-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {deletingUserId === user.id ? t('adminPage.deleting') : t('adminPage.delete')}
+                      </button>
                     </td>
                   </tr>
                 ))}

@@ -116,6 +116,11 @@ export const listUsers = async () => {
   return rows.map(rowToUser);
 };
 
+export const deleteUser = async (id) => {
+  const { rowCount } = await query('DELETE FROM users WHERE id = $1', [id]);
+  return rowCount > 0;
+};
+
 export const getModelByEmail = async (email) => {
   const { rows } = await query('SELECT * FROM models WHERE email = $1 LIMIT 1', [email]);
   return rows[0] ? rowToModel(rows[0]) : null;

@@ -22,6 +22,7 @@ import {
   updateModel,
   upsertModel,
   deleteModel,
+  deleteUser,
   metrics as computeMetrics,
   createUser,
 } from './repositories/index.js';
@@ -332,6 +333,15 @@ app.get('/api/admin/users', async (_req, res) => {
   await ensureDb();
   const users = await listUsers();
   res.json({ ok: true, users: users.map(sanitizeUser) });
+});
+
+app.delete('/api/admin/users/:id', async (req, res) => {
+  await ensureDb();
+  const deleted = await deleteUser(req.params.id);
+  if (!deleted) {
+    return res.status(404).json({ ok: false, error: 'Usuário não encontrado.' });
+  }
+  res.json({ ok: true });
 });
 
 app.get('/api/admin/models', async (_req, res) => {
