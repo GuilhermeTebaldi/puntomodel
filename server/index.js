@@ -36,6 +36,7 @@ const defaultCorsOrigins = new Set([
   'http://127.0.0.1:5173',
   'https://puntomodel.vercel.app',
   'https://puntomodel.com',
+  'https://www.puntomodel.com',
 ]);
 const envCorsOrigins = []
   .concat(process.env.CORS_ORIGIN || '')
