@@ -1,12 +1,28 @@
 import express from 'express';
 import cors from 'cors';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Low } from 'lowdb';
-import { JSONFile } from 'lowdb/node';
 import { nanoid } from 'nanoid';
 import dotenv from 'dotenv';
+import { ensureSchema, checkDb } from './db.js';
+import {
+  addComment,
+  addEvent,
+  addNotification,
+  addPayment,
+  findUserByEmail,
+  getModelByEmail,
+  getModelById as getModelByIdRepo,
+  listModels,
+  listUsers,
+  markNotificationsRead,
+  rate as rateEvent,
+  resetDatabase,
+  updateModel,
+  upsertModel,
+  metrics as computeMetrics,
+  createUser,
+} from './repositories/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,6 +34,8 @@ const defaultCorsOrigins = new Set([
   'http://127.0.0.1:3000',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  'https://puntomodel.vercel.app',
+  'https://puntomodel.com',
 ]);
 const envCorsOrigins = []
   .concat(process.env.CORS_ORIGIN || '')
@@ -42,41 +60,15 @@ const app = express();
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 
-const dataDir = process.env.DATA_DIR || __dirname;
-const dbFile = process.env.DB_FILE || path.join(dataDir, 'db.json');
-fs.mkdirSync(path.dirname(dbFile), { recursive: true });
-const adapter = new JSONFile(dbFile);
-const db = new Low(adapter, { users: [], models: [] });
-
 const adminEmail = process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL || 'puntomodeloficial@gmail.com';
 const adminPassword = process.env.ADMIN_PASSWORD || process.env.VITE_ADMIN_PASSWORD || '16046421';
 
+let schemaReady = null;
 const ensureDb = async () => {
-  await db.read();
-  db.data ||= { users: [], models: [] };
-
-  let changed = false;
-  const now = Date.now();
-  db.data.models.forEach((model) => {
-    if (model.onlineUntil && now > Number(model.onlineUntil)) {
-      if (model.isOnline !== false || model.onlineUntil) {
-        model.isOnline = false;
-        model.onlineUntil = null;
-        model.updatedAt = new Date().toISOString();
-        changed = true;
-      }
-    }
-    const prevStatus = model.billing?.status;
-    syncBillingStatus(model, now);
-    if (prevStatus && model.billing?.status !== prevStatus) {
-      model.updatedAt = new Date().toISOString();
-      changed = true;
-    }
-  });
-
-  if (changed) {
-    await db.write();
+  if (!schemaReady) {
+    schemaReady = ensureSchema();
   }
+  await schemaReady;
 };
 
 const normalizeEmail = (email) => (email || '').trim().toLowerCase();
@@ -103,6 +95,30 @@ const syncBillingStatus = (model, now = Date.now()) => {
     return;
   }
   model.billing.status = expiresAtMs > now ? 'active' : 'expired';
+};
+
+const refreshModelState = async (model) => {
+  if (!model) return model;
+  let changed = false;
+  const now = Date.now();
+  if (model.onlineUntil && now > Number(model.onlineUntil)) {
+    if (model.isOnline !== false || model.onlineUntil) {
+      model.isOnline = false;
+      model.onlineUntil = null;
+      changed = true;
+    }
+  }
+  const prevStatus = model.billing?.status;
+  syncBillingStatus(model, now);
+  if (prevStatus && model.billing?.status !== prevStatus) {
+    changed = true;
+  }
+  if (changed) {
+    model.updatedAt = new Date().toISOString();
+    const updated = await updateModel(model.id, model);
+    return updated || model;
+  }
+  return model;
 };
 
 const ensureModelStats = (model) => {
@@ -187,8 +203,9 @@ const sanitizeUser = (user) => ({
   createdAt: user.createdAt,
 });
 
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true });
+app.get('/api/health', async (_req, res) => {
+  const dbOk = await checkDb();
+  res.json({ ok: true, db: dbOk });
 });
 
 
@@ -205,7 +222,7 @@ app.post('/api/auth/register', async (req, res) => {
     return res.status(400).json({ ok: false, error: 'Perfil inválido.' });
   }
 
-  const exists = db.data.users.find((user) => normalizeEmail(user.email) === normalizedEmail);
+  const exists = await findUserByEmail(normalizedEmail);
   if (exists) {
     return res.status(409).json({ ok: false, error: 'Este e-mail já está cadastrado.' });
   }
@@ -219,8 +236,7 @@ app.post('/api/auth/register', async (req, res) => {
     createdAt: new Date().toISOString(),
   };
 
-  db.data.users.push(newUser);
-  await db.write();
+  await createUser(newUser);
 
   res.json({ ok: true, user: sanitizeUser(newUser) });
 });
@@ -245,11 +261,9 @@ app.post('/api/auth/login', async (req, res) => {
     }) });
   }
 
-  const user = db.data.users.find(
-    (stored) => normalizeEmail(stored.email) === normalizedEmail && stored.password === normalizedPassword
-  );
+  const user = await findUserByEmail(normalizedEmail);
 
-  if (!user) {
+  if (!user || user.password !== normalizedPassword) {
     return res.status(401).json({ ok: false, error: 'E-mail ou senha inválidos.' });
   }
 
@@ -260,7 +274,9 @@ app.get('/api/models', async (req, res) => {
   await ensureDb();
   const { featured, city, email, online } = req.query;
   const includeUnpaid = req.query.includeUnpaid === 'true';
-  let models = [...db.data.models];
+  const emailFilter = email ? String(email).toLowerCase() : null;
+  let models = await listModels({ email: emailFilter || undefined });
+  models = await Promise.all(models.map((model) => refreshModelState(model)));
 
   if (!includeUnpaid) {
     models = models.filter((model) => isBillingActive(model));
@@ -289,21 +305,25 @@ app.get('/api/models', async (req, res) => {
 
 app.get('/api/models/:id', async (req, res) => {
   await ensureDb();
-  const model = db.data.models.find((item) => item.id === req.params.id);
+  const model = await getModelByIdRepo(req.params.id);
   if (!model) {
     return res.status(404).json({ ok: false, error: 'Perfil não encontrado.' });
   }
-  res.json({ ok: true, model });
+  const refreshed = await refreshModelState(model);
+  res.json({ ok: true, model: refreshed });
 });
 
 app.get('/api/admin/users', async (_req, res) => {
   await ensureDb();
-  res.json({ ok: true, users: db.data.users.map(sanitizeUser) });
+  const users = await listUsers();
+  res.json({ ok: true, users: users.map(sanitizeUser) });
 });
 
 app.get('/api/admin/models', async (_req, res) => {
   await ensureDb();
-  res.json({ ok: true, models: db.data.models });
+  let models = await listModels();
+  models = await Promise.all(models.map((model) => refreshModelState(model)));
+  res.json({ ok: true, models });
 });
 
 app.post('/api/models', async (req, res) => {
@@ -327,9 +347,7 @@ app.post('/api/models', async (req, res) => {
     mapPoint = { x: Math.min(95, Math.max(5, x)), y: Math.min(95, Math.max(5, y)) };
   }
 
-  const existingModel = db.data.models.find(
-    (model) => normalizeEmail(model.email) === normalizedModelEmail
-  );
+  const existingModel = await getModelByEmail(normalizedModelEmail);
 
   const existingBilling = existingModel?.billing ?? null;
   const existingPayments = existingModel?.payments ?? [];
@@ -359,26 +377,21 @@ app.post('/api/models', async (req, res) => {
     payments: payload.payments ?? existingPayments,
   };
 
-  let savedModel = null;
-  if (existingModel) {
-    Object.assign(existingModel, modelPayload, { updatedAt: new Date().toISOString() });
-    savedModel = existingModel;
-  } else {
-    savedModel = {
-      id: nanoid(),
-      ...modelPayload,
-      createdAt: new Date().toISOString(),
-    };
-    db.data.models.push(savedModel);
-  }
-  await db.write();
+  const nowIso = new Date().toISOString();
+  const savedModel = await upsertModel({
+    id: existingModel?.id ?? nanoid(),
+    email: normalizedModelEmail,
+    ...modelPayload,
+    createdAt: existingModel?.createdAt ?? nowIso,
+    updatedAt: nowIso,
+  });
 
   res.json({ ok: true, model: savedModel });
 });
 
 app.patch('/api/models/:id', async (req, res) => {
   await ensureDb();
-  const model = db.data.models.find((item) => item.id === req.params.id);
+  const model = await getModelByIdRepo(req.params.id);
   if (!model) {
     return res.status(404).json({ ok: false, error: 'Perfil não encontrado.' });
   }
@@ -408,15 +421,15 @@ app.patch('/api/models/:id', async (req, res) => {
     payments: payload.payments ?? model.payments ?? [],
   };
 
-  Object.assign(model, updates, { updatedAt: new Date().toISOString() });
-  await db.write();
+  const updatedModel = { ...model, ...updates, updatedAt: new Date().toISOString() };
+  const savedModel = await updateModel(model.id, updatedModel);
 
-  res.json({ ok: true, model });
+  res.json({ ok: true, model: savedModel });
 });
 
 app.post('/api/models/:id/payments', async (req, res) => {
   await ensureDb();
-  const model = db.data.models.find((item) => item.id === req.params.id);
+  const model = await getModelByIdRepo(req.params.id);
   if (!model) {
     return res.status(404).json({ ok: false, error: 'Perfil não encontrado.' });
   }
@@ -465,14 +478,15 @@ app.post('/api/models/:id/payments', async (req, res) => {
     paidByEmail: payment.paidByEmail,
   };
   model.updatedAt = new Date().toISOString();
-  await db.write();
+  const savedModel = await updateModel(model.id, model);
+  await addPayment(model.id, payment);
 
-  res.json({ ok: true, model });
+  res.json({ ok: true, model: savedModel });
 });
 
 app.post('/api/models/:id/events', async (req, res) => {
   await ensureDb();
-  const model = db.data.models.find((item) => item.id === req.params.id);
+  const model = await getModelByIdRepo(req.params.id);
   if (!model) {
     return res.status(404).json({ ok: false, error: 'Perfil não encontrado.' });
   }
@@ -490,13 +504,14 @@ app.post('/api/models/:id/events', async (req, res) => {
   }
   model.stats = stats;
   model.updatedAt = new Date().toISOString();
-  await db.write();
+  await updateModel(model.id, model);
+  await addEvent(model.id, type);
   res.json({ ok: true });
 });
 
 app.post('/api/models/:id/rate', async (req, res) => {
   await ensureDb();
-  const model = db.data.models.find((item) => item.id === req.params.id);
+  const model = await getModelByIdRepo(req.params.id);
   if (!model) {
     return res.status(404).json({ ok: false, error: 'Perfil não encontrado.' });
   }
@@ -516,50 +531,37 @@ app.post('/api/models/:id/rate', async (req, res) => {
   model.ratingIps = ratingIps;
   model.stats = stats;
   const notifications = ensureModelNotifications(model);
-  notifications.unshift({
+  const ratingNotification = {
     id: nanoid(),
     type: 'rating',
     title: 'Nova avaliacao',
     message: `Voce recebeu ${value} estrela${value > 1 ? 's' : ''}.`,
     read: false,
     createdAt: new Date().toISOString(),
-  });
+  };
+  notifications.unshift(ratingNotification);
   model.notifications = notifications;
   model.updatedAt = new Date().toISOString();
-  await db.write();
+  await updateModel(model.id, model);
+  await rateEvent(model.id, value);
+  await addNotification(model.id, ratingNotification);
   res.json({ ok: true });
 });
 
 app.get('/api/models/:id/metrics', async (req, res) => {
   await ensureDb();
-  const model = db.data.models.find((item) => item.id === req.params.id);
+  const model = await getModelByIdRepo(req.params.id);
   if (!model) {
     return res.status(404).json({ ok: false, error: 'Perfil não encontrado.' });
   }
-  const stats = ensureModelStats(model);
-  const todayKey = getTodayKey();
-  const viewsToday = Number(stats.views?.[todayKey] || 0);
-  const whatsappToday = Number(stats.whatsapp?.[todayKey] || 0);
-  const ratingCount = Number(stats.ratings?.count || 0);
-  const ratingAvg = ratingCount ? Number((stats.ratings.sum / ratingCount).toFixed(2)) : 0;
-  const whatsapp30 = sumLastDays(stats.whatsapp, 30);
-  const estimatedEarningsMonth = whatsapp30 * 50;
+  const metrics = computeMetrics(model);
 
-  res.json({
-    ok: true,
-    metrics: {
-      viewsToday,
-      whatsappToday,
-      ratingAvg,
-      ratingCount,
-      estimatedEarningsMonth,
-    },
-  });
+  res.json({ ok: true, metrics });
 });
 
 app.get('/api/models/:id/comments', async (req, res) => {
   await ensureDb();
-  const model = db.data.models.find((item) => item.id === req.params.id);
+  const model = await getModelByIdRepo(req.params.id);
   if (!model) {
     return res.status(404).json({ ok: false, error: 'Perfil não encontrado.' });
   }
@@ -569,7 +571,7 @@ app.get('/api/models/:id/comments', async (req, res) => {
 
 app.post('/api/models/:id/comments', async (req, res) => {
   await ensureDb();
-  const model = db.data.models.find((item) => item.id === req.params.id);
+  const model = await getModelByIdRepo(req.params.id);
   if (!model) {
     return res.status(404).json({ ok: false, error: 'Perfil não encontrado.' });
   }
@@ -598,35 +600,43 @@ app.post('/api/models/:id/comments', async (req, res) => {
   model.comments.unshift(newComment);
   model.commentIps[ip] = true;
   const notifications = ensureModelNotifications(model);
-  notifications.unshift({
+  const commentNotification = {
     id: nanoid(),
     type: 'comment',
     title: 'Novo comentario',
     message: `${cleanName} deixou um comentario no seu perfil.`,
     read: false,
     createdAt: new Date().toISOString(),
-  });
+  };
+  notifications.unshift(commentNotification);
   model.notifications = notifications;
   model.updatedAt = new Date().toISOString();
-  await db.write();
+  await updateModel(model.id, model);
+  await addComment(model.id, newComment);
+  await addNotification(model.id, commentNotification);
 
   res.json({ ok: true, comment: newComment });
 });
 
 app.get('/api/models/:id/notifications', async (req, res) => {
   await ensureDb();
-  const model = db.data.models.find((item) => item.id === req.params.id);
+  const model = await getModelByIdRepo(req.params.id);
   if (!model) {
     return res.status(404).json({ ok: false, error: 'Perfil não encontrado.' });
   }
+  const hadNotifications = Array.isArray(model.notifications) && model.notifications.length > 0;
   const notifications = backfillNotifications(model);
-  await db.write();
+  if (!hadNotifications && notifications.length > 0) {
+    model.updatedAt = new Date().toISOString();
+    await updateModel(model.id, model);
+    await Promise.all(notifications.map((notification) => addNotification(model.id, notification)));
+  }
   res.json({ ok: true, notifications });
 });
 
 app.post('/api/models/:id/notifications/read-all', async (req, res) => {
   await ensureDb();
-  const model = db.data.models.find((item) => item.id === req.params.id);
+  const model = await getModelByIdRepo(req.params.id);
   if (!model) {
     return res.status(404).json({ ok: false, error: 'Perfil não encontrado.' });
   }
@@ -636,7 +646,8 @@ app.post('/api/models/:id/notifications/read-all', async (req, res) => {
   });
   model.notifications = notifications;
   model.updatedAt = new Date().toISOString();
-  await db.write();
+  await updateModel(model.id, model);
+  await markNotificationsRead(model.id);
   res.json({ ok: true });
 });
 
@@ -646,16 +657,16 @@ app.post('/api/admin/reset', async (_req, res) => {
   }
 
   await ensureDb();
-  db.data.users = [];
-  db.data.models = [];
-  await db.write();
+  await resetDatabase();
   res.json({ ok: true });
 });
 
 app.get('/api/stats', async (_req, res) => {
   await ensureDb();
-  const totalModels = db.data.models.length;
-  const totalUsers = db.data.users.length;
+  const users = await listUsers();
+  const models = await listModels();
+  const totalModels = models.length;
+  const totalUsers = users.length;
 
   res.json({
     ok: true,
