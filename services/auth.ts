@@ -20,6 +20,7 @@ export interface AuthUser {
 export interface PendingModelProfile {
   name: string;
   email: string;
+  password?: string;
 }
 
 const PENDING_MODEL_KEY = 'punto_pending_model';
@@ -94,7 +95,8 @@ export const clearCurrentUser = () => {
 
 export const savePendingModelProfile = (profile: PendingModelProfile) => {
   if (!isBrowser()) return;
-  window.localStorage.setItem(PENDING_MODEL_KEY, JSON.stringify(profile));
+  const { name, email } = profile;
+  window.localStorage.setItem(PENDING_MODEL_KEY, JSON.stringify({ name, email }));
 };
 
 export const getPendingModelProfile = (): PendingModelProfile | null => {

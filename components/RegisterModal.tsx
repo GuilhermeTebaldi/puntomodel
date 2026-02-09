@@ -2,14 +2,14 @@
 import React, { useEffect, useState } from 'react';
 import { X, ArrowRight } from 'lucide-react';
 import Logo from './Logo';
-import { registerUser, savePendingModelProfile, setCurrentUser } from '../services/auth';
+import { savePendingModelProfile } from '../services/auth';
 import { useI18n } from '../translations/i18n';
 
 interface RegisterModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSwitchToLogin: () => void;
-  onModelRegisterSuccess: (profile: { name: string; email: string }) => void;
+  onModelRegisterSuccess: (profile: { name: string; email: string; password: string }) => void;
   onRegisterSuccess?: () => void;
 }
 
@@ -32,24 +32,19 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitch
   if (!isOpen) return null;
 
   const handleFinalize = async () => {
-    setSubmitting(true);
-    const result = await registerUser({
-      name: fullName,
-      email,
-      password,
-      role: 'model',
-    });
-    setSubmitting(false);
-
-    if (!result.ok) {
-      setError(result.error);
+    const trimmedName = fullName.trim();
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+    if (!trimmedName || !trimmedEmail || !trimmedPassword) {
+      setError(t('errors.nameEmailRequired'));
       return;
     }
 
+    setSubmitting(true);
+    const profile = { name: trimmedName, email: trimmedEmail, password: trimmedPassword };
+    savePendingModelProfile({ name: profile.name, email: profile.email });
+    setSubmitting(false);
     setError('');
-    setCurrentUser(result.user);
-    const profile = { name: result.user.name, email: result.user.email };
-    savePendingModelProfile(profile);
     onModelRegisterSuccess(profile);
   };
 

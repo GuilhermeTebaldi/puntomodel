@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Check, Camera, MapPin, Smartphone, User, ArrowRight, ChevronLeft, Info, Heart } from 'lucide-react';
 import Logo from './Logo';
-import { clearPendingModelProfile, getPendingModelProfile, PendingModelProfile } from '../services/auth';
+import { AuthUser, clearPendingModelProfile, getPendingModelProfile, PendingModelProfile, registerUser, setCurrentUser } from '../services/auth';
 import { uploadImage } from '../services/cloudinary';
 import { createModelProfile } from '../services/models';
 import { hairOptions, eyeOptions, serviceOptions } from '../translations';
@@ -13,13 +13,13 @@ interface ModelOnboardingProps {
   isOpen: boolean;
   onClose: () => void;
   registration?: PendingModelProfile | null;
-  onProfilePublished?: () => void;
+  onProfilePublished?: (user?: AuthUser | null) => void;
 }
 
 const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, registration, onProfilePublished }) => {
-  const { t, translateError, translateHair, translateEyes, getPriceLabel, language } = useI18n();
+  const { t, translateError, translateHair, translateEyes, language } = useI18n();
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 6;
+  const totalSteps = 5;
   const [countries, setCountries] = useState<Array<{ name: string; cca2: string; dial: string }>>([]);
   const [selectedCountry, setSelectedCountry] = useState('BR');
   const [phoneValue, setPhoneValue] = useState('');
@@ -34,14 +34,10 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const [eyes, setEyes] = useState(eyeOptions[0]?.labels.br || 'Castanhos');
   const [loadingCountries, setLoadingCountries] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<LocationValue | null>(null);
-  const [currency, setCurrency] = useState('BRL');
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [services, setServices] = useState<string[]>([]);
   const [bio, setBio] = useState('');
-  const [priceOneHour, setPriceOneHour] = useState('');
-  const [priceTwoHours, setPriceTwoHours] = useState('');
-  const [priceOvernight, setPriceOvernight] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState('');
   const availableServices = serviceOptions;
@@ -63,10 +59,6 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       setPhotos([]);
       setServices([]);
       setBio('');
-      setPriceOneHour('');
-      setPriceTwoHours('');
-      setPriceOvernight('');
-      setCurrency('BRL');
       setPublishError('');
       setPublishing(false);
       return;
@@ -79,54 +71,6 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     }
   }, [isOpen, registration]);
 
-  const resolveCurrency = (countryCode?: string) => {
-    const code = (countryCode || '').toUpperCase();
-    const map: Record<string, string> = {
-      BR: 'BRL',
-      PT: 'EUR',
-      ES: 'EUR',
-      FR: 'EUR',
-      IT: 'EUR',
-      DE: 'EUR',
-      NL: 'EUR',
-      BE: 'EUR',
-      AT: 'EUR',
-      IE: 'EUR',
-      GR: 'EUR',
-      FI: 'EUR',
-      SE: 'EUR',
-      NO: 'NOK',
-      GB: 'GBP',
-      UK: 'GBP',
-      US: 'USD',
-      CA: 'CAD',
-      MX: 'MXN',
-      AR: 'ARS',
-      CL: 'CLP',
-      CO: 'COP',
-      CH: 'CHF',
-      AU: 'AUD',
-    };
-    return map[code] || 'USD';
-  };
-
-  const currencySymbol = (code: string) => {
-    const symbols: Record<string, string> = {
-      BRL: 'R$',
-      EUR: '€',
-      USD: '$',
-      GBP: '£',
-      CAD: 'C$',
-      MXN: 'MX$',
-      ARS: 'AR$',
-      CLP: 'CLP$',
-      COP: 'COP$',
-      CHF: 'CHF',
-      AUD: 'A$',
-      NOK: 'NOK',
-    };
-    return symbols[code] || code;
-  };
 
   useEffect(() => {
     let isActive = true;
@@ -212,9 +156,6 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
 
   const handleLocationChange = (location: LocationValue) => {
     setSelectedLocation(location);
-    if (location.countryCode) {
-      setCurrency(resolveCurrency(location.countryCode));
-    }
   };
 
   const handlePhotoAdd = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -256,28 +197,40 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     }
 
     const parsedAge = age ? Number(age) : null;
-    const normalizePrice = (value: string) => Number(value.replace(/\\./g, '').replace(',', '.'));
-    const priceEntries = [
-      priceOneHour ? { label: getPriceLabel('oneHour'), value: normalizePrice(priceOneHour) } : null,
-      priceTwoHours ? { label: getPriceLabel('twoHours'), value: normalizePrice(priceTwoHours) } : null,
-      priceOvernight ? { label: getPriceLabel('overnight'), value: normalizePrice(priceOvernight) } : null,
-    ].filter(Boolean) as Array<{ label: string; value: number }>;
-    const prices = priceEntries.filter((item) => Number.isFinite(item.value));
+    const registrationPassword = registration?.password?.trim();
+    if (!registrationPassword) {
+      setPublishError(t('errors.registerFailed'));
+      setPublishing(false);
+      return;
+    }
 
     const locationParts = selectedLocation?.display?.split(',').map((part) => part.trim()) ?? [];
     const city = locationParts[0] || undefined;
     const state = locationParts[1] || undefined;
 
     try {
+      const registrationResult = await registerUser({
+        name: displayName,
+        email: registeredEmail.trim(),
+        password: registrationPassword,
+        role: 'model',
+      });
+      if (!registrationResult.ok) {
+        setPublishError(registrationResult.error);
+        setPublishing(false);
+        return;
+      }
+      setCurrentUser(registrationResult.user);
+
       await createModelProfile({
+        userId: registrationResult.user.id,
         name: displayName,
         email: registeredEmail.trim(),
         age: parsedAge,
         phone: phoneValue.replace(/\\D/g, ''),
         bio,
         services,
-        prices,
-        currency,
+        prices: [],
         attributes: {
           height: height || undefined,
           weight: weight || undefined,
@@ -297,7 +250,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         featured: true,
       });
       clearPendingModelProfile();
-      onProfilePublished?.();
+      onProfilePublished?.(registrationResult.user);
       setPublishing(false);
       onClose();
     } catch (err) {
@@ -321,7 +274,6 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     { title: t('onboarding.steps.verification'), icon: <Smartphone size={18} /> },
     { title: t('onboarding.steps.profile'), icon: <User size={18} /> },
     { title: t('onboarding.steps.location'), icon: <MapPin size={18} /> },
-    { title: t('onboarding.steps.pricing'), icon: <MapPin size={18} /> },
     { title: t('onboarding.steps.bioServices'), icon: <Info size={18} /> },
     { title: t('onboarding.steps.photos'), icon: <Camera size={18} /> },
   ];
@@ -338,7 +290,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         </div>
         
         {/* Progress Dots (Mobile) / Steps (Desktop) */}
-        <div className="hidden md:grid grid-cols-6 gap-4 w-full max-w-5xl">
+        <div className="hidden md:grid grid-cols-5 gap-4 w-full max-w-5xl">
           {stepsInfo.map((s, i) => (
             <div key={i} className="flex flex-col items-center text-center">
               <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-sm ${
@@ -555,68 +507,6 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
 
           {currentStep === 4 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-2">{t('onboarding.step4.title')}</h1>
-              <p className="text-gray-500 mb-2 text-base sm:text-lg">{t('onboarding.step4.subtitle')}</p>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 sm:mb-8">
-                {t('onboarding.step4.locationLine', { location: selectedLocation ? selectedLocation.display : t('onboarding.step4.locationNotDefined'), currency })}
-              </p>
-              
-              <div className="bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] shadow-sm border border-gray-100 space-y-6">
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black text-gray-400 uppercase block tracking-widest">{t('onboarding.step4.pricingTable')}</label>
-                  <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                    <span className="text-sm font-bold text-gray-500 flex-1">{t('onboarding.step4.oneHour')}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-400 font-bold">{currencySymbol(currency)}</span>
-                      <input
-                        type="text"
-                        placeholder="350,00"
-                        value={priceOneHour}
-                        onChange={(event) => setPriceOneHour(event.target.value)}
-                        className="bg-transparent border-none focus:outline-none font-black text-gray-900 w-24 text-right"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                    <span className="text-sm font-bold text-gray-500 flex-1">{t('onboarding.step4.twoHours')}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-400 font-bold">{currencySymbol(currency)}</span>
-                      <input
-                        type="text"
-                        placeholder="600,00"
-                        value={priceTwoHours}
-                        onChange={(event) => setPriceTwoHours(event.target.value)}
-                        className="bg-transparent border-none focus:outline-none font-black text-gray-900 w-24 text-right"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 bg-red-50/50 p-4 rounded-2xl border border-red-100">
-                    <span className="text-sm font-bold text-[#e3262e] flex-1">{t('onboarding.step4.overnight')}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[#e3262e] opacity-50 font-bold">{currencySymbol(currency)}</span>
-                      <input
-                        type="text"
-                        placeholder="1.500,00"
-                        value={priceOvernight}
-                        onChange={(event) => setPriceOvernight(event.target.value)}
-                        className="bg-transparent border-none focus:outline-none font-black text-[#e3262e] w-24 text-right"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <button 
-                  onClick={nextStep}
-                  className="w-full bg-[#e3262e] text-white py-4 sm:py-5 rounded-2xl font-bold uppercase tracking-widest hover:bg-red-700 transition-all mt-4 shadow-xl shadow-red-100"
-                >
-                  {t('onboarding.step4.finish')}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {currentStep === 5 && (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-2">{t('onboarding.step5.title')}</h1>
               <p className="text-gray-500 mb-6 sm:mb-8 text-base sm:text-lg">{t('onboarding.step5.subtitle')}</p>
               
@@ -665,7 +555,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
             </div>
           )}
 
-          {currentStep === 6 && (
+          {currentStep === 5 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-2">{t('onboarding.step6.title')}</h1>
               <p className="text-gray-500 mb-6 sm:mb-8 text-base sm:text-lg">{t('onboarding.step6.subtitle')}</p>

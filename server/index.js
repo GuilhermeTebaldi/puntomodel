@@ -390,6 +390,7 @@ app.post('/api/models', async (req, res) => {
   const modelPayload = {
     name: payload.name.trim(),
     email: normalizedModelEmail,
+    userId: typeof payload.userId === 'string' ? payload.userId : undefined,
     age: payload.age ?? null,
     phone: payload.phone ?? '',
     bio: payload.bio ?? '',
@@ -454,6 +455,7 @@ app.patch('/api/models/:id', async (req, res) => {
     notifications: payload.notifications ?? model.notifications ?? [],
     billing: payload.billing ?? model.billing ?? null,
     payments: payload.payments ?? model.payments ?? [],
+    userId: typeof payload.userId === 'string' ? payload.userId : model.userId ?? null,
   };
 
   const updatedModel = { ...model, ...updates, updatedAt: new Date().toISOString() };
@@ -554,6 +556,11 @@ app.post('/api/models/:id/rate', async (req, res) => {
   if (!Number.isFinite(value) || value < 1 || value > 5) {
     return res.status(400).json({ ok: false, error: 'Nota inválida.' });
   }
+  const raterName = typeof req.body?.raterName === 'string' ? req.body.raterName.trim().slice(0, 80) : '';
+  const raterEmailRaw = typeof req.body?.raterEmail === 'string' ? req.body.raterEmail : '';
+  const raterEmail = raterEmailRaw ? normalizeEmail(raterEmailRaw).slice(0, 120) : '';
+  const raterId = typeof req.body?.raterId === 'string' ? req.body.raterId.trim().slice(0, 60) : null;
+  const raterLabel = raterName || raterEmail || '';
   const ip = (req.ip || '').replace('::ffff:', '') || 'unknown';
   const ratingIps = ensureModelRatings(model);
   if (ratingIps[ip]) {
@@ -570,9 +577,14 @@ app.post('/api/models/:id/rate', async (req, res) => {
     id: nanoid(),
     type: 'rating',
     title: 'Nova avaliacao',
-    message: `Voce recebeu ${value} estrela${value > 1 ? 's' : ''}.`,
+    message: raterLabel
+      ? `${raterLabel} avaliou com ${value} estrela${value > 1 ? 's' : ''}.`
+      : `Voce recebeu ${value} estrela${value > 1 ? 's' : ''}.`,
     read: false,
     createdAt: new Date().toISOString(),
+    userId: raterId || null,
+    userName: raterName || null,
+    userEmail: raterEmail || null,
   };
   notifications.unshift(ratingNotification);
   model.notifications = notifications;

@@ -387,9 +387,6 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     translateError,
     locale,
     translateService,
-    translatePriceLabel,
-    getPriceId,
-    getPriceLabel,
     translateHair,
     translateEyes,
     language,
@@ -401,7 +398,6 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   const [editingBio, setEditingBio] = useState(false);
   const [editingServices, setEditingServices] = useState(false);
   const [editingAttributes, setEditingAttributes] = useState(false);
-  const [editingPrices, setEditingPrices] = useState(false);
   const [editingLocation, setEditingLocation] = useState(false);
   const [editingPhotos, setEditingPhotos] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
@@ -418,7 +414,6 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     estimatedEarningsMonth: 0,
   });
   const billingCurrency = 'EUR';
-  const [displayCurrency, setDisplayCurrency] = useState(model.currency || 'BRL');
   const [notifications, setNotifications] = useState<Array<{
     id: string;
     type: string;
@@ -463,9 +458,6 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   const [hairInput, setHairInput] = useState(model.attributes?.hair || '');
   const [feetInput, setFeetInput] = useState(model.attributes?.feet || '');
   const [eyesInput, setEyesInput] = useState(model.attributes?.eyes || '');
-  const [priceOneHour, setPriceOneHour] = useState('');
-  const [priceTwoHours, setPriceTwoHours] = useState('');
-  const [priceOvernight, setPriceOvernight] = useState('');
   const [photosInput, setPhotosInput] = useState<string[]>(model.photos || []);
   const [locationDraft, setLocationDraft] = useState<LocationValue | null>(toLocationValue(model.location));
 
@@ -481,16 +473,6 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     setEyesInput(model.attributes?.eyes || '');
     setPhotosInput(model.photos || []);
     setLocationDraft(toLocationValue(model.location));
-
-    const getPrice = (priceId: 'oneHour' | 'twoHours' | 'overnight') =>
-      model.prices?.find((price) => getPriceId(price.label) === priceId)?.value ?? '';
-    const oneHour = getPrice('oneHour');
-    const twoHours = getPrice('twoHours');
-    const overnight = getPrice('overnight');
-    setPriceOneHour(oneHour ? String(oneHour) : '');
-    setPriceTwoHours(twoHours ? String(twoHours) : '');
-    setPriceOvernight(overnight ? String(overnight) : '');
-    setDisplayCurrency(model.currency || 'BRL');
   }, [model]);
 
   useEffect(() => {
@@ -554,14 +536,6 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     setEyesInput(model.attributes?.eyes || '');
     setPhotosInput(model.photos || []);
     setLocationDraft(toLocationValue(model.location));
-    const getPrice = (priceId: 'oneHour' | 'twoHours' | 'overnight') =>
-      model.prices?.find((price) => getPriceId(price.label) === priceId)?.value ?? '';
-    const oneHour = getPrice('oneHour');
-    const twoHours = getPrice('twoHours');
-    const overnight = getPrice('overnight');
-    setPriceOneHour(oneHour ? String(oneHour) : '');
-    setPriceTwoHours(twoHours ? String(twoHours) : '');
-    setPriceOvernight(overnight ? String(overnight) : '');
   };
 
   const handleSave = async (payload: Record<string, unknown>, onDone: () => void) => {
@@ -755,7 +729,8 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const unreadCount = notifications.filter((notification) => !notification.read).length;
+  const visibleNotifications = notifications.filter((notification) => notification.type !== 'comment');
+  const unreadCount = visibleNotifications.filter((notification) => !notification.read).length;
 
   const resolvePlanLabel = (planId?: string) => {
     if (planId === PLAN_ID) return t('dashboard.billing.planDiamond');
@@ -847,12 +822,6 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
       value: (metrics.ratingAvg || 0).toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
       icon: <Star size={20} className="text-yellow-500" />,
       trend: t('dashboard.stats.ratingCount', { count: metrics.ratingCount.toLocaleString(locale) }),
-    },
-    {
-      label: t('dashboard.stats.estimatedEarnings'),
-      value: new Intl.NumberFormat(locale, { style: 'currency', currency: displayCurrency }).format(metrics.estimatedEarningsMonth),
-      icon: <TrendingUp size={20} className="text-[#e3262e]" />,
-      trend: t('dashboard.stats.month'),
     },
   ];
 
@@ -986,10 +955,10 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                     <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{t('dashboard.notifications.recent')}</span>
                   </div>
                   <div className="max-h-80 overflow-y-auto">
-                    {notifications.length === 0 && (
+                    {visibleNotifications.length === 0 && (
                       <div className="p-4 text-sm text-gray-500">{t('dashboard.notifications.empty')}</div>
                     )}
-                    {notifications.map((n) => (
+                    {visibleNotifications.map((n) => (
                       <div key={n.id} className="p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors">
                         <p className="text-sm font-bold text-gray-900">{n.title}</p>
                         <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
@@ -1023,7 +992,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
           {activeSection === 'dashboard' && (
             <>
               {/* Stats Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {stats.map((s, idx) => (
                   <div key={idx} className="bg-white p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-4">
@@ -1429,89 +1398,6 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                   )}
                 </section>
 
-                <section className="bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] border border-gray-100 shadow-sm">
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-black text-gray-900 uppercase tracking-tighter flex items-center gap-2">
-                      <Clock size={18} className="text-[#e3262e]" /> {t('dashboard.pricing.title')}
-                    </h3>
-                    <button
-                      onClick={() => {
-                        setEditingPrices(!editingPrices);
-                        if (editingPrices) resetEdits();
-                      }}
-                      className="bg-gray-50 text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors"
-                    >
-                      <Edit3 size={16} />
-                    </button>
-                  </div>
-                  <div className="space-y-3">
-                    {editingPrices ? (
-                      <div className="space-y-4">
-                        <input
-                          type="text"
-                          value={priceOneHour}
-                          onChange={(event) => setPriceOneHour(event.target.value)}
-                          placeholder={t('dashboard.pricing.oneHour')}
-                          className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm focus:outline-none"
-                        />
-                        <input
-                          type="text"
-                          value={priceTwoHours}
-                          onChange={(event) => setPriceTwoHours(event.target.value)}
-                          placeholder={t('dashboard.pricing.twoHours')}
-                          className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm focus:outline-none"
-                        />
-                        <input
-                          type="text"
-                          value={priceOvernight}
-                          onChange={(event) => setPriceOvernight(event.target.value)}
-                          placeholder={t('dashboard.pricing.overnight')}
-                          className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm focus:outline-none"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            disabled={saving}
-                            onClick={() => {
-                              const normalizePrice = (value: string) => Number(value.replace(/\./g, '').replace(',', '.'));
-                              const prices = [
-                                priceOneHour ? { label: getPriceLabel('oneHour'), value: normalizePrice(priceOneHour) } : null,
-                                priceTwoHours ? { label: getPriceLabel('twoHours'), value: normalizePrice(priceTwoHours) } : null,
-                                priceOvernight ? { label: getPriceLabel('overnight'), value: normalizePrice(priceOvernight) } : null,
-                              ].filter(Boolean) as Array<{ label: string; value: number }>;
-                              handleSave({ prices }, () => setEditingPrices(false));
-                            }}
-                            className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
-                          >
-                            {saving ? t('common.saving') : t('common.save')}
-                          </button>
-                          <button
-                            onClick={() => {
-                              resetEdits();
-                              setEditingPrices(false);
-                            }}
-                            className="px-4 py-2 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest"
-                          >
-                            {t('common.cancel')}
-                          </button>
-                        </div>
-                      </div>
-                    ) : model.prices?.length ? (
-                      model.prices.map((price, index) => (
-                        <div
-                          key={`${price.label}-${index}`}
-                          className={`flex justify-between p-4 rounded-2xl border ${getPriceId(price.label) === 'overnight' ? 'bg-red-50/50 border-red-100 text-[#e3262e]' : 'bg-gray-50 border-gray-100'}`}
-                        >
-                          <span className="text-sm font-bold">{translatePriceLabel(price.label)}</span>
-                        <span className="text-sm font-black">
-                          {new Intl.NumberFormat(locale, { style: 'currency', currency: displayCurrency }).format(price.value)}
-                        </span>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-gray-500">{t('dashboard.pricing.notProvided')}</p>
-                    )}
-                  </div>
-                </section>
               </div>
 
               <div className="space-y-6">

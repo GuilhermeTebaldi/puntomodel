@@ -10,7 +10,7 @@ import RegisterModal from './components/RegisterModal';
 import ModelOnboarding from './components/ModelOnboarding';
 import MapView from './components/MapView';
 import ModelProfile from './components/ModelProfile';
-import { clearCurrentUser, getCurrentUser, PendingModelProfile } from './services/auth';
+import { AuthUser, clearCurrentUser, getCurrentUser, PendingModelProfile } from './services/auth';
 import { fetchModelByEmail, fetchModelById, fetchModelsAll, ModelProfileData } from './services/models';
 import { getSavedModelIds } from './services/savedModels';
 import AdminPage from './components/AdminPage';
@@ -139,9 +139,13 @@ const App: React.FC = () => {
       });
   };
 
-  const handleProfilePublished = () => {
+  const handleProfilePublished = (user?: AuthUser | null) => {
+    const activeUser = user ?? currentUser;
+    if (user) {
+      setCurrentUser(user);
+    }
     loadFeatured();
-    loadMyProfile(currentUser);
+    loadMyProfile(activeUser);
     navigateTo('/dashboard');
   };
 

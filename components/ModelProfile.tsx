@@ -1,7 +1,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { X, MessageCircle, Phone, MapPin, CheckCircle2, ShieldCheck, Heart, Share2, Info, Clock, Star, ChevronLeft, ChevronRight } from 'lucide-react';
-import { createModelComment, fetchModelComments, fetchModelMetrics, rateModel, trackModelEvent } from '../services/models';
+import { X, MessageCircle, Phone, MapPin, CheckCircle2, ShieldCheck, Heart, Share2, Info, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { fetchModelMetrics, rateModel, trackModelEvent } from '../services/models';
+import { getCurrentUser } from '../services/auth';
 import { isModelSaved, toggleSavedModel } from '../services/savedModels';
 import { useI18n } from '../translations/i18n';
 
@@ -30,7 +31,7 @@ interface ModelProfileProps {
 }
 
 const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
-  const { t, translateError, translateService, translatePriceLabel, translateHair, translateEyes, locale, getPriceId } = useI18n();
+  const { t, translateError, translateService, translateHair, translateEyes, locale } = useI18n();
   const [metrics, setMetrics] = useState({
     viewsToday: 0,
     whatsappToday: 0,
@@ -41,13 +42,6 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
   const [ratingError, setRatingError] = useState('');
   const [ratingSuccess, setRatingSuccess] = useState('');
-  const [comments, setComments] = useState<Array<{ id: string; name: string; message: string; createdAt: string }>>([]);
-  const [commentName, setCommentName] = useState('');
-  const [commentMessage, setCommentMessage] = useState('');
-  const [commentSubmitting, setCommentSubmitting] = useState(false);
-  const [commentError, setCommentError] = useState('');
-  const [commentSuccess, setCommentSuccess] = useState('');
-  const [displayCurrency, setDisplayCurrency] = useState(model.currency || 'BRL');
   const [isSaved, setIsSaved] = useState(() => isModelSaved(model.id));
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -125,56 +119,6 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
   }, [model.id]);
 
   useEffect(() => {
-    if (model.currency) {
-      setDisplayCurrency(model.currency);
-      return;
-    }
-    const lat = model.location?.lat;
-    const lon = model.location?.lon;
-    if (typeof lat !== 'number' || typeof lon !== 'number') return;
-
-    const resolveCurrency = (countryCode?: string) => {
-      const code = (countryCode || '').toUpperCase();
-      const map: Record<string, string> = {
-        BR: 'BRL',
-        PT: 'EUR',
-        ES: 'EUR',
-        FR: 'EUR',
-        IT: 'EUR',
-        DE: 'EUR',
-        NL: 'EUR',
-        BE: 'EUR',
-        AT: 'EUR',
-        IE: 'EUR',
-        GR: 'EUR',
-        FI: 'EUR',
-        SE: 'EUR',
-        NO: 'NOK',
-        GB: 'GBP',
-        UK: 'GBP',
-        US: 'USD',
-        CA: 'CAD',
-        MX: 'MXN',
-        AR: 'ARS',
-        CL: 'CLP',
-        CO: 'COP',
-        CH: 'CHF',
-        AU: 'AUD',
-      };
-      return map[code] || 'USD';
-    };
-
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`)
-      .then((res) => res.json())
-      .then((data) => {
-        const code = data?.address?.country_code;
-        const curr = resolveCurrency(code);
-        setDisplayCurrency(curr);
-      })
-      .catch(() => undefined);
-  }, [model.currency, model.location?.lat, model.location?.lon]);
-
-  useEffect(() => {
     if (activePhotoIndex === null) return;
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -199,25 +143,13 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
   }, [activePhotoIndex]);
 
 
-  useEffect(() => {
-    let mounted = true;
-    fetchModelComments(model.id)
-      .then((data) => {
-        if (!mounted) return;
-        setComments(data);
-      })
-      .catch(() => undefined);
-    return () => {
-      mounted = false;
-    };
-  }, [model.id]);
-
   const handleRate = async (value: number) => {
     setRatingSubmitting(true);
     setRatingError('');
     setRatingSuccess('');
     try {
-      await rateModel(model.id, value);
+      const user = getCurrentUser();
+      await rateModel(model.id, value, user ? { id: user.id, name: user.name, email: user.email } : undefined);
       setRatingSuccess(t('profile.ratingThanks'));
       const updated = await fetchModelMetrics(model.id);
       setMetrics(updated);
@@ -225,26 +157,6 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
       setRatingError(err instanceof Error ? translateError(err.message) : t('errors.rate'));
     } finally {
       setRatingSubmitting(false);
-    }
-  };
-
-  const handleCommentSubmit = async () => {
-    setCommentSubmitting(true);
-    setCommentError('');
-    setCommentSuccess('');
-    try {
-      const newComment = await createModelComment(model.id, {
-        name: commentName,
-        message: commentMessage,
-      });
-      setComments((prev) => [newComment, ...prev]);
-      setCommentName('');
-      setCommentMessage('');
-      setCommentSuccess(t('profile.commentSuccess'));
-    } catch (err) {
-      setCommentError(err instanceof Error ? translateError(err.message) : t('errors.commentFailed'));
-    } finally {
-      setCommentSubmitting(false);
     }
   };
 
@@ -408,33 +320,34 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
                 </div>
               </section>
 
-              <section className="bg-gray-50 p-6 rounded-3xl border border-gray-100">
-                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                  <Clock size={20} className="text-[#e3262e]" />
-                  {t('profile.pricing')}
-                </h3>
-                <div className="space-y-4">
-                  {model.prices?.length ? (
-                    model.prices.map((price, index) => (
-                      <div key={`${price.label}-${index}`} className={`flex justify-between items-center ${index < model.prices.length - 1 ? 'pb-4 border-b border-gray-200' : ''}`}>
-                        <span className="font-medium text-gray-700">{translatePriceLabel(price.label)}</span>
-                        <span className={`font-black text-gray-900 ${getPriceId(price.label) === 'overnight' ? 'text-[#e3262e]' : ''}`}>
-                          {new Intl.NumberFormat(locale, { style: 'currency', currency: displayCurrency }).format(price.value)}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-gray-500">{t('profile.pricingMissing')}</p>
-                  )}
-                </div>
-              </section>
-
               <section className="bg-white p-6 rounded-3xl border border-gray-100">
                 <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <Star size={20} className="text-[#e3262e]" />
-                  {t('profile.rateProfile')}
+                  {t('profile.ratingsTitle')}
                 </h3>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center">
+                    {[1, 2, 3, 4, 5].map((value) => {
+                      const filled = value <= Math.round(metrics.ratingAvg || 0);
+                      return (
+                        <Star
+                          key={`avg-${value}`}
+                          size={18}
+                          className={filled ? 'text-yellow-500' : 'text-gray-200'}
+                          fill={filled ? 'currentColor' : 'none'}
+                        />
+                      );
+                    })}
+                  </div>
+                  <span className="text-sm font-bold text-gray-900">
+                    {(metrics.ratingAvg || 0).toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {t('profile.ratingCountLabel', { count: metrics.ratingCount.toLocaleString(locale) })}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">{t('profile.rateProfile')}</p>
+                <div className="flex items-center gap-2 mt-3">
                   {[1, 2, 3, 4, 5].map((value) => (
                     <button
                       key={value}
@@ -449,55 +362,6 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
                 </div>
                 {ratingError && <p className="text-xs text-red-500 mt-3">{ratingError}</p>}
                 {ratingSuccess && <p className="text-xs text-green-600 mt-3">{ratingSuccess}</p>}
-              </section>
-
-              <section className="bg-white p-6 rounded-3xl border border-gray-100">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <MessageCircle size={20} className="text-[#e3262e]" />
-                  {t('profile.comments')}
-                </h3>
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    placeholder={t('profile.commentNamePlaceholder')}
-                    value={commentName}
-                    onChange={(event) => setCommentName(event.target.value)}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm focus:outline-none"
-                  />
-                  <textarea
-                    placeholder={t('profile.commentMessagePlaceholder')}
-                    value={commentMessage}
-                    onChange={(event) => setCommentMessage(event.target.value)}
-                    rows={4}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm focus:outline-none"
-                  />
-                  <button
-                    onClick={handleCommentSubmit}
-                    disabled={commentSubmitting}
-                    className="px-5 py-3 rounded-2xl bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
-                  >
-                    {commentSubmitting ? t('profile.commentSubmitting') : t('profile.commentSubmit')}
-                  </button>
-                  {commentError && <p className="text-xs text-red-500">{commentError}</p>}
-                  {commentSuccess && <p className="text-xs text-green-600">{commentSuccess}</p>}
-                </div>
-
-                <div className="mt-6 space-y-4">
-                  {comments.length === 0 && (
-                    <p className="text-sm text-gray-400">{t('profile.commentEmpty')}</p>
-                  )}
-                  {comments.map((comment) => (
-                    <div key={comment.id} className="border border-gray-100 rounded-2xl p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-bold text-gray-900">{comment.name}</p>
-                        <span className="text-[10px] text-gray-400 font-bold uppercase">
-                          {new Date(comment.createdAt).toLocaleDateString(locale)}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 leading-relaxed">{comment.message}</p>
-                    </div>
-                  ))}
-                </div>
               </section>
             </div>
 

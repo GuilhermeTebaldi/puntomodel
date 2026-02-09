@@ -26,8 +26,6 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
     eyes: '',
     minAge: '',
     maxAge: '',
-    minPrice: '',
-    maxPrice: '',
   });
   const [savedIds, setSavedIds] = useState<string[]>(() => getSavedModelIds());
 
@@ -52,8 +50,6 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
     const eyes = new Set<string>();
     let minAge: number | null = null;
     let maxAge: number | null = null;
-    let minPrice: number | null = null;
-    let maxPrice: number | null = null;
     let hasOffline = false;
     let hasPremium = false;
 
@@ -66,12 +62,6 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
       if (typeof model.age === 'number') {
         minAge = minAge === null ? model.age : Math.min(minAge, model.age);
         maxAge = maxAge === null ? model.age : Math.max(maxAge, model.age);
-      }
-      if (model.prices?.length) {
-        model.prices.forEach((price) => {
-          minPrice = minPrice === null ? price.value : Math.min(minPrice, price.value);
-          maxPrice = maxPrice === null ? price.value : Math.max(maxPrice, price.value);
-        });
       }
       if (model.isOnline === false) {
         hasOffline = true;
@@ -89,8 +79,6 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
       eyes: Array.from(eyes).sort((a, b) => a.localeCompare(b)),
       minAge,
       maxAge,
-      minPrice,
-      maxPrice,
       hasOffline,
       hasPremium,
     };
@@ -100,9 +88,6 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
     const query = searchQuery.trim().toLowerCase();
     const minAge = filters.minAge ? Number(filters.minAge) : null;
     const maxAge = filters.maxAge ? Number(filters.maxAge) : null;
-    const minPrice = filters.minPrice ? Number(filters.minPrice) : null;
-    const maxPrice = filters.maxPrice ? Number(filters.maxPrice) : null;
-
     return models.filter((model) => {
       const name = (model.name || '').toLowerCase();
       const city = (model.location?.city || '').toLowerCase();
@@ -126,15 +111,6 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
       if (minAge !== null && (typeof model.age !== 'number' || model.age < minAge)) return false;
       if (maxAge !== null && (typeof model.age !== 'number' || model.age > maxAge)) return false;
 
-      if (minPrice !== null || maxPrice !== null) {
-        if (!model.prices?.length) return false;
-        const values = model.prices.map((price) => price.value);
-        const modelMin = Math.min(...values);
-        const modelMax = Math.max(...values);
-        if (minPrice !== null && modelMax < minPrice) return false;
-        if (maxPrice !== null && modelMin > maxPrice) return false;
-      }
-
       return true;
     });
   }, [filters, models, savedIds, searchQuery, selectedServices, showSavedOnly]);
@@ -155,19 +131,17 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
     setSearchQuery('');
     setShowSavedOnly(false);
     setSelectedServices([]);
-    setFilters({
-      onlineOnly: false,
-      premiumOnly: false,
-      city: '',
-      state: '',
-      hair: '',
-      eyes: '',
-      minAge: '',
-      maxAge: '',
-      minPrice: '',
-      maxPrice: '',
-    });
-  };
+      setFilters({
+        onlineOnly: false,
+        premiumOnly: false,
+        city: '',
+        state: '',
+        hair: '',
+        eyes: '',
+        minAge: '',
+        maxAge: '',
+      });
+    };
 
   return (
     <div className="fixed inset-0 z-[300] bg-gray-50 flex flex-col animate-in fade-in slide-in-from-right-10 duration-500 overflow-hidden">
@@ -331,27 +305,6 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
                   placeholder={t('listing.filtersAgeMax', { count: filterOptions.maxAge ?? '' })}
                   value={filters.maxAge}
                   onChange={(event) => setFilters((prev) => ({ ...prev, maxAge: event.target.value }))}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-600"
-                />
-              </div>
-            )}
-
-            {(filterOptions.minPrice !== null || filterOptions.maxPrice !== null) && (
-              <div className="flex gap-3">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  placeholder={t('listing.filtersPriceMin', { count: filterOptions.minPrice ?? '' })}
-                  value={filters.minPrice}
-                  onChange={(event) => setFilters((prev) => ({ ...prev, minPrice: event.target.value }))}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-600"
-                />
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  placeholder={t('listing.filtersPriceMax', { count: filterOptions.maxPrice ?? '' })}
-                  value={filters.maxPrice}
-                  onChange={(event) => setFilters((prev) => ({ ...prev, maxPrice: event.target.value }))}
                   className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-600"
                 />
               </div>

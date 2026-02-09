@@ -54,6 +54,7 @@ export interface ModelPayment {
 
 export interface ModelProfileData {
   id: string;
+  userId?: string;
   name: string;
   email: string;
   age?: number | null;
@@ -226,11 +227,20 @@ export const trackModelEvent = async (id: string, type: 'view' | 'whatsapp') => 
   }
 };
 
-export const rateModel = async (id: string, value: number) => {
+export const rateModel = async (
+  id: string,
+  value: number,
+  rater?: { id?: string; name?: string; email?: string }
+) => {
   const response = await apiFetch(`/api/models/${id}/rate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value }),
+    body: JSON.stringify({
+      value,
+      raterId: rater?.id,
+      raterName: rater?.name,
+      raterEmail: rater?.email,
+    }),
   });
   if (!response.ok) {
     const data = await response.json();
