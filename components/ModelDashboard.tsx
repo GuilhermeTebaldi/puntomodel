@@ -475,56 +475,6 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     setLocationDraft(toLocationValue(model.location));
   }, [model]);
 
-  useEffect(() => {
-    if (model.currency) {
-      setDisplayCurrency(model.currency);
-      return;
-    }
-    const lat = model.location?.lat;
-    const lon = model.location?.lon;
-    if (typeof lat !== 'number' || typeof lon !== 'number') return;
-
-    const resolveCurrency = (countryCode?: string) => {
-      const code = (countryCode || '').toUpperCase();
-      const map: Record<string, string> = {
-        BR: 'BRL',
-        PT: 'EUR',
-        ES: 'EUR',
-        FR: 'EUR',
-        IT: 'EUR',
-        DE: 'EUR',
-        NL: 'EUR',
-        BE: 'EUR',
-        AT: 'EUR',
-        IE: 'EUR',
-        GR: 'EUR',
-        FI: 'EUR',
-        SE: 'EUR',
-        NO: 'NOK',
-        GB: 'GBP',
-        UK: 'GBP',
-        US: 'USD',
-        CA: 'CAD',
-        MX: 'MXN',
-        AR: 'ARS',
-        CL: 'CLP',
-        CO: 'COP',
-        CH: 'CHF',
-        AU: 'AUD',
-      };
-      return map[code] || 'USD';
-    };
-
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`)
-      .then((res) => res.json())
-      .then((data) => {
-        const code = data?.address?.country_code;
-        const curr = resolveCurrency(code);
-        setDisplayCurrency(curr);
-      })
-      .catch(() => undefined);
-  }, [model.currency, model.location?.lat, model.location?.lon]);
-
   const resetEdits = () => {
     setNameInput(model.name);
     setBioInput(model.bio || '');
