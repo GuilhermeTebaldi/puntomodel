@@ -1,4 +1,8 @@
-const rawBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
+const rawBaseUrl =
+  import.meta.env.VITE_API_BASE_URL ??
+  import.meta.env.VITE_API_URL ??
+  'https://puntomodel.onrender.com/api';
+
 const normalizedBaseUrl = rawBaseUrl.replace(/\/+$/, '');
 
 export const buildApiUrl = (path: string) => {
