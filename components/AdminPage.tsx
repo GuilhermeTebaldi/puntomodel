@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { apiFetch } from '../services/api';
 import Logo from './Logo';
 import { useI18n } from '../translations/i18n';
 
@@ -34,8 +35,8 @@ const AdminPage: React.FC = () => {
     const load = async () => {
       try {
         const [usersRes, modelsRes] = await Promise.all([
-          fetch('/api/admin/users'),
-          fetch('/api/admin/models'),
+          apiFetch('/api/admin/users'),
+          apiFetch('/api/admin/models'),
         ]);
         const usersData = await usersRes.json();
         const modelsData = await modelsRes.json();
@@ -64,7 +65,7 @@ const AdminPage: React.FC = () => {
     if (!confirmed) return;
     setResetting(true);
     try {
-      const response = await fetch('/api/admin/reset', { method: 'POST' });
+      const response = await apiFetch('/api/admin/reset', { method: 'POST' });
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || t('errors.resetFailed'));
       setUsers([]);

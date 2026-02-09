@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Check, Camera, MapPin, Smartphone, User, ArrowRight, ChevronLeft, Info, Heart } from 'lucide-react';
 import Logo from './Logo';
 import { clearPendingModelProfile, getPendingModelProfile, PendingModelProfile } from '../services/auth';
+import { uploadImageToCloudinary } from '../services/cloudinary';
 import { createModelProfile } from '../services/models';
 import { hairOptions, eyeOptions, serviceOptions } from '../translations';
 import { useI18n } from '../translations/i18n';
@@ -35,6 +36,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const [selectedLocation, setSelectedLocation] = useState<LocationValue | null>(null);
   const [currency, setCurrency] = useState('BRL');
   const [photos, setPhotos] = useState<string[]>([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [services, setServices] = useState<string[]>([]);
   const [bio, setBio] = useState('');
   const [priceOneHour, setPriceOneHour] = useState('');
@@ -215,27 +217,20 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     }
   };
 
-  const handlePhotoAdd = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoAdd = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []) as File[];
     if (!files.length) return;
-    Promise.all(
-      files.map(
-        (file) =>
-          new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(String(reader.result));
-            reader.onerror = () => reject(new Error(t('errors.imageLoadFailed')));
-            reader.readAsDataURL(file);
-          })
-      )
-    )
-      .then((base64Images) => {
-        setPhotos((prev) => [...prev, ...base64Images]);
-      })
-      .catch(() => {
-        setPublishError(t('errors.imageLoadFailedGeneric'));
-      });
-    event.target.value = '';
+    setUploadingPhotos(true);
+    setPublishError('');
+    try {
+      const uploaded = await Promise.all(files.map((file) => uploadImageToCloudinary(file)));
+      setPhotos((prev) => [...prev, ...uploaded]);
+    } catch {
+      setPublishError(t('errors.imageLoadFailedGeneric'));
+    } finally {
+      setUploadingPhotos(false);
+      event.target.value = '';
+    }
   };
 
   const toggleService = (service: string) => {
@@ -714,7 +709,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
 
                 <button 
                   onClick={handlePublish}
-                  disabled={publishing}
+                  disabled={publishing || uploadingPhotos}
                   className="w-full bg-[#e3262e] text-white py-4 sm:py-5 rounded-2xl font-bold uppercase tracking-widest hover:bg-red-700 transition-all shadow-xl shadow-red-200 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {publishing ? t('onboarding.step6.publishing') : t('onboarding.step6.publish')}
