@@ -6,15 +6,9 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL nao configurado.');
 }
 
-const ssl =
-  process.env.PG_SSL === 'true' ||
-  String(process.env.DATABASE_URL).includes('sslmode=require')
-    ? { rejectUnauthorized: false }
-    : undefined;
-
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl,
+  ssl: { rejectUnauthorized: false },
 });
 
 export const query = (text, params) => pool.query(text, params);
