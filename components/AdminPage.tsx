@@ -28,6 +28,7 @@ const AdminPage: React.FC = () => {
   const [tab, setTab] = useState<'users' | 'models'>('users');
   const [error, setError] = useState('');
   const [resetting, setResetting] = useState(false);
+  const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -75,6 +76,25 @@ const AdminPage: React.FC = () => {
       setError(err instanceof Error ? translateError(err.message) : t('errors.resetError'));
     } finally {
       setResetting(false);
+    }
+  };
+
+  const handleDeleteModel = async (model: AdminModel) => {
+    const confirmed = window.confirm(
+      `${t('adminPage.confirmDeleteModel')}\n${model.name} (${model.email})`
+    );
+    if (!confirmed) return;
+    setDeletingModelId(model.id);
+    setError('');
+    try {
+      const response = await apiFetch(`/api/admin/models/${model.id}`, { method: 'DELETE' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || t('errors.deleteFailed'));
+      setModels((prev) => prev.filter((item) => item.id !== model.id));
+    } catch (err) {
+      setError(err instanceof Error ? translateError(err.message) : t('errors.deleteFailed'));
+    } finally {
+      setDeletingModelId(null);
     }
   };
 
@@ -170,12 +190,13 @@ const AdminPage: React.FC = () => {
                   <th className="text-left px-4 py-3">{t('adminPage.table.age')}</th>
                   <th className="text-left px-4 py-3">{t('adminPage.table.phone')}</th>
                   <th className="text-left px-4 py-3">{t('adminPage.table.featured')}</th>
+                  <th className="text-right px-4 py-3">{t('adminPage.table.actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {models.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-6 text-gray-400 text-center">{t('adminPage.emptyModels')}</td>
+                    <td colSpan={6} className="px-4 py-6 text-gray-400 text-center">{t('adminPage.emptyModels')}</td>
                   </tr>
                 )}
                 {models.map((model) => (
@@ -185,6 +206,15 @@ const AdminPage: React.FC = () => {
                     <td className="px-4 py-3 text-gray-600">{model.age ?? '-'}</td>
                     <td className="px-4 py-3 text-gray-600">{model.phone || '-'}</td>
                     <td className="px-4 py-3 text-gray-600">{model.featured ? t('adminPage.featuredYes') : t('adminPage.featuredNo')}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => handleDeleteModel(model)}
+                        disabled={deletingModelId === model.id}
+                        className="text-xs font-bold uppercase tracking-widest text-red-600 hover:text-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {deletingModelId === model.id ? t('adminPage.deleting') : t('adminPage.delete')}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

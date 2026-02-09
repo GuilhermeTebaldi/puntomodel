@@ -21,6 +21,7 @@ import {
   resetDatabase,
   updateModel,
   upsertModel,
+  deleteModel,
   metrics as computeMetrics,
   createUser,
 } from './repositories/index.js';
@@ -338,6 +339,16 @@ app.get('/api/admin/models', async (_req, res) => {
   let models = await listModels();
   models = await Promise.all(models.map((model) => refreshModelState(model)));
   res.json({ ok: true, models });
+});
+
+app.delete('/api/admin/models/:id', async (req, res) => {
+  await ensureDb();
+  const model = await getModelByIdRepo(req.params.id);
+  if (!model) {
+    return res.status(404).json({ ok: false, error: 'Perfil não encontrado.' });
+  }
+  await deleteModel(model.id);
+  res.json({ ok: true });
 });
 
 app.post('/api/models', async (req, res) => {

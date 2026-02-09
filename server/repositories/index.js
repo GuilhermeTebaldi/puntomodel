@@ -160,6 +160,10 @@ export const updateModel = async (id, model) => {
   return rows[0] ? rowToModel(rows[0]) : null;
 };
 
+export const deleteModel = async (id) => {
+  await query('DELETE FROM models WHERE id = $1', [id]);
+};
+
 export const addPayment = async (modelId, payment) => {
   const id = payment.id || nanoid();
   const createdAt = payment.createdAt || new Date().toISOString();
