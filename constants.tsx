@@ -14,8 +14,8 @@ export const COLORS = {
 export const STATS: StatItem[] = [
   { value: '+22 milhões', label: 'de usuários' },
   { value: '+70 mil', label: 'acompanhantes' },
-  { value: '+1 milhão', label: 'de vídeos' },
-  { value: '+130 mil', label: 'avaliações' },
+  { value: '+0', label: 'de imagens' },
+  { value: '+0', label: 'avaliações' },
 ];
 
 export const BOTTOM_NAV: NavLink[] = [

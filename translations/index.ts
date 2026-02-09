@@ -202,7 +202,7 @@ export const translateEyeLabel = (label: string, lang: LanguageCode) => {
 export const statOptions = [
   { id: 'users', labels: { br: 'de usuários', us: 'users', es: 'de usuarios', it: 'utenti', de: 'Nutzer', fr: "d'utilisateurs" } },
   { id: 'escorts', labels: { br: 'acompanhantes', us: 'escorts', es: 'acompañantes', it: 'accompagnatrici', de: 'Escorts', fr: 'escortes' } },
-  { id: 'videos', labels: { br: 'de vídeos', us: 'videos', es: 'videos', it: 'video', de: 'Videos', fr: 'vidéos' } },
+  { id: 'videos', labels: { br: 'de imagens', us: 'images', es: 'imagenes', it: 'immagini', de: 'Bilder', fr: 'images' } },
   { id: 'reviews', labels: { br: 'avaliações', us: 'reviews', es: 'reseñas', it: 'recensioni', de: 'Bewertungen', fr: 'avis' } },
 ] as const satisfies readonly LabeledOption[];
 
@@ -215,7 +215,7 @@ export const translateStatLabel = (label: string, lang: LanguageCode) => {
 export const statValueOptions = [
   { id: 'users', labels: { br: '+22 milhões', us: '+22 million', es: '+22 millones', it: '+22 milioni', de: '+22 Mio.', fr: '+22 M' } },
   { id: 'escorts', labels: { br: '+70 mil', us: '+70k', es: '+70 mil', it: '+70 mila', de: '+70 Tsd.', fr: '+70 k' } },
-  { id: 'videos', labels: { br: '+1 milhão', us: '+1 million', es: '+1 millón', it: '+1 milione', de: '+1 Mio.', fr: '+1 M' } },
+  { id: 'videos', labels: { br: '+0', us: '+0', es: '+0', it: '+0', de: '+0', fr: '+0' } },
   { id: 'reviews', labels: { br: '+130 mil', us: '+130k', es: '+130 mil', it: '+130 mila', de: '+130 Tsd.', fr: '+130 k' } },
 ] as const satisfies readonly LabeledOption[];
 

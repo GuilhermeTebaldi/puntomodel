@@ -11,22 +11,9 @@ interface HeroProps {
 }
 
 const Hero: React.FC<HeroProps> = ({ onSearch, onRegisterClick }) => {
-  const { t, translateStatLabel, translateStatValue, list } = useI18n();
+  const { t, translateStatLabel, translateStatValue } = useI18n();
   const [stats, setStats] = useState(STATS);
-  const [activeCard, setActiveCard] = useState(0);
   const overlayLines = t('hero.overlay').split('\n');
-  const cardEntries = list('hero.cards');
-  const cards = cardEntries
-    .map((entry, index) => {
-      const [title, desc, image] = entry.split('|');
-      return {
-        id: `${index}-${title || entry}`,
-        title: (title || entry).trim(),
-        desc: (desc || '').trim(),
-        image: (image || '').trim(),
-      };
-    })
-    .filter((card) => card.title);
 
   useEffect(() => {
     let mounted = true;
@@ -42,14 +29,6 @@ const Hero: React.FC<HeroProps> = ({ onSearch, onRegisterClick }) => {
       mounted = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (cards.length <= 1) return;
-    const intervalId = window.setInterval(() => {
-      setActiveCard((prev) => (prev + 1) % cards.length);
-    }, 3500);
-    return () => window.clearInterval(intervalId);
-  }, [cards.length]);
 
   return (
     <section className="relative overflow-hidden pt-8 md:pt-16 pb-20 px-4">
@@ -76,97 +55,6 @@ const Hero: React.FC<HeroProps> = ({ onSearch, onRegisterClick }) => {
               </div>
             ))}
           </div>
-
-          {cards.length > 0 && (
-            <div className="mt-10 flex flex-col items-center lg:items-start">
-              <div className="relative w-full max-w-md h-36 sm:h-40 lg:h-44">
-                {Array.from({ length: Math.min(3, cards.length) }).map((_, stackIndex) => {
-                  const index = (activeCard + stackIndex) % cards.length;
-                  const card = cards[index];
-                  const isActive = stackIndex === 0;
-                  const translate = stackIndex * 10;
-                  const scale = 1 - stackIndex * 0.05;
-                  const opacity = isActive ? 1 : 0.35;
-                  const zIndex = 30 - stackIndex;
-                  const albumImages = [0, 1, 2]
-                    .map((offset) => cards[(index + offset) % cards.length]?.image)
-                    .filter(Boolean);
-                  return (
-                    <div
-                      key={`${card.id}-${stackIndex}`}
-                      className="absolute inset-0 transition-all duration-700 ease-out"
-                      style={{
-                        transform: `translateY(${translate}px) scale(${scale})`,
-                        opacity,
-                        zIndex,
-                      }}
-                    >
-                      <div className="h-full flex items-center justify-center lg:justify-start">
-                        <div className="relative w-55 h-40 sm:w-62 sm:h-45 lg:w-60 lg:h-50">
-                          <div className="sm:hidden flex items-center justify-center gap-2 w-full h-full">
-                            {albumImages.slice(0, 2).map((image, imageIndex) => (
-                              <div
-                                key={`${card.id}-album-mobile-${imageIndex}`}
-                                className="w-1/2 h-full rounded-2xl overflow-hidden border-2 border-white shadow-md bg-gray-100"
-                              >
-                                <img src={image as string} alt="" className="w-full h-full object-cover" />
-                              </div>
-                            ))}
-                            {albumImages.length === 0 && (
-                              <>
-                                <div className="w-1/2 h-full rounded-2xl bg-red-50 text-[#e3262e] font-black flex items-center justify-center text-sm">
-                                  0{index + 1}
-                                </div>
-                                <div className="w-1/2 h-full rounded-2xl bg-red-50 text-[#e3262e] font-black flex items-center justify-center text-sm">
-                                  0{index + 2}
-                                </div>
-                              </>
-                            )}
-                          </div>
-
-                          <div className="hidden sm:block">
-                            {albumImages.length > 0 ? (
-                              albumImages.slice(0, 3).map((image, imageIndex) => (
-                                <div
-                                  key={`${card.id}-album-${imageIndex}`}
-                                  className="absolute w-28 h-28 sm:w-32 sm:h-32 lg:w-36 lg:h-36 rounded-2xl overflow-hidden border-2 border-white shadow-md bg-gray-100"
-                                  style={{
-                                    left: imageIndex * 16,
-                                    top: imageIndex * 7,
-                                    zIndex: 20 - imageIndex,
-                                  }}
-                                >
-                                  <img src={image as string} alt="" className="w-full h-full object-cover" />
-                                </div>
-                              ))
-                            ) : (
-                              <div className="w-28 h-28 sm:w-32 sm:h-32 lg:w-36 lg:h-36 rounded-2xl bg-red-50 text-[#e3262e] font-black flex items-center justify-center text-sm">
-                                0{index + 1}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {cards.length > 1 && (
-                <div className="mt-4 flex items-center gap-2">
-                  {cards.map((card, index) => (
-                    <button
-                      key={`${card.id}-dot`}
-                      onClick={() => setActiveCard(index)}
-                      className={`h-2 rounded-full transition-all ${
-                        index === activeCard ? 'w-6 bg-[#e3262e]' : 'w-2 bg-gray-300'
-                      }`}
-                      aria-label={`Card ${index + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
           <div className="mt-12 max-w-xl mx-auto lg:mx-0">
             <SearchBar onSearch={onSearch} />

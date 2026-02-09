@@ -714,14 +714,22 @@ app.get('/api/stats', async (_req, res) => {
   const models = await listModels();
   const totalModels = models.length;
   const totalUsers = users.length;
+  const totalRatings = models.reduce((sum, model) => {
+    const count = Number(model?.stats?.ratings?.count || 0);
+    return sum + (Number.isFinite(count) ? count : 0);
+  }, 0);
+  const totalImages = models.reduce((sum, model) => {
+    const count = Array.isArray(model?.photos) ? model.photos.length : 0;
+    return sum + count;
+  }, 0);
 
   res.json({
     ok: true,
     stats: [
       { value: `+${totalUsers}`, label: 'de usuários' },
       { value: `+${totalModels}`, label: 'acompanhantes' },
-      { value: '+0', label: 'de vídeos' },
-      { value: '+0', label: 'avaliações' },
+      { value: `+${totalImages}`, label: 'de imagens' },
+      { value: `+${totalRatings}`, label: 'avaliações' },
     ],
   });
 });
