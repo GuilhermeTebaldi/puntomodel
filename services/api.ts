@@ -7,7 +7,6 @@ const normalizedBaseUrl = rawBaseUrl.replace(/\/+$/, '');
 
 export const buildApiUrl = (path: string) => {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  if (!normalizedBaseUrl) return normalizedPath;
   return `${normalizedBaseUrl}${normalizedPath}`;
 };
 
