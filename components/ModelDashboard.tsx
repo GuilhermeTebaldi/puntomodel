@@ -34,6 +34,7 @@ import {
   ModelBilling,
   ModelPayment,
 } from '../services/models';
+import { uploadImageToCloudinary } from '../services/cloudinary';
 import { useI18n } from '../translations/i18n';
 
 interface ModelDashboardModel {
@@ -403,6 +404,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   const [editingPrices, setEditingPrices] = useState(false);
   const [editingLocation, setEditingLocation] = useState(false);
   const [editingPhotos, setEditingPhotos] = useState(false);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -682,27 +684,20 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     setServicesInput((prev) => prev.filter((item) => item !== service));
   };
 
-  const handlePhotoAdd = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoAdd = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []) as File[];
     if (!files.length) return;
-    Promise.all(
-      files.map(
-        (file) =>
-          new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(String(reader.result));
-            reader.onerror = () => reject(new Error(t('errors.imageLoadFailed')));
-            reader.readAsDataURL(file);
-          })
-      )
-    )
-      .then((base64Images) => {
-        setPhotosInput((prev) => [...prev, ...base64Images]);
-      })
-      .catch(() => {
-        setSaveError(t('errors.imageLoadFailedGeneric'));
-      });
-    event.target.value = '';
+    setUploadingPhotos(true);
+    setSaveError('');
+    try {
+      const uploaded = await Promise.all(files.map((file) => uploadImageToCloudinary(file)));
+      setPhotosInput((prev) => [...prev, ...uploaded]);
+    } catch {
+      setSaveError(t('errors.imageLoadFailedGeneric'));
+    } finally {
+      setUploadingPhotos(false);
+      event.target.value = '';
+    }
   };
 
   const handleRemovePhoto = (index: number) => {
@@ -1547,7 +1542,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
               </div>
               {editingPhotos ? (
                 <div className="space-y-3">
-                  <input type="file" multiple accept="image/*" onChange={handlePhotoAdd} />
+                  <input type="file" multiple accept="image/*" onChange={handlePhotoAdd} disabled={uploadingPhotos} />
                   <div className="grid grid-cols-3 gap-2">
                     {photosInput.map((photo, index) => (
                       <button
@@ -1563,7 +1558,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                   </div>
                   <div className="flex gap-2">
                     <button
-                      disabled={saving}
+                      disabled={saving || uploadingPhotos}
                       onClick={() => handleSave({ photos: photosInput }, () => setEditingPhotos(false))}
                       className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
                     >

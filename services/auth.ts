@@ -1,3 +1,5 @@
+import { apiFetch } from './api';
+
 export type UserRole = 'client' | 'model' | 'admin';
 
 export interface RegisterPayload {
@@ -27,7 +29,7 @@ const isBrowser = () => typeof window !== 'undefined';
 
 export const registerUser = async (payload: RegisterPayload) => {
   try {
-    const response = await fetch('/api/auth/register', {
+    const response = await apiFetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -46,7 +48,7 @@ export const registerUser = async (payload: RegisterPayload) => {
 
 export const loginUser = async (email: string, password: string) => {
   try {
-    const response = await fetch('/api/auth/login', {
+    const response = await apiFetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),

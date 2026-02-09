@@ -1,3 +1,5 @@
+import { apiFetch } from './api';
+
 export interface ModelPrice {
   label: string;
   value: number;
@@ -95,7 +97,7 @@ export const isBillingActive = (billing?: ModelBilling | null) => {
 };
 
 export const fetchFeaturedModels = async () => {
-  const response = await fetch('/api/models?featured=true&online=true');
+  const response = await apiFetch('/api/models?featured=true&online=true');
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.error || 'Não foi possível carregar modelos.');
@@ -104,7 +106,7 @@ export const fetchFeaturedModels = async () => {
 };
 
 export const fetchModels = async () => {
-  const response = await fetch('/api/models?online=true');
+  const response = await apiFetch('/api/models?online=true');
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.error || 'Não foi possível carregar modelos.');
@@ -113,7 +115,7 @@ export const fetchModels = async () => {
 };
 
 export const fetchModelsByCity = async (city: string) => {
-  const response = await fetch(`/api/models?city=${encodeURIComponent(city)}&online=true`);
+  const response = await apiFetch(`/api/models?city=${encodeURIComponent(city)}&online=true`);
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.error || 'Não foi possível carregar modelos.');
@@ -122,7 +124,7 @@ export const fetchModelsByCity = async (city: string) => {
 };
 
 export const fetchModelsAll = async () => {
-  const response = await fetch('/api/models');
+  const response = await apiFetch('/api/models');
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.error || 'Não foi possível carregar modelos.');
@@ -131,7 +133,7 @@ export const fetchModelsAll = async () => {
 };
 
 export const fetchModelsByCityAll = async (city: string) => {
-  const response = await fetch(`/api/models?city=${encodeURIComponent(city)}`);
+  const response = await apiFetch(`/api/models?city=${encodeURIComponent(city)}`);
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.error || 'Não foi possível carregar modelos.');
@@ -140,7 +142,7 @@ export const fetchModelsByCityAll = async (city: string) => {
 };
 
 export const fetchModelByEmail = async (email: string) => {
-  const response = await fetch(`/api/models?email=${encodeURIComponent(email)}&includeUnpaid=true`);
+  const response = await apiFetch(`/api/models?email=${encodeURIComponent(email)}&includeUnpaid=true`);
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.error || 'Não foi possível carregar perfil.');
@@ -150,7 +152,7 @@ export const fetchModelByEmail = async (email: string) => {
 };
 
 export const fetchModelById = async (id: string) => {
-  const response = await fetch(`/api/models/${id}`);
+  const response = await apiFetch(`/api/models/${id}`);
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.error || 'Não foi possível carregar perfil.');
@@ -159,7 +161,7 @@ export const fetchModelById = async (id: string) => {
 };
 
 export const createModelProfile = async (payload: Omit<ModelProfileData, 'id'>) => {
-  const response = await fetch('/api/models', {
+  const response = await apiFetch('/api/models', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -175,7 +177,7 @@ export const updateModelProfile = async (
   id: string,
   payload: Partial<Omit<ModelProfileData, 'id' | 'email'>>
 ) => {
-  const response = await fetch(`/api/models/${id}`, {
+  const response = await apiFetch(`/api/models/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -188,7 +190,7 @@ export const updateModelProfile = async (
 };
 
 export const fetchStats = async () => {
-  const response = await fetch('/api/stats');
+  const response = await apiFetch('/api/stats');
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.error || 'Não foi possível carregar estatísticas.');
@@ -200,7 +202,7 @@ export const createModelPayment = async (
   id: string,
   payload: { amount: number; currency: string; method: 'pix' | 'card'; planId?: string; paidByUserId?: string | null; paidByEmail?: string | null }
 ) => {
-  const response = await fetch(`/api/models/${id}/payments`, {
+  const response = await apiFetch(`/api/models/${id}/payments`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -213,7 +215,7 @@ export const createModelPayment = async (
 };
 
 export const trackModelEvent = async (id: string, type: 'view' | 'whatsapp') => {
-  const response = await fetch(`/api/models/${id}/events`, {
+  const response = await apiFetch(`/api/models/${id}/events`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ type }),
@@ -225,7 +227,7 @@ export const trackModelEvent = async (id: string, type: 'view' | 'whatsapp') => 
 };
 
 export const rateModel = async (id: string, value: number) => {
-  const response = await fetch(`/api/models/${id}/rate`, {
+  const response = await apiFetch(`/api/models/${id}/rate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ value }),
@@ -237,7 +239,7 @@ export const rateModel = async (id: string, value: number) => {
 };
 
 export const fetchModelMetrics = async (id: string) => {
-  const response = await fetch(`/api/models/${id}/metrics`);
+  const response = await apiFetch(`/api/models/${id}/metrics`);
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.error || 'Não foi possível carregar métricas.');
@@ -252,7 +254,7 @@ export const fetchModelMetrics = async (id: string) => {
 };
 
 export const fetchModelComments = async (id: string) => {
-  const response = await fetch(`/api/models/${id}/comments`);
+  const response = await apiFetch(`/api/models/${id}/comments`);
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.error || 'Não foi possível carregar comentários.');
@@ -261,7 +263,7 @@ export const fetchModelComments = async (id: string) => {
 };
 
 export const createModelComment = async (id: string, payload: { name: string; message: string }) => {
-  const response = await fetch(`/api/models/${id}/comments`, {
+  const response = await apiFetch(`/api/models/${id}/comments`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -274,7 +276,7 @@ export const createModelComment = async (id: string, payload: { name: string; me
 };
 
 export const fetchModelNotifications = async (id: string) => {
-  const response = await fetch(`/api/models/${id}/notifications`);
+  const response = await apiFetch(`/api/models/${id}/notifications`);
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.error || 'Não foi possível carregar notificações.');
@@ -290,7 +292,7 @@ export const fetchModelNotifications = async (id: string) => {
 };
 
 export const markModelNotificationsRead = async (id: string) => {
-  const response = await fetch(`/api/models/${id}/notifications/read-all`, {
+  const response = await apiFetch(`/api/models/${id}/notifications/read-all`, {
     method: 'POST',
   });
   if (!response.ok) {

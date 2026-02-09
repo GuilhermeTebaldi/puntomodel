@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Low } from 'lowdb';
@@ -12,11 +13,38 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.resolve(__dirname, '..', '.env.local') });
 
+const defaultCorsOrigins = new Set([
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+]);
+const envCorsOrigins = []
+  .concat(process.env.CORS_ORIGIN || '')
+  .concat(process.env.FRONTEND_ORIGIN || '')
+  .map((value) => value.split(','))
+  .flat()
+  .map((value) => value.trim())
+  .filter(Boolean);
+if (process.env.VERCEL_URL) {
+  envCorsOrigins.push(`https://${process.env.VERCEL_URL}`);
+}
+const allowedCorsOrigins = new Set([...defaultCorsOrigins, ...envCorsOrigins]);
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedCorsOrigins.has(origin)) return callback(null, true);
+    return callback(new Error(`CORS bloqueado para a origem: ${origin}`));
+  },
+};
+
 const app = express();
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 
-const dbFile = path.join(__dirname, 'db.json');
+const dataDir = process.env.DATA_DIR || __dirname;
+const dbFile = process.env.DB_FILE || path.join(dataDir, 'db.json');
+fs.mkdirSync(path.dirname(dbFile), { recursive: true });
 const adapter = new JSONFile(dbFile);
 const db = new Low(adapter, { users: [], models: [] });
 
