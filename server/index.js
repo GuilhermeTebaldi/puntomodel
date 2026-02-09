@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { nanoid } from 'nanoid';
 import dotenv from 'dotenv';
 import { ensureSchema, checkDb } from './db.js';
+import { upload, uploadToCloudinary } from './upload.js';
 import {
   addComment,
   addEvent,
@@ -60,6 +61,18 @@ const corsOptions = {
 const app = express();
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
+
+app.post('/api/upload/image', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'file_required' });
+    }
+    const result = await uploadToCloudinary(req.file);
+    res.json({ url: result.secure_url });
+  } catch (e) {
+    res.status(500).json({ error: 'upload_failed' });
+  }
+});
 
 const adminEmail = process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL || 'puntomodeloficial@gmail.com';
 const adminPassword = process.env.ADMIN_PASSWORD || process.env.VITE_ADMIN_PASSWORD || '16046421';

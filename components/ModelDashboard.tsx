@@ -34,7 +34,7 @@ import {
   ModelBilling,
   ModelPayment,
 } from '../services/models';
-import { uploadImageToCloudinary } from '../services/cloudinary';
+import { uploadImage } from '../services/cloudinary';
 import { useI18n } from '../translations/i18n';
 
 interface ModelDashboardModel {
@@ -690,7 +690,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     setUploadingPhotos(true);
     setSaveError('');
     try {
-      const uploaded = await Promise.all(files.map((file) => uploadImageToCloudinary(file)));
+      const uploaded = await Promise.all(files.map((file) => uploadImage(file)));
       setPhotosInput((prev) => [...prev, ...uploaded]);
     } catch {
       setSaveError(t('errors.imageLoadFailedGeneric'));

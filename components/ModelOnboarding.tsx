@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Check, Camera, MapPin, Smartphone, User, ArrowRight, ChevronLeft, Info, Heart } from 'lucide-react';
 import Logo from './Logo';
 import { clearPendingModelProfile, getPendingModelProfile, PendingModelProfile } from '../services/auth';
-import { uploadImageToCloudinary } from '../services/cloudinary';
+import { uploadImage } from '../services/cloudinary';
 import { createModelProfile } from '../services/models';
 import { hairOptions, eyeOptions, serviceOptions } from '../translations';
 import { useI18n } from '../translations/i18n';
@@ -223,7 +223,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     setUploadingPhotos(true);
     setPublishError('');
     try {
-      const uploaded = await Promise.all(files.map((file) => uploadImageToCloudinary(file)));
+      const uploaded = await Promise.all(files.map((file) => uploadImage(file)));
       setPhotos((prev) => [...prev, ...uploaded]);
     } catch {
       setPublishError(t('errors.imageLoadFailedGeneric'));
