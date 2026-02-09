@@ -6,7 +6,11 @@ const rawBaseUrl =
 const normalizedBaseUrl = rawBaseUrl.replace(/\/+$/, '');
 
 export const buildApiUrl = (path: string) => {
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  let normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+  // Evita duplicação quando os chamadores já passam "/api/..." e a base já termina com "/api"
+  if (normalizedPath === '/api') normalizedPath = '';
+  else if (normalizedPath.startsWith('/api/')) normalizedPath = normalizedPath.slice(4);
   return `${normalizedBaseUrl}${normalizedPath}`;
 };
 
