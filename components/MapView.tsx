@@ -21,6 +21,7 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
   const [models, setModels] = useState<ModelProfileData[]>([]);
   const [error, setError] = useState('');
   const [searchCenter, setSearchCenter] = useState<[number, number] | null>(null);
+  const [mapZoom, setMapZoom] = useState(4);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
   const searchCircleRef = useRef<L.Circle | null>(null);
@@ -113,44 +114,23 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
     [modelsWithLocation]
   );
 
-  const distributedModels = useMemo(() => {
-    const groups = new Map<string, ModelProfileData[]>();
-    modelsWithLocation.forEach((model) => {
-      const lat = model.location!.lat as number;
-      const lon = model.location!.lon as number;
-      const key = `${lat.toFixed(6)},${lon.toFixed(6)}`;
-      const list = groups.get(key);
-      if (list) {
-        list.push(model);
-      } else {
-        groups.set(key, [model]);
-      }
-    });
-
-    const result: Array<{ model: ModelProfileData; position: [number, number] }> = [];
-    const baseOffset = 0.00018;
+  const buildSpreadPositionFromPoint = (
+    centerPoint: L.Point,
+    index: number,
+    total: number,
+    map: L.Map
+  ) => {
+    if (total <= 1) return map.containerPointToLatLng(centerPoint);
     const ringSize = 8;
-    groups.forEach((group) => {
-      if (group.length === 1) {
-        const model = group[0];
-        result.push({ model, position: [model.location!.lat as number, model.location!.lon as number] });
-        return;
-      }
-      group.forEach((model, index) => {
-        const lat = model.location!.lat as number;
-        const lon = model.location!.lon as number;
-        const ring = Math.floor(index / ringSize);
-        const slot = index % ringSize;
-        const angle = (slot / ringSize) * Math.PI * 2;
-        const radius = baseOffset * (1 + ring * 0.85);
-        const latOffset = radius * Math.cos(angle);
-        const lonOffset = (radius * Math.sin(angle)) / Math.cos((lat * Math.PI) / 180);
-        result.push({ model, position: [lat + latOffset, lon + lonOffset] });
-      });
-    });
-
-    return result;
-  }, [modelsWithLocation]);
+    const ring = Math.floor(index / ringSize);
+    const slot = index % ringSize;
+    const slotsInRing = Math.min(ringSize, total - ring * ringSize);
+    const angle = (slot / slotsInRing) * Math.PI * 2;
+    const radius = 26 + ring * 14;
+    const offsetPoint = L.point(Math.cos(angle) * radius, Math.sin(angle) * radius);
+    const spreadPoint = centerPoint.add(offsetPoint);
+    return map.containerPointToLatLng(spreadPoint);
+  };
 
   const defaultCenter = useMemo(() => {
     if (positions.length === 0) return [-14.235, -51.9253] as [number, number];
@@ -196,8 +176,12 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
 
     markersRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
+    setMapZoom(map.getZoom());
     map.on('dragstart zoomstart', () => {
       userInteractedRef.current = true;
+    });
+    map.on('zoomend', () => {
+      setMapZoom(map.getZoom());
     });
 
     return () => {
@@ -215,14 +199,50 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
       searchCircleRef.current = null;
     }
 
-    distributedModels.forEach(({ model, position }) => {
-      const marker = L.marker(position, {
-        icon: createMarkerIcon(model, selectedModel?.id === model.id),
-      }).addTo(
-        markersRef.current!
-      );
-      marker.on('click', () => setSelectedModel(model));
-    });
+    const shouldSpread = mapZoom >= 14;
+    if (!shouldSpread) {
+      modelsWithLocation.forEach((model) => {
+        const marker = L.marker([model.location!.lat as number, model.location!.lon as number], {
+          icon: createMarkerIcon(model, selectedModel?.id === model.id),
+        }).addTo(
+          markersRef.current!
+        );
+        marker.on('click', () => setSelectedModel(model));
+      });
+    } else {
+      const groups: Array<{ center: L.Point; models: ModelProfileData[] }> = [];
+      const threshold = 34;
+
+      modelsWithLocation.forEach((model) => {
+        const lat = model.location!.lat as number;
+        const lon = model.location!.lon as number;
+        const point = mapRef.current!.latLngToContainerPoint([lat, lon]);
+        let group = groups.find((item) => item.center.distanceTo(point) <= threshold);
+        if (!group) {
+          groups.push({ center: point, models: [model] });
+          return;
+        }
+        const nextCount = group.models.length + 1;
+        const averaged = L.point(
+          (group.center.x * (nextCount - 1) + point.x) / nextCount,
+          (group.center.y * (nextCount - 1) + point.y) / nextCount
+        );
+        group.center = averaged;
+        group.models.push(model);
+      });
+
+      groups.forEach((group) => {
+        group.models.forEach((model, index) => {
+          const position = buildSpreadPositionFromPoint(group.center, index, group.models.length, mapRef.current!);
+          const marker = L.marker(position, {
+            icon: createMarkerIcon(model, selectedModel?.id === model.id),
+          }).addTo(
+            markersRef.current!
+          );
+          marker.on('click', () => setSelectedModel(model));
+        });
+      });
+    }
 
     if (searchCenter) {
       searchCircleRef.current = L.circle(searchCenter, {
@@ -243,7 +263,7 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
       }
       didInitialFitRef.current = true;
     }
-  }, [distributedModels, positions, defaultCenter, selectedModel, searchCenter]);
+  }, [modelsWithLocation, positions, defaultCenter, selectedModel, searchCenter, mapZoom]);
 
   return (
     <div className="fixed inset-0 z-[150] bg-[#f8f9fa] flex flex-col animate-in fade-in duration-300">
