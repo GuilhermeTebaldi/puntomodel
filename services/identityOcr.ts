@@ -12,6 +12,7 @@ export type IdentityScanResult = {
   confidence: number;
   processedImage?: string;
   samplesFound?: number;
+  documentType?: 'passport' | 'id' | 'unknown';
 };
 
 const loadTesseract = () =>
@@ -102,38 +103,93 @@ const filters = {
   },
 };
 
-const extractDateUltraRobust = (text: string) => {
+const normalizeDateParts = (day: number, month: number, year: number) => {
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  if (year < 1920 || year > new Date().getFullYear()) return null;
+  const date = new Date(year, month - 1, day);
+  if (Number.isNaN(date.getTime())) return null;
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+};
+
+const extractDateCandidates = (text: string) => {
   const clean = text.replace(/[^0-9\/.\-\s]/g, ' ');
-  const mrzMatches = text.match(/([0-9]{6})[0-9][M|F|X]([0-9]{6})/);
-  if (mrzMatches) {
-    const raw = mrzMatches[1];
-    const yr = parseInt(raw.substring(0, 2), 10);
-    const year = `${yr > new Date().getFullYear() % 100 ? '19' : '20'}${raw.substring(0, 2)}`;
-    return `${year}-${raw.substring(2, 4)}-${raw.substring(4, 6)}`;
-  }
   const dateRegex = /(\d{2})\s*[\/\-. ]\s*(\d{2})\s*[\/\-. ]\s*(\d{4})/g;
   const matches = [...clean.matchAll(dateRegex)];
-  const validDates = matches
-    .map((match) => {
-      const day = Number(match[1]);
-      const month = Number(match[2]);
-      const year = Number(match[3]);
-      if (month >= 1 && month <= 12 && day >= 1 && day <= 31 && year > 1920 && year < new Date().getFullYear() - 5) {
-        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      }
-      return null;
-    })
+  return matches
+    .map((match) => normalizeDateParts(Number(match[1]), Number(match[2]), Number(match[3])))
     .filter(Boolean) as string[];
-  return validDates.length ? validDates.sort()[0] : null;
 };
+
+const extractDateNearLabel = (text: string) => {
+  const lines = text.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+  const labelRegex = /(NASCIMENTO|DATA\s*DE\s*NASCIMENTO|DATA\s*NASC|DT\s*NASC|NASC\b|DOB|BIRTH|NACIMIENTO|NAISSANCE)/;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (!labelRegex.test(lines[i])) continue;
+    const fromLine = extractDateCandidates(lines[i]);
+    if (fromLine.length) return fromLine[0];
+    const nextLine = lines[i + 1];
+    if (nextLine) {
+      const fromNext = extractDateCandidates(nextLine);
+      if (fromNext.length) return fromNext[0];
+    }
+  }
+  return null;
+};
+
+const selectBestBirthDate = (dates: string[]) => {
+  if (!dates.length) return null;
+  const today = new Date();
+  const withAge = dates.map((iso) => {
+    const [year, month, day] = iso.split('-').map(Number);
+    const birthDate = new Date(year, month - 1, day);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age -= 1;
+    }
+    return { iso, age };
+  });
+  const plausible = withAge.filter(({ age }) => age >= 18 && age <= 90);
+  if (!plausible.length) return null;
+  return plausible.map((item) => item.iso).sort()[0];
+};
+
+const extractBirthDate = (text: string) => {
+  const labeled = extractDateNearLabel(text);
+  if (labeled) return labeled;
+  const dates = extractDateCandidates(text);
+  return selectBestBirthDate(dates);
+};
+
+const isPassportLike = (text: string) => /PASSAPORTE|PASSPORT|P</.test(text);
 
 const extractDocumentNumber = (text: string, birthDate?: string | null) => {
   const upper = text.toUpperCase();
+  const lines = upper.split(/\n+/).map((line) => line.trim()).filter(Boolean);
   const cpfMatch = upper.match(/\b\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2}\b/);
   if (cpfMatch) return cpfMatch[0].replace(/\s/g, '');
-  const passportMatch = upper.match(/\b[A-Z]{1,2}\d{6,8}\b/);
-  if (passportMatch) return passportMatch[0];
-  const rgMatch = upper.match(/\b\d{1,2}[.\s]?\d{3}[.\s]?\d{3}[-\s]?[0-9X]\b/);
+
+  const rgRegex = /\b\d{1,2}[.\s]?\d{3}[.\s]?\d{3}[-\s]?[0-9X]\b/;
+  const cnhRegex = /\b\d{11}\b/;
+  const rgLabelRegex = /(RG|REGISTRO\s*GERAL)/;
+  const cnhLabelRegex = /(CNH|REGISTRO|HABILITACAO|HABILITAÇÃO)/;
+
+  for (let i = 0; i < lines.length; i += 1) {
+    if (rgLabelRegex.test(lines[i])) {
+      const match = lines[i].match(rgRegex) || lines[i + 1]?.match(rgRegex);
+      if (match) return match[0].replace(/\s/g, '');
+    }
+  }
+
+  for (let i = 0; i < lines.length; i += 1) {
+    if (cnhLabelRegex.test(lines[i])) {
+      const match = lines[i].match(cnhRegex) || lines[i + 1]?.match(cnhRegex);
+      if (match) return match[0];
+    }
+  }
+
+  const rgMatch = upper.match(rgRegex);
   if (rgMatch) return rgMatch[0].replace(/\s/g, '');
   const birthDigits = birthDate ? birthDate.replace(/-/g, '') : '';
   const birthDigitsBr = birthDate ? `${birthDate.slice(8, 10)}${birthDate.slice(5, 7)}${birthDate.slice(0, 4)}` : '';
@@ -191,7 +247,7 @@ export const scanIdentityDocument = async (
           try {
             const res = await scheduler.addJob('recognize', variant.image);
             const text = res.data.text.toUpperCase();
-            const date = extractDateUltraRobust(text);
+            const date = extractBirthDate(text);
             if (date) {
               onProgress(`AMOSTRA_${index + 1}_OK`);
               return { date, confidence: res.data.confidence, text, image: variant.image };
@@ -206,7 +262,7 @@ export const scanIdentityDocument = async (
       await scheduler.terminate();
       const validResults = results.filter((item) => item !== null) as OCRSample[];
       if (!validResults.length) {
-        resolve({ text: '', birthDate: null, documentNumber: null, confidence: 0 });
+        resolve({ text: '', birthDate: null, documentNumber: null, confidence: 0, documentType: 'unknown' });
         return;
       }
 
@@ -218,6 +274,7 @@ export const scanIdentityDocument = async (
 
       onProgress('CONSENSO_ESTABELECIDO');
       const documentNumber = extractDocumentNumber(bestSample.text, bestSample.date);
+      const documentType = isPassportLike(bestSample.text) ? 'passport' : 'id';
 
       resolve({
         text: bestSample.text,
@@ -226,6 +283,7 @@ export const scanIdentityDocument = async (
         confidence: bestSample.confidence,
         processedImage: bestSample.image,
         samplesFound: validResults.length,
+        documentType,
       });
     };
     img.src = imagePath;

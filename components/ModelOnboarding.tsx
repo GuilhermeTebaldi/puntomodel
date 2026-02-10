@@ -30,6 +30,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const [identityNumber, setIdentityNumber] = useState('');
   const [identityDocumentUrl, setIdentityDocumentUrl] = useState('');
   const [identityBirthDate, setIdentityBirthDate] = useState('');
+  const [identityDocumentType, setIdentityDocumentType] = useState<'unknown' | 'id' | 'passport'>('unknown');
   const [identityFaceUrl, setIdentityFaceUrl] = useState('');
   const [identityFacePreview, setIdentityFacePreview] = useState('');
   const [uploadingIdentity, setUploadingIdentity] = useState(false);
@@ -486,6 +487,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     setIdentityScanMessage('');
     setIdentityScanError('');
     setIdentityScanSuccess(false);
+    setIdentityDocumentType('unknown');
     setStep1Error('');
 
     const reader = new FileReader();
@@ -498,6 +500,12 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       }
       try {
         const result = await scanIdentityDocument(base64, (step) => setIdentityScanMessage(step));
+        setIdentityDocumentType(result.documentType ?? 'unknown');
+        if (result.documentType === 'passport') {
+          setIdentityScanError(t('errors.identityPassportNotAllowed'));
+          setIdentityScanSuccess(false);
+          return;
+        }
         if (result.birthDate) {
           setIdentityBirthDate(formatBirthDateInput(formatIsoToBirthInput(result.birthDate)));
         }
@@ -639,6 +647,10 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     setStep1Error('');
     if (!identityNumber.trim() || !identityDocumentUrl) {
       setStep1Error(t('errors.identityRequired'));
+      return;
+    }
+    if (identityDocumentType === 'passport') {
+      setStep1Error(t('errors.identityPassportNotAllowed'));
       return;
     }
     if (!identityFaceUrl) {
@@ -1108,8 +1120,8 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                         type="text"
                         value={identityBirthDate}
                         placeholder={t('onboarding.step1.identityBirthPlaceholder')}
-                        readOnly
-                        inputMode="none"
+                        onChange={(event) => setIdentityBirthDate(formatBirthDateInput(event.target.value))}
+                        inputMode="numeric"
                         className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-4 sm:px-6 focus:outline-none focus:ring-2 focus:ring-[#e3262e]/20"
                       />
                       <p className="text-[10px] text-gray-400 mt-2">{t('onboarding.step1.identityBirthHint')}</p>
