@@ -1,8 +1,6 @@
 // home 
-import React, { useEffect, useState } from 'react';
-import { STATS } from '../constants';
+import React from 'react';
 import SearchBar from './SearchBar';
-import { fetchStats } from '../services/models';
 import { useI18n } from '../translations/i18n';
 
 interface HeroProps {
@@ -11,24 +9,8 @@ interface HeroProps {
 }
 
 const Hero: React.FC<HeroProps> = ({ onSearch, onRegisterClick }) => {
-  const { t, translateStatLabel, translateStatValue } = useI18n();
-  const [stats, setStats] = useState(STATS);
+  const { t } = useI18n();
   const overlayLines = t('hero.overlay').split('\n');
-
-  useEffect(() => {
-    let mounted = true;
-    fetchStats()
-      .then((data) => {
-        if (!mounted) return;
-        setStats(data);
-      })
-      .catch(() => {
-        // keep fallback stats
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   return (
     <section className="relative overflow-hidden pt-8 md:pt-16 pb-20 px-4">
@@ -43,17 +25,18 @@ const Hero: React.FC<HeroProps> = ({ onSearch, onRegisterClick }) => {
       <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
         {/* Left Content */}
         <div className="z-10 text-center lg:text-left">
-          <h1 className="text-4xl md:text-6xl font-extrabold leading-tight text-[#111827]">
-            {t('hero.titleBefore')} <span className="text-[#e3262e]">{t('hero.titleHighlight')}</span> {t('hero.titleAfter')}
-          </h1>
-
-          <div className="mt-8 grid grid-cols-2 md:grid-cols-4 lg:flex lg:flex-wrap gap-4 md:gap-8 justify-center lg:justify-start">
-            {stats.map((stat, idx) => (
-              <div key={idx} className="flex flex-col">
-                <span className="text-lg md:text-xl font-bold text-[#111827]">{translateStatValue(stat.value)}</span>
-                <span className="text-xs md:text-sm text-gray-500 font-medium whitespace-nowrap">{translateStatLabel(stat.label)}</span>
-              </div>
-            ))}
+          <div className="relative inline-block">
+            <img
+              src="/hero-text-bg.png"
+              alt=""
+              aria-hidden="true"
+              className="absolute -top-16 left-1/2 -translate-x-1/2 w-[420px] sm:w-[520px] md:w-[640px] lg:left-auto lg:right-0 lg:top-1/2 lg:translate-x-[55%] lg:-translate-y-1/2 opacity-15 pointer-events-none select-none"
+            />
+            <h1 className="relative text-4xl md:text-6xl font-extrabold leading-tight text-[#111827]">
+              {t('hero.titleBefore')}{' '}
+              <span className="text-[#e3262e]">{t('hero.titleHighlight')}</span>{' '}
+              {t('hero.titleAfter')}
+            </h1>
           </div>
 
           <div className="mt-12 max-w-xl mx-auto lg:mx-0">

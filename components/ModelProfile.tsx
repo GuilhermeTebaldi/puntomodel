@@ -292,9 +292,17 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl md:text-5xl font-black text-gray-900">
-                  {model.name}{model.age ? `, ${model.age}` : ''}
-                </h1>
+                <div className="relative inline-block">
+                  <img
+                    src="/logo-puntoescort.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute left-1/2 -translate-x-1/2 -bottom-6 w-24 md:w-28 opacity-10 pointer-events-none select-none"
+                  />
+                  <h1 className="relative text-3xl md:text-5xl font-black text-gray-900">
+                    {model.name}{model.age ? `, ${model.age}` : ''}
+                  </h1>
+                </div>
                 <div className="bg-[#e3262e] text-white p-1 rounded-full shadow-lg shadow-red-200">
                   <CheckCircle2 size={20} />
                 </div>
