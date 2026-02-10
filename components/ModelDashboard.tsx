@@ -949,7 +949,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
               </button>
 
               {isNotificationsOpen && (
-                <div className="absolute left-1/2 -translate-x-1/2 mt-3 w-[min(90vw,20rem)] bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-[110] sm:w-80 sm:left-auto sm:translate-x-0 sm:right-0">
+                <div className="fixed inset-x-0 top-24 mx-auto w-[min(90vw,20rem)] bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-[110] sm:absolute sm:top-full sm:mt-3 sm:left-auto sm:right-0 sm:mx-0 sm:w-80">
                   <div className="bg-[#e3262e] p-4 text-white flex justify-between items-center">
                     <span className="font-bold">{t('dashboard.notifications.title')}</span>
                     <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{t('dashboard.notifications.recent')}</span>
