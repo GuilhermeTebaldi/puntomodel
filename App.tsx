@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowRight, Heart, MapPin } from 'lucide-react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -10,7 +10,7 @@ import RegisterModal from './components/RegisterModal';
 import ModelOnboarding from './components/ModelOnboarding';
 import MapView from './components/MapView';
 import ModelProfile from './components/ModelProfile';
-import { AuthUser, clearCurrentUser, getCurrentUser, PendingModelProfile } from './services/auth';
+import { AuthUser, clearCurrentUser, getCurrentUser, getPendingModelProfile, PendingModelProfile } from './services/auth';
 import { fetchModelByEmail, fetchModelById, fetchModelsAll, ModelProfileData } from './services/models';
 import { getSavedModelIds } from './services/savedModels';
 import AdminPage from './components/AdminPage';
@@ -49,6 +49,7 @@ const App: React.FC = () => {
   });
   type StaticPageKey = 'about' | 'blog' | 'help' | 'ethics' | 'terms' | 'privacy' | 'cookies' | 'report';
   const [staticPage, setStaticPage] = useState<null | { key: StaticPageKey }>(null);
+  const lastBasePathRef = useRef('/');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -217,12 +218,21 @@ const App: React.FC = () => {
     setIsRegisterOpen(false);
     setIsModelOnboardingOpen(false);
     setIsLoginOpen(true);
+    if (pathname === '/cadastro' || pathname === '/modelo/cadastro') {
+      navigateTo(lastBasePathRef.current || '/', { replace: true });
+    }
   };
 
   const openRegister = () => {
     setIsLoginOpen(false);
     setIsModelOnboardingOpen(false);
     setIsRegisterOpen(true);
+    if (pathname !== '/cadastro' && pathname !== '/modelo/cadastro' && pathname !== '/dashboard' && pathname !== '/admin') {
+      lastBasePathRef.current = pathname || '/';
+    }
+    if (pathname !== '/cadastro') {
+      navigateTo('/cadastro');
+    }
   };
 
   const handleLogout = () => {
@@ -231,9 +241,32 @@ const App: React.FC = () => {
     navigateTo('/');
   };
 
-  const navigateTo = (path: string) => {
-    window.history.pushState({}, '', path);
+  const navigateTo = (path: string, options?: { replace?: boolean }) => {
+    if (options?.replace) {
+      window.history.replaceState({}, '', path);
+    } else {
+      window.history.pushState({}, '', path);
+    }
     setPathname(path);
+  };
+
+  const slugify = (value: string) => {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)+/g, '');
+  };
+
+  const buildSearchPath = (query: string) => {
+    const slug = slugify(query);
+    return slug ? `/${slug}` : '/';
+  };
+
+  const buildProfilePath = (model: ModelProfileData) => {
+    const name = model.name ? slugify(model.name) : 'modelo';
+    return `/modelo/${name}-${model.id}`;
   };
 
   const handleLoginSuccess = () => {
@@ -251,15 +284,25 @@ const App: React.FC = () => {
     setIsRegisterOpen(false);
     setPendingModelProfile(profile);
     setIsModelOnboardingOpen(true);
+    if (pathname !== '/modelo/cadastro') {
+      navigateTo('/modelo/cadastro');
+    }
   };
 
-  const handleSearch = async (query: string) => {
+  const handleSearch = async (query: string, options?: { updatePath?: boolean }) => {
     const trimmed = query.trim();
     setSearchQuery(trimmed);
     setSearchCoords(null);
     setIsSearching(true);
     // Impede o scroll da página principal enquanto o mapa está aberto
     document.body.style.overflow = 'hidden';
+
+    if (options?.updatePath !== false) {
+      const nextPath = buildSearchPath(trimmed);
+      if (nextPath !== pathname) {
+        navigateTo(nextPath);
+      }
+    }
 
     if (!trimmed) return;
 
@@ -280,6 +323,12 @@ const App: React.FC = () => {
         '';
       if (city) {
         setSearchQuery(city);
+        if (options?.updatePath !== false) {
+          const nextPath = buildSearchPath(city);
+          if (nextPath !== pathname) {
+            navigateTo(nextPath, { replace: true });
+          }
+        }
       }
       if (Number.isFinite(lat) && Number.isFinite(lon)) {
         setSearchCoords([lat, lon]);
@@ -291,7 +340,7 @@ const App: React.FC = () => {
 
   const handleNearMe = () => {
     if (!navigator.geolocation) {
-      handleSearch('');
+      handleSearch('', { updatePath: false });
       return;
     }
 
@@ -312,10 +361,10 @@ const App: React.FC = () => {
             '';
           handleSearch(city);
         } catch {
-          handleSearch('');
+          handleSearch('', { updatePath: false });
         }
       },
-      () => handleSearch('')
+      () => handleSearch('', { updatePath: false })
     );
   };
 
@@ -378,6 +427,7 @@ const App: React.FC = () => {
 
   const closeSearch = () => {
     setIsSearching(false);
+    navigateTo('/');
     if (!selectedProfileModel) {
       document.body.style.overflow = 'auto';
     }
@@ -386,10 +436,16 @@ const App: React.FC = () => {
   const openProfile = (model: ModelProfileData) => {
     setSelectedProfileModel(model);
     document.body.style.overflow = 'hidden';
+    if (pathname !== '/dashboard' && pathname !== '/admin') {
+      navigateTo(buildProfilePath(model));
+    }
   };
 
   const closeProfile = () => {
     setSelectedProfileModel(null);
+    if (pathname.startsWith('/modelo/')) {
+      navigateTo(lastBasePathRef.current || '/');
+    }
     if (!isSearching) {
       document.body.style.overflow = 'auto';
     }
@@ -398,10 +454,16 @@ const App: React.FC = () => {
   const openListing = () => {
     setIsListingOpen(true);
     document.body.style.overflow = 'hidden';
+    if (pathname !== '/dashboard' && pathname !== '/admin') {
+      navigateTo('/todasmodelos');
+    }
   };
 
   const closeListing = () => {
     setIsListingOpen(false);
+    if (pathname === '/todasmodelos') {
+      navigateTo('/');
+    }
     if (!isSearching && !selectedProfileModel) {
       document.body.style.overflow = 'auto';
     }
@@ -413,6 +475,85 @@ const App: React.FC = () => {
   const savedOnlineModels = savedModels
     .filter((model) => model.isOnline !== false)
     .map((model) => ({ id: model.id, name: model.name }));
+
+  useEffect(() => {
+    if (pathname === '/admin' || pathname === '/dashboard') return;
+    if (pathname.startsWith('/modelo/')) return;
+    if (pathname === '/cadastro') return;
+    lastBasePathRef.current = pathname;
+  }, [pathname]);
+
+  useEffect(() => {
+    if (pathname === '/admin' || pathname === '/dashboard') return;
+
+    const cleanPath = pathname.replace(/^\/+/, '');
+    if (!cleanPath) {
+      setIsListingOpen(false);
+      setIsSearching(false);
+      setSelectedProfileModel(null);
+      document.body.style.overflow = 'auto';
+      return;
+    }
+
+    if (cleanPath === 'cadastro') {
+      setIsRegisterOpen(true);
+      setIsModelOnboardingOpen(false);
+      setIsListingOpen(false);
+      setIsSearching(false);
+      setSelectedProfileModel(null);
+      document.body.style.overflow = 'auto';
+      return;
+    }
+
+    if (cleanPath === 'modelo/cadastro') {
+      const pending = pendingModelProfile || getPendingModelProfile();
+      if (pending) {
+        setPendingModelProfile(pending);
+        setIsModelOnboardingOpen(true);
+        setIsRegisterOpen(false);
+      } else {
+        setIsRegisterOpen(true);
+        setIsModelOnboardingOpen(false);
+      }
+      setIsListingOpen(false);
+      setIsSearching(false);
+      setSelectedProfileModel(null);
+      document.body.style.overflow = 'auto';
+      return;
+    }
+
+    if (cleanPath === 'todasmodelos') {
+      if (!isListingOpen) {
+        setIsListingOpen(true);
+        setIsSearching(false);
+        setSelectedProfileModel(null);
+        document.body.style.overflow = 'hidden';
+      }
+      return;
+    }
+
+    if (cleanPath.startsWith('modelo/')) {
+      const slug = cleanPath.slice('modelo/'.length);
+      const id = slug.split('-').pop();
+      if (id && selectedProfileModel?.id !== id) {
+        fetchModelById(id)
+          .then((model) => {
+            setSelectedProfileModel(model);
+            document.body.style.overflow = 'hidden';
+          })
+          .catch(() => undefined);
+      }
+      setIsListingOpen(false);
+      setIsSearching(false);
+      return;
+    }
+
+    const query = decodeURIComponent(cleanPath).replace(/-/g, ' ');
+    if (query) {
+      handleSearch(query, { updatePath: false });
+      return;
+    }
+  }, [pathname, pendingModelProfile]);
 
   return (
     <div className="min-h-screen bg-white text-[#111827]">
@@ -758,7 +899,12 @@ const App: React.FC = () => {
       />
       <RegisterModal 
         isOpen={isRegisterOpen} 
-        onClose={() => setIsRegisterOpen(false)} 
+        onClose={() => {
+          setIsRegisterOpen(false);
+          if (pathname === '/cadastro' || pathname === '/modelo/cadastro') {
+            navigateTo(lastBasePathRef.current || '/', { replace: true });
+          }
+        }} 
         onSwitchToLogin={openLogin}
         onModelRegisterSuccess={startModelOnboarding}
         onRegisterSuccess={handleLoginSuccess}
@@ -770,6 +916,9 @@ const App: React.FC = () => {
         onClose={() => {
           setIsModelOnboardingOpen(false);
           setPendingModelProfile(null);
+          if (pathname === '/modelo/cadastro') {
+            navigateTo(lastBasePathRef.current || '/', { replace: true });
+          }
         }}
         registration={pendingModelProfile}
         onProfilePublished={handleProfilePublished}
