@@ -373,7 +373,7 @@ export const translations = {
       privacy: 'Privacidade',
       cookies: 'Política de Cookies',
       report: 'Denúncia',
-      rights: '© 2025 Punto Model. Todos os direitos reservados. Proibido para menores de 18 anos.',
+      rights: '© 2025 Puntoescort. Todos os direitos reservados. Proibido para menores de 18 anos.',
       cnpj: 'CNPJ: 00.000.000/0000-00',
       country: 'Brasil',
     },
@@ -381,7 +381,7 @@ export const translations = {
       about: {
         title: 'Quem somos',
         body:
-          'A Punto Model é uma plataforma dedicada a conectar profissionais e clientes com respeito, segurança e privacidade. Nosso foco é oferecer visibilidade para profissionais com autonomia e uma experiência segura para quem busca anúncios confiáveis.',
+          'A Puntoescort é uma plataforma dedicada a conectar profissionais e clientes com respeito, segurança e privacidade. Nosso foco é oferecer visibilidade para profissionais com autonomia e uma experiência segura para quem busca anúncios confiáveis.',
       },
       blog: {
         title: 'Blog',
@@ -1036,7 +1036,7 @@ export const translations = {
       privacy: 'Privacy',
       cookies: 'Cookie Policy',
       report: 'Report',
-      rights: '© 2025 Punto Model. All rights reserved. Not for minors under 18.',
+      rights: '© 2025 Puntoescort. All rights reserved. Not for minors under 18.',
       cnpj: 'CNPJ: 00.000.000/0000-00',
       country: 'Brazil',
     },
@@ -1044,7 +1044,7 @@ export const translations = {
       about: {
         title: 'About us',
         body:
-          'Punto Model is a platform dedicated to connecting professionals and clients with respect, safety, and privacy. Our focus is to offer visibility for professionals with autonomy and a safe experience for those seeking reliable listings.',
+          'Puntoescort is a platform dedicated to connecting professionals and clients with respect, safety, and privacy. Our focus is to offer visibility for professionals with autonomy and a safe experience for those seeking reliable listings.',
       },
       blog: {
         title: 'Blog',
@@ -1698,7 +1698,7 @@ export const translations = {
       privacy: 'Datenschutz',
       cookies: 'Cookie-Richtlinie',
       report: 'Melden',
-      rights: '© 2025 Punto Model. Alle Rechte vorbehalten. Nicht für Minderjährige unter 18.',
+      rights: '© 2025 Puntoescort. Alle Rechte vorbehalten. Nicht für Minderjährige unter 18.',
       cnpj: 'CNPJ: 00.000.000/0000-00',
       country: 'Brasilien',
     },
@@ -1706,7 +1706,7 @@ export const translations = {
       about: {
         title: 'Über uns',
         body:
-          'Punto Model ist eine Plattform, die Fachkräfte und Kunden mit Respekt, Sicherheit und Privatsphäre verbindet. Unser Fokus liegt darauf, Fachkräften Sichtbarkeit mit Autonomie zu bieten und eine sichere Erfahrung für alle zu schaffen.',
+          'Puntoescort ist eine Plattform, die Fachkräfte und Kunden mit Respekt, Sicherheit und Privatsphäre verbindet. Unser Fokus liegt darauf, Fachkräften Sichtbarkeit mit Autonomie zu bieten und eine sichere Erfahrung für alle zu schaffen.',
       },
       blog: {
         title: 'Blog',
@@ -2360,7 +2360,7 @@ export const translations = {
       privacy: 'Privacidad',
       cookies: 'Política de Cookies',
       report: 'Denuncia',
-      rights: '© 2025 Punto Model. Todos los derechos reservados. Prohibido para menores de 18 años.',
+      rights: '© 2025 Puntoescort. Todos los derechos reservados. Prohibido para menores de 18 años.',
       cnpj: 'CNPJ: 00.000.000/0000-00',
       country: 'Brasil',
     },
@@ -2368,7 +2368,7 @@ export const translations = {
       about: {
         title: 'Quiénes somos',
         body:
-          'Punto Model es una plataforma dedicada a conectar profesionales y clientes con respeto, seguridad y privacidad. Nuestro enfoque es ofrecer visibilidad a profesionales con autonomía y una experiencia segura para quienes buscan anuncios confiables.',
+          'Puntoescort es una plataforma dedicada a conectar profesionales y clientes con respeto, seguridad y privacidad. Nuestro enfoque es ofrecer visibilidad a profesionales con autonomía y una experiencia segura para quienes buscan anuncios confiables.',
       },
       blog: {
         title: 'Blog',
@@ -3021,7 +3021,7 @@ export const translations = {
       privacy: 'Privacy',
       cookies: 'Politica dei Cookie',
       report: 'Segnalazione',
-      rights: '© 2025 Punto Model. Tutti i diritti riservati. Vietato ai minori di 18 anni.',
+      rights: '© 2025 Puntoescort. Tutti i diritti riservati. Vietato ai minori di 18 anni.',
       cnpj: 'CNPJ: 00.000.000/0000-00',
       country: 'Brasile',
     },
@@ -3029,7 +3029,7 @@ export const translations = {
       about: {
         title: 'Chi siamo',
         body:
-          'Punto Model è una piattaforma dedicata a collegare professioniste e clienti con rispetto, sicurezza e privacy. Il nostro obiettivo è offrire visibilità alle professioniste con autonomia e un’esperienza sicura per chi cerca annunci affidabili.',
+          'Puntoescort è una piattaforma dedicata a collegare professioniste e clienti con rispetto, sicurezza e privacy. Il nostro obiettivo è offrire visibilità alle professioniste con autonomia e un’esperienza sicura per chi cerca annunci affidabili.',
       },
       blog: {
         title: 'Blog',
@@ -3683,7 +3683,7 @@ export const translations = {
       privacy: 'Confidentialité',
       cookies: 'Politique des cookies',
       report: 'Signaler',
-      rights: '© 2025 Punto Model. Tous droits réservés. Interdit aux mineurs de moins de 18 ans.',
+      rights: '© 2025 Puntoescort. Tous droits réservés. Interdit aux mineurs de moins de 18 ans.',
       cnpj: 'CNPJ: 00.000.000/0000-00',
       country: 'Brésil',
     },
@@ -3691,7 +3691,7 @@ export const translations = {
       about: {
         title: 'À propos',
         body:
-          'Punto Model est une plateforme dédiée à la mise en relation de professionnelles et de clients avec respect, sécurité et confidentialité. Notre objectif est d’offrir de la visibilité aux professionnelles en toute autonomie et une expérience sûre à ceux qui recherchent des annonces fiables.',
+          'Puntoescort est une plateforme dédiée à la mise en relation de professionnelles et de clients avec respect, sécurité et confidentialité. Notre objectif est d’offrir de la visibilité aux professionnelles en toute autonomie et une expérience sûre à ceux qui recherchent des annonces fiables.',
       },
       blog: {
         title: 'Blog',

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Heart } from 'lucide-react';
+import { ArrowRight, Heart, MapPin } from 'lucide-react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import QuickLinks from './components/QuickLinks';
@@ -561,33 +561,37 @@ const App: React.FC = () => {
                 <h2 className="text-2xl font-bold">{t('featured.title')}</h2>
                 <p className="text-gray-500">{t('featured.subtitle')}</p>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  onClick={handleNearMe}
-                  className="text-gray-900 font-bold text-xs sm:text-sm uppercase tracking-wider hover:underline"
-                >
-                  {t('featured.nearMe')}
-                </button>
-                <button
-                  onClick={() => setShowSavedOnly((prev) => !prev)}
-                  className={`flex items-center gap-2 font-bold text-xs sm:text-sm uppercase tracking-wider ${
-                    showSavedOnly ? 'text-[#e3262e]' : 'text-gray-900'
-                  }`}
-                >
-                  <Heart size={16} className={showSavedOnly ? 'text-[#e3262e]' : 'text-gray-500'} />
-                  {t('featured.saved')}
-                  {savedModelIds.length > 0 && (
-                    <span className="text-xs font-black text-gray-500">({savedModelIds.length})</span>
-                  )}
-                </button>
+              <div className="flex flex-col items-center text-center gap-3 sm:flex-row sm:items-center sm:justify-end sm:text-left sm:gap-3">
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    onClick={handleNearMe}
+                    className="text-gray-900 font-bold text-xs sm:text-sm uppercase tracking-wider hover:underline inline-flex items-center gap-2"
+                  >
+                    <MapPin size={14} className="text-gray-500" />
+                    {t('featured.nearMe')}
+                  </button>
+                  <button
+                    onClick={() => setShowSavedOnly((prev) => !prev)}
+                    className={`flex items-center gap-2 font-bold text-xs sm:text-sm uppercase tracking-wider ${
+                      showSavedOnly ? 'text-[#e3262e]' : 'text-gray-900'
+                    }`}
+                  >
+                    <Heart size={16} className={showSavedOnly ? 'text-[#e3262e]' : 'text-gray-500'} />
+                    {t('featured.saved')}
+                    {savedModelIds.length > 0 && (
+                      <span className="text-xs font-black text-gray-500">({savedModelIds.length})</span>
+                    )}
+                  </button>
+                </div>
                 <button
                   onClick={() => {
                     setShowSavedOnly(false);
                     openListing();
                   }}
-                  className="text-[#e3262e] font-bold text-xs sm:text-sm uppercase tracking-wider hover:underline"
+                  className="self-center text-[#e3262e] font-bold text-xs sm:text-sm uppercase tracking-wider hover:underline inline-flex items-center gap-2"
                 >
                   {t('featured.viewAll')}
+                  <ArrowRight size={14} />
                 </button>
               </div>
             </div>
@@ -626,7 +630,7 @@ const App: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-12 mb-12">
             <div className="col-span-1 md:col-span-2">
-              <h3 className="text-white font-bold text-xl mb-6">punto<span className="text-gray-500">model</span></h3>
+              <h3 className="text-white font-bold text-xl mb-6">Punto<span className="text-gray-500">escort</span></h3>
               <p className="max-w-sm mb-6 leading-relaxed">
                 {t('footer.description')}
               </p>

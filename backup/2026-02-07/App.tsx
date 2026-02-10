@@ -584,7 +584,7 @@ const App: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-12 mb-12">
             <div className="col-span-1 md:col-span-2">
-              <h3 className="text-white font-bold text-xl mb-6">punto<span className="text-gray-500">model</span></h3>
+              <h3 className="text-white font-bold text-xl mb-6">punto<span className="text-gray-500">escort</span></h3>
               <p className="max-w-sm mb-6 leading-relaxed">
                 {t('footer.description')}
               </p>

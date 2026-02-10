@@ -346,17 +346,17 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
       }`}>
         {selectedModel && (
           <div className="p-6 md:p-8 max-w-4xl mx-auto">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <div className="relative">
                   {selectedModel.photos?.[0] ? (
                     <img 
                       src={selectedModel.photos[0]} 
                       alt={selectedModel.name} 
-                      className="w-20 h-20 md:w-24 md:h-24 rounded-3xl object-cover shadow-md"
+                      className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-3xl object-cover shadow-md"
                     />
                   ) : (
-                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-gray-100" />
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-3xl bg-gray-100" />
                   )}
                   <div className={`absolute -bottom-2 -right-2 w-6 h-6 rounded-full border-4 border-white ${selectedModel.isOnline === false ? 'bg-red-500' : 'bg-green-500'}`}></div>
                 </div>
