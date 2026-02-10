@@ -22,9 +22,10 @@ import { useI18n } from './translations/i18n';
 
 const LOCATION_PROMPT_KEY = 'punto_location_prompt';
 const LOCATION_PERMISSION_KEY = 'punto_location_permission';
+const LANGUAGE_PROMPT_KEY = 'punto_language_prompt';
 
 const App: React.FC = () => {
-  const { t, translateError, setLanguageAuto, languageSource } = useI18n();
+  const { t, translateError, setLanguage, setLanguageAuto, languageSource, languageOptions } = useI18n();
   const [showSticky, setShowSticky] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
@@ -43,6 +44,10 @@ const App: React.FC = () => {
   const [pathname, setPathname] = useState(window.location.pathname);
   const [myModelProfile, setMyModelProfile] = useState<ModelProfileData | null>(null);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [showLanguagePrompt, setShowLanguagePrompt] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(LANGUAGE_PROMPT_KEY) !== '1';
+  });
   const [showAgeGate, setShowAgeGate] = useState(() => {
     if (typeof window === 'undefined') return true;
     return window.localStorage.getItem('punto_age_ok') !== '1';
@@ -50,6 +55,16 @@ const App: React.FC = () => {
   type StaticPageKey = 'about' | 'blog' | 'help' | 'ethics' | 'terms' | 'privacy' | 'cookies' | 'report';
   const [staticPage, setStaticPage] = useState<null | { key: StaticPageKey }>(null);
   const lastBasePathRef = useRef('/');
+  const locationPromptDeferredRef = useRef(false);
+
+  useEffect(() => {
+    if (languageSource === 'manual') {
+      setShowLanguagePrompt(false);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(LANGUAGE_PROMPT_KEY, '1');
+      }
+    }
+  }, [languageSource]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -90,11 +105,17 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (showAgeGate) return;
     if (languageSource === 'manual') return;
+    if (showLanguagePrompt) return;
+    const browserLanguage = resolveLanguageFromNavigator();
+    if (browserLanguage) {
+      setLanguageAuto(browserLanguage);
+      return;
+    }
     if (!navigator.geolocation) return;
     if (window.localStorage.getItem(LOCATION_PROMPT_KEY) === '1') return;
     if (showLocationPrompt) return;
+    if (showAgeGate && locationPromptDeferredRef.current) return;
 
     const revealPrompt = () => setShowLocationPrompt(true);
 
@@ -235,6 +256,14 @@ const App: React.FC = () => {
     }
   };
 
+  const handleLanguagePick = (code: typeof languageOptions[number]['code']) => {
+    setLanguage(code);
+    setShowLanguagePrompt(false);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(LANGUAGE_PROMPT_KEY, '1');
+    }
+  };
+
   const handleLogout = () => {
     clearCurrentUser();
     setCurrentUser(null);
@@ -248,6 +277,23 @@ const App: React.FC = () => {
       window.history.pushState({}, '', path);
     }
     setPathname(path);
+  };
+
+  const resolveLanguageFromNavigator = () => {
+    if (typeof navigator === 'undefined') return null;
+    const languages = Array.isArray(navigator.languages) && navigator.languages.length
+      ? navigator.languages
+      : [navigator.language];
+    for (const lang of languages) {
+      const normalized = (lang || '').toLowerCase();
+      if (normalized.startsWith('pt')) return 'br';
+      if (normalized.startsWith('en')) return 'us';
+      if (normalized.startsWith('es')) return 'es';
+      if (normalized.startsWith('it')) return 'it';
+      if (normalized.startsWith('de')) return 'de';
+      if (normalized.startsWith('fr')) return 'fr';
+    }
+    return null;
   };
 
   const slugify = (value: string) => {
@@ -420,7 +466,12 @@ const App: React.FC = () => {
   const handleLocationDeny = () => {
     setShowLocationPrompt(false);
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem(LOCATION_PROMPT_KEY, '1');
+      if (showAgeGate) {
+        locationPromptDeferredRef.current = true;
+        window.localStorage.setItem(LOCATION_PROMPT_KEY, 'later');
+      } else {
+        window.localStorage.setItem(LOCATION_PROMPT_KEY, '1');
+      }
       window.localStorage.setItem(LOCATION_PERMISSION_KEY, 'dismissed');
     }
   };
@@ -557,6 +608,30 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white text-[#111827]">
+      {showLanguagePrompt && (
+        <div className="fixed inset-0 z-[1002] flex items-center justify-center px-6">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(227,38,46,0.35),_transparent_55%)] bg-black/75 backdrop-blur-sm" />
+          <div className="relative w-full max-w-md rounded-[30px] border border-white/10 bg-[#0f0f12]/90 p-6 shadow-[0_30px_80px_rgba(0,0,0,0.5)]">
+            <div className="grid grid-cols-3 gap-3">
+              {languageOptions.map((option) => (
+                <button
+                  key={option.code}
+                  onClick={() => handleLanguagePick(option.code)}
+                  className="group flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 p-3 transition-all duration-300 hover:-translate-y-1 hover:border-[#e3262e] hover:bg-white/10 hover:shadow-[0_12px_24px_rgba(227,38,46,0.25)]"
+                >
+                  <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-[#1a1a22] shadow-inner">
+                    <img
+                      src={`https://flagcdn.com/w80/${option.code}.png`}
+                      alt={option.label}
+                      className="h-9 w-9 rounded-full object-cover ring-2 ring-white/80 transition-transform duration-300 group-hover:scale-105"
+                    />
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {showAgeGate && (
         <div className="fixed inset-0 z-[999] bg-[#0f0f12] text-white flex items-center justify-center px-6">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(227,38,46,0.25),_transparent_45%)]" />
@@ -647,8 +722,8 @@ const App: React.FC = () => {
         )
       ) : (
         <>
-          {showLocationPrompt && !showAgeGate && languageSource !== 'manual' && (
-            <div className="fixed bottom-4 left-0 right-0 z-50 px-4">
+          {showLocationPrompt && languageSource !== 'manual' && (
+            <div className="fixed bottom-4 left-0 right-0 z-[1001] px-4">
               <div className="max-w-3xl mx-auto bg-white/95 backdrop-blur border border-gray-200 rounded-2xl shadow-lg p-4 md:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                   <p className="text-sm font-bold text-gray-900">{t('locationPermission.title')}</p>
