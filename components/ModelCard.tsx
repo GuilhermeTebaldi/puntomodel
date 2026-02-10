@@ -28,14 +28,6 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onClick, showSave = false,
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               alt={model.name}
             />
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <img
-                src="/hero-text-bg.png"
-                alt=""
-                aria-hidden="true"
-                className="w-40 h-40 sm:w-64 sm:h-64 opacity-70 sm:opacity-85 mix-blend-screen object-contain translate-x-11 translate-y-24 sm:translate-x-28 sm:translate-y-44"
-              />
-            </div>
           </>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
