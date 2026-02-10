@@ -514,7 +514,7 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
                 style={{ animation: 'swipe-hint 2.4s ease-in-out infinite' }}
               >
                 <span className="text-4xl">👈🏻</span>
-                <span className="text-4xl">⇆</span>
+                <span className="text-4xl">⇆ </span>
               </div>
             </div>
           )}
