@@ -26,12 +26,6 @@ const Hero: React.FC<HeroProps> = ({ onSearch, onRegisterClick }) => {
         {/* Left Content */}
         <div className="z-20 text-center lg:text-left">
           <div className="relative inline-block">
-            <img
-              src="/hero-text-bg.png"
-              alt=""
-              aria-hidden="true"
-              className="absolute -top-16 left-1/2 -translate-x-1/2 w-[420px] sm:w-[520px] md:w-[640px] lg:left-auto lg:right-0 lg:top-1/2 lg:translate-x-[55%] lg:-translate-y-1/2 opacity-15 pointer-events-none select-none"
-            />
             <h1 className="relative text-4xl md:text-6xl font-extrabold leading-tight text-[#111827]">
               {t('hero.titleBefore')}{' '}
               <span className="text-[#e3262e]">{t('hero.titleHighlight')}</span>{' '}
