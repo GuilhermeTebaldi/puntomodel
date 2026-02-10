@@ -11,6 +11,14 @@ export interface ModelAttributes {
   eyes?: string;
   hair?: string;
   feet?: string;
+  nationality?: string;
+}
+
+export interface ModelIdentity {
+  number: string;
+  documentUrl: string;
+  birthDate?: string | null;
+  verifiedAt?: string | null;
 }
 
 export interface ModelLocation {
@@ -59,6 +67,7 @@ export interface ModelProfileData {
   email: string;
   age?: number | null;
   phone?: string;
+  identity?: ModelIdentity | null;
   bio?: string;
   services: string[];
   prices: ModelPrice[];

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Settings,
   Eye,
@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import Logo from './Logo';
 import LocationPicker, { LocationValue } from './LocationPicker';
+import NationalityPicker from './NationalityPicker';
 import {
   createModelPayment,
   fetchModelMetrics,
@@ -51,6 +52,7 @@ interface ModelDashboardModel {
     eyes?: string;
     hair?: string;
     feet?: string;
+    nationality?: string;
   };
   location?: { city?: string; state?: string; lat?: number; lon?: number } | null;
   isOnline?: boolean;
@@ -458,8 +460,17 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   const [hairInput, setHairInput] = useState(model.attributes?.hair || '');
   const [feetInput, setFeetInput] = useState(model.attributes?.feet || '');
   const [eyesInput, setEyesInput] = useState(model.attributes?.eyes || '');
+  const [nationalityInput, setNationalityInput] = useState(model.attributes?.nationality || '');
   const [photosInput, setPhotosInput] = useState<string[]>(model.photos || []);
   const [locationDraft, setLocationDraft] = useState<LocationValue | null>(toLocationValue(model.location));
+
+  const nationalityLabel = useMemo(() => {
+    const code = model.attributes?.nationality;
+    if (!code) return '-';
+    if (typeof Intl === 'undefined' || typeof Intl.DisplayNames === 'undefined') return code.toUpperCase();
+    const displayNames = new Intl.DisplayNames([locale], { type: 'region' });
+    return displayNames.of(code.toUpperCase()) ?? code.toUpperCase();
+  }, [locale, model.attributes?.nationality]);
 
   useEffect(() => {
     setIsOnline(Boolean(model.isOnline ?? true));
@@ -471,6 +482,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     setHairInput(model.attributes?.hair || '');
     setFeetInput(model.attributes?.feet || '');
     setEyesInput(model.attributes?.eyes || '');
+    setNationalityInput(model.attributes?.nationality || '');
     setPhotosInput(model.photos || []);
     setLocationDraft(toLocationValue(model.location));
   }, [model]);
@@ -484,6 +496,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     setHairInput(model.attributes?.hair || '');
     setFeetInput(model.attributes?.feet || '');
     setEyesInput(model.attributes?.eyes || '');
+    setNationalityInput(model.attributes?.nationality || '');
     setPhotosInput(model.photos || []);
     setLocationDraft(toLocationValue(model.location));
   };
@@ -1243,6 +1256,13 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                               className="bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm focus:outline-none col-span-2"
                             />
                           </div>
+                          <NationalityPicker
+                            value={nationalityInput}
+                            onChange={setNationalityInput}
+                            label={t('dashboard.form.nationalityLabel')}
+                            placeholder={t('dashboard.form.nationalityPlaceholder')}
+                            inputClassName="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm focus:outline-none"
+                          />
                           <div className="flex gap-2">
                             <button
                               disabled={saving}
@@ -1255,6 +1275,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                                       hair: hairInput || undefined,
                                       feet: feetInput || undefined,
                                       eyes: eyesInput || undefined,
+                                      nationality: nationalityInput || undefined,
                                     },
                                   },
                                   () => setEditingAttributes(false)
@@ -1293,7 +1314,11 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                               <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">{t('dashboard.form.feetLabel')}</p>
                               <p className="text-sm font-black text-gray-900">{model.attributes?.feet || '-'}</p>
                            </div>
-                           <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 text-center col-span-2 sm:col-span-4">
+                           <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 text-center col-span-2 sm:col-span-2">
+                              <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">{t('dashboard.form.nationalityLabel')}</p>
+                              <p className="text-sm font-black text-gray-900">{nationalityLabel}</p>
+                           </div>
+                           <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 text-center col-span-2 sm:col-span-2">
                               <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">{t('dashboard.form.eyesLabel')}</p>
                               <p className="text-sm font-black text-gray-900">{model.attributes?.eyes ? translateEyes(model.attributes?.eyes) : '-'}</p>
                            </div>

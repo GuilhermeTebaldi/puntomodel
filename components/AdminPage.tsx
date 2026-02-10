@@ -17,6 +17,10 @@ interface AdminModel {
   email: string;
   age?: number | null;
   phone?: string;
+  identity?: {
+    number?: string;
+    documentUrl?: string;
+  } | null;
   featured?: boolean;
   createdAt?: string;
 }
@@ -229,6 +233,8 @@ const AdminPage: React.FC = () => {
                   <th className="text-left px-4 py-3">{t('adminPage.table.email')}</th>
                   <th className="text-left px-4 py-3">{t('adminPage.table.age')}</th>
                   <th className="text-left px-4 py-3">{t('adminPage.table.phone')}</th>
+                  <th className="text-left px-4 py-3">{t('adminPage.table.identityNumber')}</th>
+                  <th className="text-left px-4 py-3">{t('adminPage.table.identityDoc')}</th>
                   <th className="text-left px-4 py-3">{t('adminPage.table.featured')}</th>
                   <th className="text-right px-4 py-3">{t('adminPage.table.actions')}</th>
                 </tr>
@@ -236,7 +242,7 @@ const AdminPage: React.FC = () => {
               <tbody>
                 {models.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-6 text-gray-400 text-center">{t('adminPage.emptyModels')}</td>
+                    <td colSpan={8} className="px-4 py-6 text-gray-400 text-center">{t('adminPage.emptyModels')}</td>
                   </tr>
                 )}
                 {models.map((model) => (
@@ -245,6 +251,26 @@ const AdminPage: React.FC = () => {
                     <td className="px-4 py-3 text-gray-600">{model.email}</td>
                     <td className="px-4 py-3 text-gray-600">{model.age ?? '-'}</td>
                     <td className="px-4 py-3 text-gray-600">{model.phone || '-'}</td>
+                    <td className="px-4 py-3 text-gray-600">{model.identity?.number || '-'}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {model.identity?.documentUrl ? (
+                        <a
+                          href={model.identity.documentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#e3262e]"
+                        >
+                          <img
+                            src={model.identity.documentUrl}
+                            alt={t('adminPage.identityPreview')}
+                            className="w-10 h-10 rounded-lg object-cover border border-gray-100"
+                          />
+                          {t('adminPage.viewDocument')}
+                        </a>
+                      ) : (
+                        <span className="text-gray-400">{t('adminPage.identityMissing')}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-gray-600">{model.featured ? t('adminPage.featuredYes') : t('adminPage.featuredNo')}</td>
                     <td className="px-4 py-3 text-right">
                       <button

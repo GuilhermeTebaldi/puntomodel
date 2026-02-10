@@ -1,13 +1,16 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { X, Check, Camera, MapPin, Smartphone, User, ArrowRight, ChevronLeft, Info, Heart } from 'lucide-react';
 import Logo from './Logo';
 import { AuthUser, clearPendingModelProfile, getPendingModelProfile, PendingModelProfile, registerUser, setCurrentUser } from '../services/auth';
 import { uploadImage } from '../services/cloudinary';
+import { fetchCountries } from '../services/countries';
+import { scanIdentityDocument } from '../services/identityOcr';
 import { createModelProfile } from '../services/models';
 import { hairOptions, eyeOptions, serviceOptions } from '../translations';
 import { useI18n } from '../translations/i18n';
 import LocationPicker, { LocationValue } from './LocationPicker';
+import NationalityPicker from './NationalityPicker';
 
 interface ModelOnboardingProps {
   isOpen: boolean;
@@ -24,6 +27,16 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const [selectedCountry, setSelectedCountry] = useState('BR');
   const [phoneValue, setPhoneValue] = useState('');
   const [phoneRawValue, setPhoneRawValue] = useState('');
+  const [identityNumber, setIdentityNumber] = useState('');
+  const [identityDocumentUrl, setIdentityDocumentUrl] = useState('');
+  const [identityBirthDate, setIdentityBirthDate] = useState('');
+  const [uploadingIdentity, setUploadingIdentity] = useState(false);
+  const [scanningIdentity, setScanningIdentity] = useState(false);
+  const [identityScanMessage, setIdentityScanMessage] = useState('');
+  const [identityScanError, setIdentityScanError] = useState('');
+  const [identityScanSuccess, setIdentityScanSuccess] = useState(false);
+  const [step1Error, setStep1Error] = useState('');
+  const [nationality, setNationality] = useState('');
   const [registeredName, setRegisteredName] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [stageName, setStageName] = useState('');
@@ -41,7 +54,14 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const [bio, setBio] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState('');
+  const identityBusy = uploadingIdentity || scanningIdentity;
+  const identityBusyLabel = scanningIdentity
+    ? t('onboarding.step1.identityScanning')
+    : uploadingIdentity
+    ? t('common.loading')
+    : t('onboarding.step1.identityUploadButton');
   const availableServices = serviceOptions;
+  const countriesWithDial = useMemo(() => countries.filter((country) => country.dial), [countries]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -57,6 +77,16 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       setEyes(eyeOptions[0]?.labels.br || '');
       setPhoneValue('');
       setPhoneRawValue('');
+      setIdentityNumber('');
+      setIdentityDocumentUrl('');
+      setIdentityBirthDate('');
+      setUploadingIdentity(false);
+      setScanningIdentity(false);
+      setIdentityScanMessage('');
+      setIdentityScanError('');
+      setIdentityScanSuccess(false);
+      setStep1Error('');
+      setNationality('');
       setSelectedLocation(null);
       setPhotos([]);
       setServices([]);
@@ -79,32 +109,15 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
 
     const loadCountries = async () => {
       try {
-        // REAL_DATA: lista de países via API pública
-        const response = await fetch('https://restcountries.com/v3.1/all?fields=name,cca2,idd');
-        const data = await response.json();
+        const mapped = await fetchCountries();
         if (!isActive) return;
-
-        const mapped = (data as Array<{ name?: { common?: string }; cca2?: string; idd?: { root?: string; suffixes?: string[] } }>)
-          .map((country) => {
-            const root = country.idd?.root ?? '';
-            const suffix = country.idd?.suffixes?.[0] ?? '';
-            const dial = root && suffix ? `${root}${suffix}` : root;
-            return {
-              name: country.name?.common ?? '',
-              cca2: country.cca2 ?? '',
-              dial,
-            };
-          })
-          .filter((country) => country.name && country.dial)
-          .sort((a, b) => a.name.localeCompare(b.name));
-
         setCountries(mapped);
-
-        const brazil = mapped.find((c) => c.cca2 === 'BR');
+        const withDial = mapped.filter((country) => country.dial);
+        const brazil = withDial.find((c) => c.cca2 === 'BR');
         if (brazil) {
           setSelectedCountry('BR');
-        } else if (mapped[0]) {
-          setSelectedCountry(mapped[0].cca2);
+        } else if (withDial[0]) {
+          setSelectedCountry(withDial[0].cca2);
         }
       } catch {
         // silently keep default
@@ -191,7 +204,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     setPhoneRawValue(value);
     const raw = value.trim();
     const digits = raw.replace(/\D/g, '');
-    const dialDigits = countries.find((country) => country.cca2 === countryCode)?.dial.replace(/\D/g, '') ?? '';
+    const dialDigits = countriesWithDial.find((country) => country.cca2 === countryCode)?.dial.replace(/\D/g, '') ?? '';
     let nationalDigits = digits;
 
     if (raw.startsWith('+') || raw.startsWith('00')) {
@@ -204,6 +217,172 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     }
 
     setPhoneValue(formatPhone(nationalDigits, countryCode));
+  };
+
+  const handleIdentityUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploadingIdentity(true);
+    setScanningIdentity(true);
+    setIdentityScanMessage('');
+    setIdentityScanError('');
+    setIdentityScanSuccess(false);
+    setStep1Error('');
+
+    const reader = new FileReader();
+    reader.onload = async (loadEvent) => {
+      const base64 = loadEvent.target?.result as string;
+      if (!base64) {
+        setIdentityScanError(t('errors.identityScanFailed'));
+        setScanningIdentity(false);
+        return;
+      }
+      try {
+        const result = await scanIdentityDocument(base64, (step) => setIdentityScanMessage(step));
+        if (result.birthDate) {
+          setIdentityBirthDate(formatBirthDateInput(formatIsoToBirthInput(result.birthDate)));
+        }
+        if (result.documentNumber) {
+          setIdentityNumber(result.documentNumber);
+        }
+        if (result.birthDate || result.documentNumber) {
+          setIdentityScanSuccess(true);
+        } else {
+          setIdentityScanError(t('errors.identityScanFailed'));
+        }
+      } catch {
+        setIdentityScanError(t('errors.identityScanFailed'));
+      } finally {
+        setScanningIdentity(false);
+      }
+    };
+    reader.onerror = () => {
+      setIdentityScanError(t('errors.identityScanFailed'));
+      setScanningIdentity(false);
+    };
+    reader.readAsDataURL(file);
+
+    try {
+      const uploadedUrl = await uploadImage(file);
+      setIdentityDocumentUrl(uploadedUrl);
+    } catch {
+      setStep1Error(t('errors.identityUploadFailed'));
+    } finally {
+      setUploadingIdentity(false);
+      event.target.value = '';
+    }
+  };
+
+  const parseBirthDateParts = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) {
+      const year = Number(isoMatch[1]);
+      const month = Number(isoMatch[2]);
+      const day = Number(isoMatch[3]);
+      if (!year || !month || !day) return null;
+      return { year, month, day };
+    }
+    const brMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (brMatch) {
+      const day = Number(brMatch[1]);
+      const month = Number(brMatch[2]);
+      const year = Number(brMatch[3]);
+      if (!year || !month || !day) return null;
+      return { year, month, day };
+    }
+    return null;
+  };
+
+  const normalizeBirthDateToIso = (value: string) => {
+    const parts = parseBirthDateParts(value);
+    if (!parts) return '';
+    const { year, month, day } = parts;
+    const date = new Date(year, month - 1, day);
+    if (Number.isNaN(date.getTime())) return '';
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return '';
+    return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+
+  const getAgeFromBirthDate = (value: string) => {
+    const parts = parseBirthDateParts(value);
+    if (!parts) return null;
+    const { year, month, day } = parts;
+    const birthDate = new Date(year, month - 1, day);
+    if (Number.isNaN(birthDate.getTime())) return null;
+    if (birthDate.getFullYear() !== year || birthDate.getMonth() !== month - 1 || birthDate.getDate() !== day) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age -= 1;
+    }
+    return age;
+  };
+
+  const formatBirthDateInput = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 8);
+    if (!digits) return '';
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+  };
+
+  const formatIsoToBirthInput = (value: string) => {
+    if (!value) return '';
+    const parts = value.split('-');
+    if (parts.length !== 3) return '';
+    const [year, month, day] = parts;
+    if (!year || !month || !day) return '';
+    return `${day}/${month}/${year}`;
+  };
+
+  const getIdentityScanStatus = (message: string) => {
+    if (!message) return '';
+    const initMatch = message.match(/INICIALIZANDO_(\d+)_CORES/);
+    if (initMatch) {
+      return t('onboarding.step1.identityScanInit', { cores: initMatch[1] });
+    }
+    if (message.startsWith('PREPARANDO_AMOSTRAS')) {
+      return t('onboarding.step1.identityScanPreparing');
+    }
+    if (message.startsWith('PROCESSANDO_THREADS_PARALELOS')) {
+      return t('onboarding.step1.identityScanProcessing');
+    }
+    const sampleMatchDetailed = message.match(/AMOSTRA_(\d+)\/(\d+)_CONFIRMADA/);
+    if (sampleMatchDetailed) {
+      return t('onboarding.step1.identityScanSample', {
+        current: sampleMatchDetailed[1],
+        total: sampleMatchDetailed[2],
+      });
+    }
+    const sampleMatch = message.match(/AMOSTRA_(\d+)_OK/);
+    if (sampleMatch) {
+      return t('onboarding.step1.identityScanSample', { current: sampleMatch[1], total: 12 });
+    }
+    if (message.startsWith('CONSENSO_ESTABELECIDO')) {
+      return t('onboarding.step1.identityScanConsensus');
+    }
+    return t('onboarding.step1.identityScanProcessing');
+  };
+
+  const handleStep1Next = () => {
+    setStep1Error('');
+    if (!identityNumber.trim() || !identityDocumentUrl) {
+      setStep1Error(t('errors.identityRequired'));
+      return;
+    }
+    const age = getAgeFromBirthDate(identityBirthDate);
+    if (!age) {
+      setStep1Error(t('errors.identityAgeRequired'));
+      return;
+    }
+    if (age < 18) {
+      setStep1Error(t('errors.identityUnderage'));
+      return;
+    }
+    nextStep();
   };
 
   const handleCountryChange = (newCountry: string) => {
@@ -281,10 +460,26 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       }
       setCurrentUser(registrationResult.user);
 
-      const selectedDial = countries.find((country) => country.cca2 === selectedCountry)?.dial ?? '';
+      const selectedDial = countriesWithDial.find((country) => country.cca2 === selectedCountry)?.dial ?? '';
       const normalizedPhone = normalizePhoneE164(phoneRawValue || phoneValue, phoneValue, selectedDial);
       if (normalizedPhone === null) {
         setPublishError(t('errors.invalidPhone'));
+        setPublishing(false);
+        return;
+      }
+      if (!identityNumber.trim() || !identityDocumentUrl) {
+        setPublishError(t('errors.identityRequired'));
+        setPublishing(false);
+        return;
+      }
+      const ageFromBirthDate = getAgeFromBirthDate(identityBirthDate);
+      if (!ageFromBirthDate) {
+        setPublishError(t('errors.identityAgeRequired'));
+        setPublishing(false);
+        return;
+      }
+      if (ageFromBirthDate < 18) {
+        setPublishError(t('errors.identityUnderage'));
         setPublishing(false);
         return;
       }
@@ -293,9 +488,14 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         userId: registrationResult.user.id,
         name: displayName,
         email: registeredEmail.trim(),
-        age: parsedAge,
+        age: ageFromBirthDate,
         phone: normalizedPhone,
         phoneCountryDial: selectedDial,
+        identity: {
+          number: identityNumber.trim(),
+          documentUrl: identityDocumentUrl,
+          birthDate: normalizeBirthDateToIso(identityBirthDate),
+        },
         bio,
         services,
         prices: [],
@@ -305,6 +505,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
           eyes: eyes || undefined,
           hair: hair || undefined,
           feet: feet || undefined,
+          nationality: nationality || undefined,
         },
         location: selectedLocation
           ? {
@@ -399,7 +600,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                     {loadingCountries ? (
                       <option>{t('common.loading')}</option>
                     ) : (
-                      countries.map((country) => (
+                      countriesWithDial.map((country) => (
                         <option key={`${country.cca2}-${country.dial}`} value={country.cca2}>
                           {country.name} ({country.dial})
                         </option>
@@ -417,9 +618,89 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                 <p className="text-[10px] text-gray-400 mt-4 leading-relaxed">
                   {t('onboarding.step1.helper')}
                 </p>
+
+                <div className="mt-6 pt-6 border-t border-gray-100 space-y-4">
+                  <div>
+                    <p className="text-xs font-black text-gray-700 uppercase tracking-widest">{t('onboarding.step1.identityTitle')}</p>
+                    <p className="text-[11px] text-gray-500 mt-1">{t('onboarding.step1.identitySubtitle')}</p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase mb-2 block tracking-widest">{t('onboarding.step1.identityNumberLabel')}</label>
+                      <input
+                        type="text"
+                        value={identityNumber}
+                        onChange={(event) => setIdentityNumber(event.target.value)}
+                        placeholder={t('onboarding.step1.identityNumberPlaceholder')}
+                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-4 sm:px-6 focus:outline-none focus:ring-2 focus:ring-[#e3262e]/20"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase mb-2 block tracking-widest">{t('onboarding.step1.identityBirthLabel')}</label>
+                      <input
+                        type="text"
+                        value={identityBirthDate}
+                        onChange={(event) => setIdentityBirthDate(formatBirthDateInput(event.target.value))}
+                        placeholder={t('onboarding.step1.identityBirthPlaceholder')}
+                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-4 sm:px-6 focus:outline-none focus:ring-2 focus:ring-[#e3262e]/20"
+                      />
+                      <p className="text-[10px] text-gray-400 mt-2">{t('onboarding.step1.identityBirthHint')}</p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="text-[10px] font-black text-gray-400 uppercase mb-2 block tracking-widest">{t('onboarding.step1.identityUploadLabel')}</label>
+                      <input
+                        type="file"
+                        id="identity-upload"
+                        accept="image/*"
+                        onChange={handleIdentityUpload}
+                        disabled={identityBusy}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="identity-upload"
+                        className={`w-full inline-flex items-center justify-center gap-2 px-4 py-4 rounded-2xl border-2 border-dashed text-xs font-bold uppercase tracking-widest transition-all cursor-pointer ${
+                          identityBusy ? 'border-gray-200 text-gray-300 bg-gray-50 cursor-not-allowed' : 'border-gray-200 text-gray-500 bg-gray-50 hover:border-[#e3262e] hover:text-[#e3262e] hover:bg-red-50'
+                        }`}
+                      >
+                        {identityBusyLabel}
+                      </label>
+                      <p className="text-[10px] text-gray-400 mt-2">{t('onboarding.step1.identityUploadHint')}</p>
+                      {scanningIdentity && (
+                        <p className="text-[10px] text-gray-500 mt-2">
+                          {t('onboarding.step1.identityScanning')}
+                          {identityScanMessage ? ` • ${getIdentityScanStatus(identityScanMessage)}` : ''}
+                        </p>
+                      )}
+                      {!scanningIdentity && identityScanSuccess && (
+                        <p className="text-[10px] text-emerald-600 mt-2">{t('onboarding.step1.identityScanSuccess')}</p>
+                      )}
+                      {!scanningIdentity && identityScanError && (
+                        <p className="text-[10px] text-red-500 mt-2">{identityScanError}</p>
+                      )}
+                    </div>
+                  </div>
+                  {identityDocumentUrl && (
+                    <div className="flex items-center gap-4 bg-gray-50 border border-gray-100 rounded-2xl p-3">
+                      <img
+                        src={identityDocumentUrl}
+                        alt={t('onboarding.step1.identityTitle')}
+                        className="w-16 h-16 rounded-xl object-cover"
+                      />
+                      <div className="text-xs text-gray-500">
+                        <p className="font-bold text-gray-700">{t('onboarding.step1.identityUploaded')}</p>
+                        <p>{t('onboarding.step1.identityPrivacy')}</p>
+                      </div>
+                    </div>
+                  )}
+                  {!identityDocumentUrl && (
+                    <p className="text-[10px] text-gray-400">{t('onboarding.step1.identityPrivacy')}</p>
+                  )}
+                  {step1Error && <p className="text-xs text-red-500 font-semibold">{step1Error}</p>}
+                </div>
                 <button 
-                  onClick={nextStep}
-                  className="w-full bg-[#e3262e] text-white py-4 sm:py-5 rounded-2xl font-bold uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-200 mt-6 sm:mt-8 flex items-center justify-center gap-2"
+                  onClick={handleStep1Next}
+                  disabled={uploadingIdentity}
+                  className="w-full bg-[#e3262e] text-white py-4 sm:py-5 rounded-2xl font-bold uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-200 mt-6 sm:mt-8 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {t('onboarding.step1.sendCode')}
                   <ArrowRight size={20} />
@@ -548,6 +829,13 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                     </select>
                   </div>
                 </div>
+
+                <NationalityPicker
+                  value={nationality}
+                  onChange={setNationality}
+                  label={t('onboarding.step2.nationality')}
+                  placeholder={t('onboarding.step2.nationalityPlaceholder')}
+                />
 
                 <button onClick={nextStep} className="w-full bg-[#e3262e] text-white py-4 sm:py-5 rounded-2xl font-bold uppercase tracking-widest hover:bg-red-700 transition-all mt-4">{t('onboarding.step2.next')}</button>
               </div>

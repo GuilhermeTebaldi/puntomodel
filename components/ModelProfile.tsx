@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { X, MessageCircle, Phone, MapPin, CheckCircle2, ShieldCheck, Heart, Share2, Info, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fetchModelMetrics, rateModel, trackModelEvent } from '../services/models';
 import { getCurrentUser } from '../services/auth';
@@ -25,6 +25,7 @@ interface ModelProfileProps {
       eyes?: string;
       hair?: string;
       feet?: string;
+      nationality?: string;
     };
     location?: { city?: string; state?: string; lat?: number; lon?: number } | null;
     isOnline?: boolean;
@@ -49,6 +50,13 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [hasSwiped, setHasSwiped] = useState(false);
+  const nationalityLabel = useMemo(() => {
+    const code = model.attributes?.nationality;
+    if (!code) return t('profile.notInformed');
+    if (typeof Intl === 'undefined' || typeof Intl.DisplayNames === 'undefined') return code.toUpperCase();
+    const displayNames = new Intl.DisplayNames([locale], { type: 'region' });
+    return displayNames.of(code.toUpperCase()) ?? code.toUpperCase();
+  }, [locale, model.attributes?.nationality, t]);
   const telDigits = toTelDigits(model.phone);
   const whatsappDigits = toWhatsappDigits(model.phone);
 
@@ -390,6 +398,10 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
                   <li className="flex justify-between text-sm">
                     <span className="text-gray-500">{t('dashboard.form.hairLabel')}</span>
                     <span className="font-bold text-gray-900">{model.attributes?.hair ? translateHair(model.attributes?.hair) : t('profile.notInformed')}</span>
+                  </li>
+                  <li className="flex justify-between text-sm">
+                    <span className="text-gray-500">{t('dashboard.form.nationalityLabel')}</span>
+                    <span className="font-bold text-gray-900">{nationalityLabel}</span>
                   </li>
                   <li className="flex justify-between text-sm">
                     <span className="text-gray-500">{t('dashboard.form.feetLabel')}</span>

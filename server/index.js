@@ -112,6 +112,62 @@ const normalizePhoneE164 = (rawPhone, phoneCountryDial) => {
   if (normalizedDigits.length < 8 || normalizedDigits.length > 15) return null;
   return `+${normalizedDigits}`;
 };
+const normalizeBirthDate = (value) => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const brMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  let year = 0;
+  let month = 0;
+  let day = 0;
+  if (isoMatch) {
+    year = Number(isoMatch[1]);
+    month = Number(isoMatch[2]);
+    day = Number(isoMatch[3]);
+  } else if (brMatch) {
+    day = Number(brMatch[1]);
+    month = Number(brMatch[2]);
+    year = Number(brMatch[3]);
+  } else {
+    return null;
+  }
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  if (Number.isNaN(date.getTime())) return null;
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+};
+const getAgeFromBirthDate = (value) => {
+  const normalized = normalizeBirthDate(value);
+  if (!normalized) return null;
+  const [year, month, day] = normalized.split('-').map((part) => Number(part));
+  const birthDate = new Date(year, month - 1, day);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age -= 1;
+  }
+  return age;
+};
+// Identity documents are stored for admin-only verification (18+).
+const normalizeIdentity = (identity, current = null) => {
+  if (identity === undefined) return current ?? null;
+  if (identity === null) return null;
+  if (typeof identity !== 'object') return null;
+  const number = typeof identity.number === 'string' ? identity.number.trim() : current?.number ?? '';
+  const documentUrl = typeof identity.documentUrl === 'string' ? identity.documentUrl.trim() : current?.documentUrl ?? '';
+  const birthDate = normalizeBirthDate(identity.birthDate) ?? current?.birthDate ?? null;
+  const verifiedAt = typeof identity.verifiedAt === 'string' ? identity.verifiedAt : current?.verifiedAt ?? null;
+  if (!number || !documentUrl || !birthDate) return null;
+  return {
+    number,
+    documentUrl,
+    birthDate,
+    verifiedAt,
+  };
+};
 const getTodayKey = () => new Date().toISOString().slice(0, 10);
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -243,6 +299,12 @@ const sanitizeUser = (user) => ({
   createdAt: user.createdAt,
 });
 
+const sanitizeModelPublic = (model) => {
+  if (!model) return model;
+  const { identity, ...rest } = model;
+  return rest;
+};
+
 app.get('/api/health', async (_req, res) => {
   const dbOk = await checkDb();
   res.json({ ok: true, db: dbOk });
@@ -340,7 +402,7 @@ app.get('/api/models', async (req, res) => {
     models = models.filter((model) => normalizeEmail(model.email) === query);
   }
 
-  res.json({ ok: true, models });
+  res.json({ ok: true, models: models.map(sanitizeModelPublic) });
 });
 
 app.get('/api/models/:id', async (req, res) => {
@@ -350,7 +412,7 @@ app.get('/api/models/:id', async (req, res) => {
     return res.status(404).json({ ok: false, error: 'Perfil não encontrado.' });
   }
   const refreshed = await refreshModelState(model);
-  res.json({ ok: true, model: refreshed });
+  res.json({ ok: true, model: sanitizeModelPublic(refreshed) });
 });
 
 app.get('/api/admin/users', async (_req, res) => {
@@ -411,6 +473,17 @@ app.post('/api/models', async (req, res) => {
   }
 
   const existingModel = await getModelByEmail(normalizedModelEmail);
+  const normalizedIdentity = normalizeIdentity(payload.identity, existingModel?.identity ?? null);
+  if (!normalizedIdentity) {
+    return res.status(400).json({ ok: false, error: 'Identidade obrigatória.' });
+  }
+  const derivedAge = getAgeFromBirthDate(normalizedIdentity.birthDate);
+  if (!derivedAge) {
+    return res.status(400).json({ ok: false, error: 'Data de nascimento inválida.' });
+  }
+  if (derivedAge < 18) {
+    return res.status(400).json({ ok: false, error: 'Menor de idade.' });
+  }
 
   const existingBilling = existingModel?.billing ?? null;
   const existingPayments = existingModel?.payments ?? [];
@@ -419,8 +492,9 @@ app.post('/api/models', async (req, res) => {
     name: payload.name.trim(),
     email: normalizedModelEmail,
     userId: typeof payload.userId === 'string' ? payload.userId : undefined,
-    age: payload.age ?? null,
+    age: derivedAge,
     phone: normalizedPhone,
+    identity: normalizedIdentity,
     bio: payload.bio ?? '',
     services: Array.isArray(payload.services) ? payload.services : [],
     prices: Array.isArray(payload.prices) ? payload.prices : [],
@@ -450,7 +524,7 @@ app.post('/api/models', async (req, res) => {
     updatedAt: nowIso,
   });
 
-  res.json({ ok: true, model: savedModel });
+  res.json({ ok: true, model: sanitizeModelPublic(savedModel) });
 });
 
 app.patch('/api/models/:id', async (req, res) => {
@@ -469,10 +543,34 @@ app.patch('/api/models/:id', async (req, res) => {
     }
     normalizedPhone = parsedPhone;
   }
+  const normalizedIdentity =
+    payload.identity !== undefined ? normalizeIdentity(payload.identity, model.identity ?? null) : model.identity ?? null;
+  if (payload.identity !== undefined && !normalizedIdentity) {
+    return res.status(400).json({ ok: false, error: 'Identidade inválida.' });
+  }
+  let derivedAge = model.age ?? null;
+  if (normalizedIdentity?.birthDate) {
+    const ageFromBirthDate = getAgeFromBirthDate(normalizedIdentity.birthDate);
+    if (!ageFromBirthDate) {
+      return res.status(400).json({ ok: false, error: 'Data de nascimento inválida.' });
+    }
+    if (ageFromBirthDate < 18) {
+      return res.status(400).json({ ok: false, error: 'Menor de idade.' });
+    }
+    derivedAge = ageFromBirthDate;
+  }
+  if (payload.age !== undefined) {
+    const numericAge = Number(payload.age);
+    if (!Number.isFinite(numericAge) || numericAge < 18) {
+      return res.status(400).json({ ok: false, error: 'Menor de idade.' });
+    }
+    derivedAge = numericAge;
+  }
   const updates = {
     name: typeof payload.name === 'string' ? payload.name.trim() : model.name,
-    age: payload.age ?? model.age ?? null,
+    age: derivedAge,
     phone: normalizedPhone,
+    identity: normalizedIdentity,
     bio: typeof payload.bio === 'string' ? payload.bio : model.bio ?? '',
     services: Array.isArray(payload.services) ? payload.services : model.services ?? [],
     prices: Array.isArray(payload.prices) ? payload.prices : model.prices ?? [],
@@ -497,7 +595,7 @@ app.patch('/api/models/:id', async (req, res) => {
   const updatedModel = { ...model, ...updates, updatedAt: new Date().toISOString() };
   const savedModel = await updateModel(model.id, updatedModel);
 
-  res.json({ ok: true, model: savedModel });
+  res.json({ ok: true, model: sanitizeModelPublic(savedModel) });
 });
 
 app.post('/api/models/:id/payments', async (req, res) => {
@@ -554,7 +652,7 @@ app.post('/api/models/:id/payments', async (req, res) => {
   const savedModel = await updateModel(model.id, model);
   await addPayment(model.id, payment);
 
-  res.json({ ok: true, model: savedModel });
+  res.json({ ok: true, model: sanitizeModelPublic(savedModel) });
 });
 
 app.post('/api/models/:id/events', async (req, res) => {
