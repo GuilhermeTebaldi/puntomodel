@@ -1,6 +1,6 @@
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { X, Check, Camera, MapPin, Smartphone, User, ArrowRight, ChevronLeft, Info, Heart } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { X, Check, Camera, MapPin, Smartphone, User, ArrowRight, ChevronLeft, Info, Heart, Loader2 } from 'lucide-react';
 import Logo from './Logo';
 import { AuthUser, clearPendingModelProfile, getPendingModelProfile, PendingModelProfile, registerUser, setCurrentUser } from '../services/auth';
 import { uploadImage } from '../services/cloudinary';
@@ -62,6 +62,112 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     : t('onboarding.step1.identityUploadButton');
   const availableServices = serviceOptions;
   const countriesWithDial = useMemo(() => countries.filter((country) => country.dial), [countries]);
+  const manualCountryRef = useRef(false);
+
+  const getBrowserCountryCode = () => {
+    if (typeof navigator === 'undefined') return '';
+    const locale = navigator.language || '';
+    const normalized = locale.replace('_', '-');
+    const parts = normalized.split('-');
+    if (parts[1]) return parts[1].toUpperCase();
+    try {
+      const intlLocale = new (Intl as any).Locale(normalized);
+      return intlLocale?.region ? String(intlLocale.region).toUpperCase() : '';
+    } catch {
+      return parts[0] ? parts[0].toUpperCase() : '';
+    }
+  };
+
+  const fetchCountryCodeFromIp = async () => {
+    const endpoints = [
+      { url: 'https://ipapi.co/json/', key: 'country_code' },
+      { url: 'https://ipwho.is/', key: 'country_code' },
+    ];
+    for (const endpoint of endpoints) {
+      try {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 3500);
+        const response = await fetch(endpoint.url, {
+          signal: controller.signal,
+          headers: { Accept: 'application/json' },
+        });
+        window.clearTimeout(timeout);
+        if (!response.ok) continue;
+        const data = await response.json();
+        const code = data?.[endpoint.key];
+        if (code) return String(code).toUpperCase();
+      } catch {
+        // ignore and try next endpoint
+      }
+    }
+    return '';
+  };
+
+  const getTimezoneCountryCode = () => {
+    try {
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (!timeZone) return '';
+      const map: Record<string, string> = {
+        'Europe/Rome': 'IT',
+        'Europe/Madrid': 'ES',
+        'Europe/Paris': 'FR',
+        'Europe/Berlin': 'DE',
+        'Europe/London': 'GB',
+        'Europe/Lisbon': 'PT',
+        'Europe/Zurich': 'CH',
+        'Europe/Vienna': 'AT',
+        'Europe/Brussels': 'BE',
+        'Europe/Amsterdam': 'NL',
+        'Europe/Oslo': 'NO',
+        'Europe/Stockholm': 'SE',
+        'Europe/Helsinki': 'FI',
+        'Europe/Warsaw': 'PL',
+        'Europe/Prague': 'CZ',
+        'Europe/Bucharest': 'RO',
+        'Europe/Athens': 'GR',
+        'Europe/Istanbul': 'TR',
+        'America/Sao_Paulo': 'BR',
+        'America/New_York': 'US',
+        'America/Chicago': 'US',
+        'America/Los_Angeles': 'US',
+        'America/Mexico_City': 'MX',
+      };
+      return map[timeZone] || '';
+    } catch {
+      return '';
+    }
+  };
+
+  const resolveAutoCountry = async (withDial: Array<{ name: string; cca2: string; dial: string }>) => {
+    const localeCountry = getBrowserCountryCode();
+    if (localeCountry && withDial.some((c) => c.cca2 === localeCountry)) {
+      return localeCountry;
+    }
+    const tzCountry = getTimezoneCountryCode();
+    if (tzCountry && withDial.some((c) => c.cca2 === tzCountry)) {
+      return tzCountry;
+    }
+    const ipCountry = await fetchCountryCodeFromIp();
+    if (ipCountry && withDial.some((c) => c.cca2 === ipCountry)) {
+      return ipCountry;
+    }
+    return '';
+  };
+
+  const detectCountryByDial = (digitsValue: string) => {
+    if (!digitsValue) return '';
+    let best: { cca2: string; dial: string } | null = null;
+    for (const country of countriesWithDial) {
+      const dialDigits = country.dial.replace(/\D/g, '');
+      if (!dialDigits) continue;
+      if (digitsValue.startsWith(dialDigits)) {
+        if (!best || dialDigits.length > best.dial.replace(/\D/g, '').length) {
+          best = country;
+        }
+      }
+    }
+    return best?.cca2 ?? '';
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -93,6 +199,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       setBio('');
       setPublishError('');
       setPublishing(false);
+      manualCountryRef.current = false;
       return;
     }
 
@@ -113,11 +220,16 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         if (!isActive) return;
         setCountries(mapped);
         const withDial = mapped.filter((country) => country.dial);
+        const autoCountry = await resolveAutoCountry(withDial);
         const brazil = withDial.find((c) => c.cca2 === 'BR');
-        if (brazil) {
-          setSelectedCountry('BR');
-        } else if (withDial[0]) {
-          setSelectedCountry(withDial[0].cca2);
+        if (!manualCountryRef.current) {
+          if (autoCountry) {
+            setSelectedCountry(autoCountry);
+          } else if (brazil) {
+            setSelectedCountry('BR');
+          } else if (withDial[0]) {
+            setSelectedCountry(withDial[0].cca2);
+          }
         }
       } catch {
         // silently keep default
@@ -209,6 +321,15 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
 
     if (raw.startsWith('+') || raw.startsWith('00')) {
       const withoutPrefix = raw.startsWith('00') ? digits.replace(/^00/, '') : digits;
+      const detectedCountry = detectCountryByDial(withoutPrefix);
+      if (detectedCountry && detectedCountry !== countryCode) {
+        const detectedDial = countriesWithDial.find((country) => country.cca2 === detectedCountry)?.dial.replace(/\D/g, '') ?? '';
+        const detectedNational = detectedDial && withoutPrefix.startsWith(detectedDial) ? withoutPrefix.slice(detectedDial.length) : withoutPrefix;
+        manualCountryRef.current = true;
+        setSelectedCountry(detectedCountry);
+        setPhoneValue(formatPhone(detectedNational, detectedCountry));
+        return;
+      }
       if (dialDigits && withoutPrefix.startsWith(dialDigits)) {
         nationalDigits = withoutPrefix.slice(dialDigits.length);
       } else {
@@ -390,6 +511,11 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     const digits = phoneValue.replace(/\D/g, '');
     setPhoneValue(formatPhone(digits, newCountry));
     setPhoneRawValue(formatPhone(digits, newCountry));
+  };
+
+  const handleCountrySelect = (newCountry: string) => {
+    manualCountryRef.current = true;
+    handleCountryChange(newCountry);
   };
 
   const handleLocationChange = (location: LocationValue) => {
@@ -594,7 +720,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                 <div className="flex flex-col sm:flex-row gap-3">
                   <select
                     value={selectedCountry}
-                    onChange={(event) => handleCountryChange(event.target.value)}
+                    onChange={(event) => handleCountrySelect(event.target.value)}
                     className="w-full sm:w-32 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center font-bold text-gray-500 px-3 py-4 focus:outline-none focus:ring-2 focus:ring-[#e3262e]/20"
                   >
                     {loadingCountries ? (
@@ -625,27 +751,6 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                     <p className="text-[11px] text-gray-500 mt-1">{t('onboarding.step1.identitySubtitle')}</p>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[10px] font-black text-gray-400 uppercase mb-2 block tracking-widest">{t('onboarding.step1.identityNumberLabel')}</label>
-                      <input
-                        type="text"
-                        value={identityNumber}
-                        onChange={(event) => setIdentityNumber(event.target.value)}
-                        placeholder={t('onboarding.step1.identityNumberPlaceholder')}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-4 sm:px-6 focus:outline-none focus:ring-2 focus:ring-[#e3262e]/20"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-black text-gray-400 uppercase mb-2 block tracking-widest">{t('onboarding.step1.identityBirthLabel')}</label>
-                      <input
-                        type="text"
-                        value={identityBirthDate}
-                        onChange={(event) => setIdentityBirthDate(formatBirthDateInput(event.target.value))}
-                        placeholder={t('onboarding.step1.identityBirthPlaceholder')}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-4 sm:px-6 focus:outline-none focus:ring-2 focus:ring-[#e3262e]/20"
-                      />
-                      <p className="text-[10px] text-gray-400 mt-2">{t('onboarding.step1.identityBirthHint')}</p>
-                    </div>
                     <div className="sm:col-span-2">
                       <label className="text-[10px] font-black text-gray-400 uppercase mb-2 block tracking-widest">{t('onboarding.step1.identityUploadLabel')}</label>
                       <input
@@ -666,10 +771,29 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                       </label>
                       <p className="text-[10px] text-gray-400 mt-2">{t('onboarding.step1.identityUploadHint')}</p>
                       {scanningIdentity && (
-                        <p className="text-[10px] text-gray-500 mt-2">
-                          {t('onboarding.step1.identityScanning')}
-                          {identityScanMessage ? ` • ${getIdentityScanStatus(identityScanMessage)}` : ''}
-                        </p>
+                        <div className="mt-4 rounded-2xl border border-red-100 bg-red-50/70 p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
+                              <Loader2 className="w-5 h-5 text-[#e3262e] animate-spin" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">
+                                {t('onboarding.step1.identityScanTitle')}
+                              </p>
+                              <p className="text-[11px] text-gray-600 mt-1">
+                                {t('onboarding.step1.identityScanning')}
+                              </p>
+                              {identityScanMessage && (
+                                <p className="text-[11px] text-gray-400 mt-1">
+                                  {getIdentityScanStatus(identityScanMessage)}
+                                </p>
+                              )}
+                              <div className="mt-3 h-1.5 rounded-full bg-white/80 overflow-hidden">
+                                <div className="h-full w-2/3 bg-[#e3262e] animate-pulse" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       )}
                       {!scanningIdentity && identityScanSuccess && (
                         <p className="text-[10px] text-emerald-600 mt-2">{t('onboarding.step1.identityScanSuccess')}</p>
@@ -677,6 +801,27 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                       {!scanningIdentity && identityScanError && (
                         <p className="text-[10px] text-red-500 mt-2">{identityScanError}</p>
                       )}
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase mb-2 block tracking-widest">{t('onboarding.step1.identityNumberLabel')}</label>
+                      <input
+                        type="text"
+                        value={identityNumber}
+                        onChange={(event) => setIdentityNumber(event.target.value)}
+                        placeholder={t('onboarding.step1.identityNumberPlaceholder')}
+                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-4 sm:px-6 focus:outline-none focus:ring-2 focus:ring-[#e3262e]/20"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase mb-2 block tracking-widest">{t('onboarding.step1.identityBirthLabel')}</label>
+                      <input
+                        type="text"
+                        value={identityBirthDate}
+                        onChange={(event) => setIdentityBirthDate(formatBirthDateInput(event.target.value))}
+                        placeholder={t('onboarding.step1.identityBirthPlaceholder')}
+                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-4 sm:px-6 focus:outline-none focus:ring-2 focus:ring-[#e3262e]/20"
+                      />
+                      <p className="text-[10px] text-gray-400 mt-2">{t('onboarding.step1.identityBirthHint')}</p>
                     </div>
                   </div>
                   {identityDocumentUrl && (

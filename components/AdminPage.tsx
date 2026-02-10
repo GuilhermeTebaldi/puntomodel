@@ -20,6 +20,7 @@ interface AdminModel {
   identity?: {
     number?: string;
     documentUrl?: string;
+    birthDate?: string;
   } | null;
   featured?: boolean;
   createdAt?: string;
@@ -44,6 +45,7 @@ const AdminPage: React.FC = () => {
   const [resetting, setResetting] = useState(false);
   const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<AdminModel | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -135,6 +137,38 @@ const AdminPage: React.FC = () => {
   const handleBackToSite = () => {
     window.history.pushState({}, '', '/');
     window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+
+  const closeModelDetails = () => setSelectedModel(null);
+
+  const formatDate = (value?: string | null) => {
+    if (!value) return '-';
+    const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) {
+      const date = new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
+      return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString(locale);
+    }
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString(locale);
+  };
+
+  const calculateAge = (birthDate?: string | null) => {
+    if (!birthDate) return null;
+    const isoMatch = birthDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!isoMatch) return null;
+    const year = Number(isoMatch[1]);
+    const month = Number(isoMatch[2]);
+    const day = Number(isoMatch[3]);
+    const date = new Date(year, month - 1, day);
+    if (Number.isNaN(date.getTime())) return null;
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+    const today = new Date();
+    let age = today.getFullYear() - year;
+    const monthDiff = today.getMonth() - (month - 1);
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < day)) {
+      age -= 1;
+    }
+    return age;
   };
 
   return (
@@ -273,6 +307,13 @@ const AdminPage: React.FC = () => {
                     </td>
                     <td className="px-4 py-3 text-gray-600">{model.featured ? t('adminPage.featuredYes') : t('adminPage.featuredNo')}</td>
                     <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-3">
+                        <button
+                          onClick={() => setSelectedModel(model)}
+                          className="text-xs font-bold uppercase tracking-widest text-gray-600 hover:text-gray-800"
+                        >
+                          {t('adminPage.viewDetails')}
+                        </button>
                       <button
                         onClick={() => handleDeleteModel(model)}
                         disabled={deletingModelId === model.id}
@@ -280,11 +321,92 @@ const AdminPage: React.FC = () => {
                       >
                         {deletingModelId === model.id ? t('adminPage.deleting') : t('adminPage.delete')}
                       </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {selectedModel && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={closeModelDetails}
+            />
+            <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-xl border border-gray-100">
+              <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400">{t('adminPage.documentsTitle')}</p>
+                  <h2 className="text-xl font-black text-gray-900">{selectedModel.name}</h2>
+                  <p className="text-sm text-gray-500">{selectedModel.email}</p>
+                </div>
+                <button
+                  onClick={closeModelDetails}
+                  className="text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-gray-700"
+                >
+                  {t('common.close')}
+                </button>
+              </div>
+
+              <div className="px-6 py-6 space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{t('adminPage.table.phone')}</p>
+                    <p className="text-sm font-semibold text-gray-800">{selectedModel.phone || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{t('adminPage.table.age')}</p>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {selectedModel.age ?? calculateAge(selectedModel.identity?.birthDate) ?? '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{t('adminPage.table.identityNumber')}</p>
+                    <p className="text-sm font-semibold text-gray-800">{selectedModel.identity?.number || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{t('adminPage.identityBirthDate')}</p>
+                    <p className="text-sm font-semibold text-gray-800">{formatDate(selectedModel.identity?.birthDate)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{t('adminPage.table.createdAt')}</p>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {selectedModel.createdAt ? new Date(selectedModel.createdAt).toLocaleString(locale) : '-'}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
+                    {t('adminPage.identityPreview')}
+                  </p>
+                  {selectedModel.identity?.documentUrl ? (
+                    <div className="flex flex-col sm:flex-row gap-4 items-start">
+                      <img
+                        src={selectedModel.identity.documentUrl}
+                        alt={t('adminPage.identityPreview')}
+                        className="w-full sm:w-64 h-48 object-cover rounded-2xl border border-gray-100"
+                      />
+                      <div className="text-sm text-gray-600 space-y-2">
+                        <p className="font-semibold text-gray-800">{t('adminPage.viewDocument')}</p>
+                        <a
+                          href={selectedModel.identity.documentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#e3262e]"
+                        >
+                          {t('adminPage.viewDocument')}
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400">{t('adminPage.identityMissing')}</p>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>
