@@ -56,6 +56,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const [loadingCountries, setLoadingCountries] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<LocationValue | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [photosUploadProgress, setPhotosUploadProgress] = useState(0);
   const [photosUploadingCount, setPhotosUploadingCount] = useState(0);
@@ -236,6 +237,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       setNationality('');
       setSelectedLocation(null);
       setPhotos([]);
+      setPhotoFiles([]);
       setServices([]);
       setBio('');
       setStep5Error('');
@@ -679,34 +681,13 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const handlePhotoAdd = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []) as File[];
     if (!files.length) return;
-    setUploadingPhotos(true);
     setPublishError('');
     setPhotosUploadProgress(0);
-    setPhotosUploadingCount(files.length);
-    try {
-      const uploaded: string[] = [];
-      for (let index = 0; index < files.length; index += 1) {
-        const file = files[index];
-        const url = await uploadImageWithProgress(file, (progress) => {
-          const overall = Math.round(((index + progress / 100) / files.length) * 100);
-          setPhotosUploadProgress(overall);
-        });
-        uploaded.push(url);
-        const completed = Math.round(((index + 1) / files.length) * 100);
-        setPhotosUploadProgress(completed);
-      }
-      setPhotos((prev) => [...prev, ...uploaded]);
-      setPhotosUploadProgress(100);
-    } catch {
-      setPublishError(t('errors.imageLoadFailedGeneric'));
-    } finally {
-      setUploadingPhotos(false);
-      window.setTimeout(() => {
-        setPhotosUploadProgress(0);
-        setPhotosUploadingCount(0);
-      }, 800);
-      event.target.value = '';
-    }
+    setPhotosUploadingCount(0);
+    const previews = files.map((file) => URL.createObjectURL(file));
+    setPhotos((prev) => [...prev, ...previews]);
+    setPhotoFiles((prev) => [...prev, ...files]);
+    event.target.value = '';
   };
 
   const toggleService = (service: string) => {
@@ -742,7 +723,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       setPublishing(false);
       return;
     }
-    if (photos.length < 4) {
+    if (photoFiles.length < 4) {
       setPublishError(t('errors.minPhotos'));
       setPublishing(false);
       return;
@@ -803,6 +784,33 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         return;
       }
 
+      setUploadingPhotos(true);
+      setPhotosUploadProgress(0);
+      setPhotosUploadingCount(photoFiles.length);
+      let uploadedPhotos: string[] = [];
+      try {
+        const uploaded: string[] = [];
+        for (let index = 0; index < photoFiles.length; index += 1) {
+          const file = photoFiles[index];
+          const url = await uploadImageWithProgress(file, (progress) => {
+            const overall = Math.round(((index + progress / 100) / photoFiles.length) * 100);
+            setPhotosUploadProgress(overall);
+          });
+          uploaded.push(url);
+          const completed = Math.round(((index + 1) / photoFiles.length) * 100);
+          setPhotosUploadProgress(completed);
+        }
+        uploadedPhotos = uploaded;
+        setPhotosUploadProgress(100);
+      } catch {
+        setPublishError(t('errors.imageLoadFailedGeneric'));
+        setPublishing(false);
+        setUploadingPhotos(false);
+        setPhotosUploadProgress(0);
+        setPhotosUploadingCount(0);
+        return;
+      }
+
       await createModelProfile({
         userId: registrationResult.user.id,
         name: displayName,
@@ -836,16 +844,22 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
               lon: Number(selectedLocation.lon),
             }
           : null,
-        photos,
+        photos: uploadedPhotos,
         featured: true,
       });
       clearPendingModelProfile();
       onProfilePublished?.(registrationResult.user);
       setPublishing(false);
+      setUploadingPhotos(false);
+      setPhotosUploadProgress(0);
+      setPhotosUploadingCount(0);
       onClose();
     } catch (err) {
       setPublishError(err instanceof Error ? translateError(err.message) : t('errors.publishFailed'));
       setPublishing(false);
+      setUploadingPhotos(false);
+      setPhotosUploadProgress(0);
+      setPhotosUploadingCount(0);
     }
   };
 
