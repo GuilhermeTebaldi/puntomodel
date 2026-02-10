@@ -12,6 +12,7 @@ export interface ModelAttributes {
   hair?: string;
   feet?: string;
   nationality?: string;
+  audience?: string[];
 }
 
 export interface ModelIdentity {

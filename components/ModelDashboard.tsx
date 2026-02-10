@@ -53,6 +53,7 @@ interface ModelDashboardModel {
     hair?: string;
     feet?: string;
     nationality?: string;
+    audience?: string[];
   };
   location?: { city?: string; state?: string; lat?: number; lon?: number } | null;
   isOnline?: boolean;
@@ -455,14 +456,24 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   const [bioInput, setBioInput] = useState(model.bio || '');
   const [servicesInput, setServicesInput] = useState<string[]>(model.services || []);
   const [serviceDraft, setServiceDraft] = useState('');
+  const [editingAudience, setEditingAudience] = useState(false);
   const [heightInput, setHeightInput] = useState(model.attributes?.height || '');
   const [weightInput, setWeightInput] = useState(model.attributes?.weight || '');
   const [hairInput, setHairInput] = useState(model.attributes?.hair || '');
   const [feetInput, setFeetInput] = useState(model.attributes?.feet || '');
   const [eyesInput, setEyesInput] = useState(model.attributes?.eyes || '');
   const [nationalityInput, setNationalityInput] = useState(model.attributes?.nationality || '');
+  const [audienceInput, setAudienceInput] = useState<string[]>(model.attributes?.audience || []);
   const [photosInput, setPhotosInput] = useState<string[]>(model.photos || []);
   const [locationDraft, setLocationDraft] = useState<LocationValue | null>(toLocationValue(model.location));
+  const audienceOptions = useMemo(
+    () => [
+      { id: 'men', label: t('common.audienceMen') },
+      { id: 'women', label: t('common.audienceWomen') },
+      { id: 'other', label: t('common.audienceOther') },
+    ],
+    [t]
+  );
 
   const nationalityLabel = useMemo(() => {
     const code = model.attributes?.nationality;
@@ -472,17 +483,30 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     return displayNames.of(code.toUpperCase()) ?? code.toUpperCase();
   }, [locale, model.attributes?.nationality]);
 
+  const audienceLabel = useMemo(() => {
+    const list = model.attributes?.audience;
+    if (!list || !list.length) return t('dashboard.form.servicesMissing');
+    const map: Record<string, string> = {
+      men: t('common.audienceMen'),
+      women: t('common.audienceWomen'),
+      other: t('common.audienceOther'),
+    };
+    return list.map((item) => map[item] || item).join(', ');
+  }, [model.attributes?.audience, t]);
+
   useEffect(() => {
     setIsOnline(Boolean(model.isOnline ?? true));
     setNameInput(model.name);
     setBioInput(model.bio || '');
     setServicesInput(model.services || []);
+    setEditingAudience(false);
     setHeightInput(model.attributes?.height || '');
     setWeightInput(model.attributes?.weight || '');
     setHairInput(model.attributes?.hair || '');
     setFeetInput(model.attributes?.feet || '');
     setEyesInput(model.attributes?.eyes || '');
     setNationalityInput(model.attributes?.nationality || '');
+    setAudienceInput(model.attributes?.audience || []);
     setPhotosInput(model.photos || []);
     setLocationDraft(toLocationValue(model.location));
   }, [model]);
@@ -491,14 +515,20 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     setNameInput(model.name);
     setBioInput(model.bio || '');
     setServicesInput(model.services || []);
+    setEditingAudience(false);
     setHeightInput(model.attributes?.height || '');
     setWeightInput(model.attributes?.weight || '');
     setHairInput(model.attributes?.hair || '');
     setFeetInput(model.attributes?.feet || '');
     setEyesInput(model.attributes?.eyes || '');
     setNationalityInput(model.attributes?.nationality || '');
+    setAudienceInput(model.attributes?.audience || []);
     setPhotosInput(model.photos || []);
     setLocationDraft(toLocationValue(model.location));
+  };
+
+  const toggleAudience = (value: string) => {
+    setAudienceInput((prev) => (prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]));
   };
 
   const handleSave = async (payload: Record<string, unknown>, onDone: () => void) => {
@@ -1203,6 +1233,74 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                         </div>
                       )}
                     </div>
+                    <div className="pt-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('dashboard.form.audienceLabel')}</label>
+                        <button
+                          onClick={() => {
+                            setEditingAudience(!editingAudience);
+                            if (editingAudience) resetEdits();
+                          }}
+                          className="text-gray-300 hover:text-[#e3262e]"
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                      </div>
+                      {editingAudience ? (
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap gap-2">
+                            {audienceOptions.map((option) => (
+                              <button
+                                key={option.id}
+                                type="button"
+                                onClick={() => toggleAudience(option.id)}
+                                className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${
+                                  audienceInput.includes(option.id)
+                                    ? 'bg-[#e3262e] text-white border-[#e3262e] shadow-sm'
+                                    : 'bg-white text-gray-500 border-gray-100 hover:border-gray-200'
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              disabled={saving}
+                              onClick={() =>
+                                handleSave(
+                                  {
+                                    attributes: {
+                                      ...(model.attributes ?? {}),
+                                      audience: audienceInput.length ? audienceInput : undefined,
+                                    },
+                                  },
+                                  () => setEditingAudience(false)
+                                )
+                              }
+                              className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
+                            >
+                              {saving ? t('common.saving') : t('common.save')}
+                            </button>
+                            <button
+                              onClick={() => {
+                                resetEdits();
+                                setEditingAudience(false);
+                              }}
+                              className="px-4 py-2 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest"
+                            >
+                              {t('common.cancel')}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          <span className="bg-gray-50 text-gray-600 px-4 py-2 rounded-xl text-xs font-bold border border-gray-100">
+                            {audienceLabel}
+                          </span>
+                        </div>
+                      )}
+                    </div>
 
                     <div className="pt-6 border-t border-gray-100">
                       <div className="flex justify-between items-center mb-4">
@@ -1276,6 +1374,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                                       feet: feetInput || undefined,
                                       eyes: eyesInput || undefined,
                                       nationality: nationalityInput || undefined,
+                                      audience: audienceInput.length ? audienceInput : undefined,
                                     },
                                   },
                                   () => setEditingAttributes(false)

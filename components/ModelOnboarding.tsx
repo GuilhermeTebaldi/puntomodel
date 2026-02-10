@@ -20,7 +20,7 @@ interface ModelOnboardingProps {
 }
 
 const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, registration, onProfilePublished }) => {
-  const { t, translateError, translateHair, translateEyes, language } = useI18n();
+  const { t, translateError, translateHair, translateEyes, language, list } = useI18n();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 5;
   const [countries, setCountries] = useState<Array<{ name: string; cca2: string; dial: string }>>([]);
@@ -52,6 +52,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const [feet, setFeet] = useState('');
   const [hair, setHair] = useState(hairOptions[0]?.labels.br || 'Morena');
   const [eyes, setEyes] = useState(eyeOptions[0]?.labels.br || 'Castanhos');
+  const [audience, setAudience] = useState<string[]>([]);
   const [loadingCountries, setLoadingCountries] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<LocationValue | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
@@ -60,6 +61,8 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const [photosUploadingCount, setPhotosUploadingCount] = useState(0);
   const [services, setServices] = useState<string[]>([]);
   const [bio, setBio] = useState('');
+  const [step5Error, setStep5Error] = useState('');
+  const [showBioSuggestions, setShowBioSuggestions] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState('');
   const identityBusy = uploadingIdentity || scanningIdentity;
@@ -70,9 +73,18 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     : t('onboarding.step1.identityUploadButton');
   const availableServices = serviceOptions;
   const countriesWithDial = useMemo(() => countries.filter((country) => country.dial), [countries]);
+  const audienceOptions = useMemo(
+    () => [
+      { id: 'men', label: t('common.audienceMen') },
+      { id: 'women', label: t('common.audienceWomen') },
+      { id: 'other', label: t('common.audienceOther') },
+    ],
+    [t]
+  );
   const manualCountryRef = useRef(false);
   const faceVideoRef = useRef<HTMLVideoElement | null>(null);
   const faceStreamRef = useRef<MediaStream | null>(null);
+  const hasSelectedLocation = Boolean(selectedLocation && selectedLocation.lat && selectedLocation.lon);
 
   const getBrowserCountryCode = () => {
     if (typeof navigator === 'undefined') return '';
@@ -203,6 +215,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       setFeet('');
       setHair(hairOptions[0]?.labels.br || '');
       setEyes(eyeOptions[0]?.labels.br || '');
+      setAudience([]);
       setPhoneValue('');
       setPhoneRawValue('');
       setIdentityNumber('');
@@ -225,6 +238,8 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       setPhotos([]);
       setServices([]);
       setBio('');
+      setStep5Error('');
+      setShowBioSuggestions(false);
       setPublishError('');
       setPublishing(false);
       setPhotosUploadProgress(0);
@@ -647,6 +662,11 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     setSelectedLocation(location);
   };
 
+  const handleStep3Next = () => {
+    if (!hasSelectedLocation) return;
+    nextStep();
+  };
+
   const handlePhotoAdd = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []) as File[];
     if (!files.length) return;
@@ -684,6 +704,23 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     setServices((prev) =>
       prev.includes(service) ? prev.filter((item) => item !== service) : [...prev, service]
     );
+  };
+
+  const handleStep5Next = () => {
+    setStep5Error('');
+    if (!bio.trim()) {
+      setStep5Error(t('errors.bioRequired'));
+      return;
+    }
+    if (!services.length) {
+      setStep5Error(t('errors.servicesRequired'));
+      return;
+    }
+    nextStep();
+  };
+
+  const toggleAudience = (id: string) => {
+    setAudience((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
   };
 
   const handlePublish = async () => {
@@ -780,6 +817,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
           hair: hair || undefined,
           feet: feet || undefined,
           nationality: nationality || undefined,
+          audience: audience.length ? audience : undefined,
         },
         location: selectedLocation
           ? {
@@ -801,6 +839,87 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       setPublishing(false);
     }
   };
+
+  const nationalityLabel = useMemo(() => {
+    if (!nationality) return '';
+    if (typeof Intl === 'undefined' || typeof Intl.DisplayNames === 'undefined') return nationality.toUpperCase();
+    const displayNames = new Intl.DisplayNames([language], { type: 'region' });
+    return displayNames.of(nationality.toUpperCase()) ?? nationality.toUpperCase();
+  }, [language, nationality]);
+
+  const buildBioSuggestions = useMemo(() => {
+    const intros = list('onboarding.step5.bioSuggestions.intros');
+    const bodies = list('onboarding.step5.bioSuggestions.bodies');
+    const closings = list('onboarding.step5.bioSuggestions.closings');
+    if (!intros.length || !bodies.length || !closings.length) return [];
+
+    const displayName = stageName.trim() || registeredName.trim() || t('onboarding.step5.suggestionNameFallback');
+    const derivedAge = getAgeFromBirthDate(identityBirthDate);
+    const ageValue = age.trim() || (derivedAge ? String(derivedAge) : '');
+    const ageText = ageValue ? t('onboarding.step5.bioVars.age', { age: ageValue }) : '';
+    const nationalityText = nationalityLabel ? t('onboarding.step5.bioVars.nationality', { nationality: nationalityLabel }) : '';
+    const cityValue = selectedLocation?.display?.split(',')[0]?.trim() || '';
+    const cityText = cityValue ? t('onboarding.step5.bioVars.city', { city: cityValue }) : '';
+    const hairText = hair ? t('onboarding.step5.bioVars.hair', { hair: translateHair(hair) }) : '';
+    const eyesText = eyes ? t('onboarding.step5.bioVars.eyes', { eyes: translateEyes(eyes) }) : '';
+    const servicesLabels = services
+      .map((serviceId) => {
+        const service = availableServices.find((item) => item.id === serviceId);
+        return service?.labels[language] || service?.labels.br || '';
+      })
+      .filter(Boolean);
+    const servicesText = servicesLabels.length
+      ? t('onboarding.step5.bioVars.services', { services: servicesLabels.join(', ') })
+      : '';
+
+    const vars = {
+      name: displayName,
+      ageText,
+      nationalityText,
+      cityText,
+      hairText,
+      eyesText,
+      servicesText,
+    } as Record<string, string>;
+
+    const fillTemplate = (template: string) => {
+      let text = template.replace(/{{\s*(\w+)\s*}}/g, (_, key) => vars[key] || '');
+      text = text
+        .replace(/\s{2,}/g, ' ')
+        .replace(/\s+,/g, ', ')
+        .replace(/,\s*\./g, '.')
+        .replace(/\s+\./g, '.')
+        .replace(/\s+\!/g, '!')
+        .replace(/\s+\?/g, '?')
+        .trim();
+      return text;
+    };
+
+    const total = 30;
+    const suggestions: string[] = [];
+    for (let i = 0; i < total; i += 1) {
+      const template = `${intros[i % intros.length]} ${bodies[i % bodies.length]} ${closings[i % closings.length]}`;
+      const filled = fillTemplate(template);
+      if (filled) suggestions.push(filled);
+    }
+    return suggestions;
+  }, [
+    list,
+    stageName,
+    registeredName,
+    t,
+    age,
+    identityBirthDate,
+    nationalityLabel,
+    selectedLocation?.display,
+    hair,
+    eyes,
+    services,
+    availableServices,
+    language,
+    translateHair,
+    translateEyes,
+  ]);
 
 
   if (!isOpen) return null;
@@ -965,11 +1084,13 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                       <input
                         type="text"
                         value={identityBirthDate}
-                        onChange={(event) => setIdentityBirthDate(formatBirthDateInput(event.target.value))}
                         placeholder={t('onboarding.step1.identityBirthPlaceholder')}
+                        readOnly
+                        inputMode="none"
                         className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-4 sm:px-6 focus:outline-none focus:ring-2 focus:ring-[#e3262e]/20"
                       />
                       <p className="text-[10px] text-gray-400 mt-2">{t('onboarding.step1.identityBirthHint')}</p>
+                      <p className="text-[10px] text-gray-400 mt-1">{t('onboarding.step1.identityBirthAuto')}</p>
                     </div>
                     <div className="sm:col-span-2">
                       <label className="text-[10px] font-black text-gray-400 uppercase mb-2 block tracking-widest">
@@ -1217,6 +1338,27 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                   placeholder={t('onboarding.step2.nationalityPlaceholder')}
                 />
 
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase mb-3 block tracking-widest">{t('onboarding.step2.audienceLabel')}</label>
+                  <div className="flex flex-wrap gap-2">
+                    {audienceOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => toggleAudience(option.id)}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all border ${
+                          audience.includes(option.id)
+                            ? 'bg-[#e3262e] text-white border-[#e3262e] shadow-lg shadow-red-100'
+                            : 'bg-white text-gray-500 border-gray-100 hover:border-gray-300'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-2">{t('onboarding.step2.audienceHint')}</p>
+                </div>
+
                 <button onClick={nextStep} className="w-full bg-[#e3262e] text-white py-4 sm:py-5 rounded-2xl font-bold uppercase tracking-widest hover:bg-red-700 transition-all mt-4">{t('onboarding.step2.next')}</button>
               </div>
             </div>
@@ -1232,11 +1374,17 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
               <div className="bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-3xl shadow-sm border border-gray-100 space-y-6">
                 <LocationPicker value={selectedLocation} onChange={handleLocationChange} />
                 <button 
-                  onClick={nextStep}
-                  className="w-full bg-[#e3262e] text-white py-4 sm:py-5 rounded-2xl font-bold uppercase tracking-widest hover:bg-red-700 transition-all mt-4"
+                  onClick={handleStep3Next}
+                  disabled={!hasSelectedLocation}
+                  className="w-full bg-[#e3262e] text-white py-4 sm:py-5 rounded-2xl font-bold uppercase tracking-widest hover:bg-red-700 transition-all mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {t('onboarding.step3.continue')}
                 </button>
+                {!hasSelectedLocation && (
+                  <p className="text-xs text-gray-400 font-semibold text-center">
+                    {t('onboarding.step3.locationRequired')}
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -1248,9 +1396,18 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
               
               <div className="bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] shadow-sm border border-gray-100 space-y-8">
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase mb-3 block tracking-widest flex items-center gap-2">
-                    <Info size={14} /> {t('onboarding.step5.bioLabel')}
-                  </label>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                      <Info size={14} /> {t('onboarding.step5.bioLabel')}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowBioSuggestions((prev) => !prev)}
+                      className="text-[10px] font-black uppercase tracking-widest text-[#e3262e]"
+                    >
+                      {t('onboarding.step5.suggestionsButton')}
+                    </button>
+                  </div>
                   <textarea 
                     rows={4}
                     placeholder={t('onboarding.step5.bioPlaceholder')}
@@ -1258,6 +1415,32 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                     onChange={(event) => setBio(event.target.value)}
                     className="w-full bg-gray-50 border border-gray-100 rounded-3xl py-4 px-6 focus:outline-none focus:ring-2 focus:ring-[#e3262e]/20 transition-all resize-none"
                   ></textarea>
+                  {showBioSuggestions && (
+                    <div className="mt-4 bg-gray-50 border border-gray-100 rounded-3xl p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
+                        {t('onboarding.step5.suggestionsTitle')}
+                      </p>
+                      {buildBioSuggestions.length ? (
+                        <div className="grid grid-cols-1 gap-3 max-h-64 overflow-y-auto pr-1">
+                          {buildBioSuggestions.map((text, index) => (
+                            <button
+                              key={`${text.slice(0, 18)}-${index}`}
+                              type="button"
+                              onClick={() => {
+                                setBio(text);
+                                setShowBioSuggestions(false);
+                              }}
+                              className="text-left text-xs text-gray-600 bg-white border border-gray-100 rounded-2xl px-4 py-3 hover:border-[#e3262e] hover:text-gray-800 transition-colors"
+                            >
+                              {text}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400">{t('onboarding.step5.suggestionsEmpty')}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -1282,11 +1465,14 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                 </div>
 
                 <button 
-                  onClick={nextStep}
+                  onClick={handleStep5Next}
                   className="w-full bg-[#e3262e] text-white py-4 sm:py-5 rounded-2xl font-bold uppercase tracking-widest hover:bg-red-700 transition-all"
                 >
                   {t('onboarding.step5.continue')}
                 </button>
+                {step5Error && (
+                  <p className="text-xs text-red-500 font-semibold mt-3">{step5Error}</p>
+                )}
               </div>
             </div>
           )}

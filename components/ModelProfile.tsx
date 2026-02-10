@@ -26,6 +26,7 @@ interface ModelProfileProps {
       hair?: string;
       feet?: string;
       nationality?: string;
+      audience?: string[];
     };
     location?: { city?: string; state?: string; lat?: number; lon?: number } | null;
     isOnline?: boolean;
@@ -57,6 +58,16 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
     const displayNames = new Intl.DisplayNames([locale], { type: 'region' });
     return displayNames.of(code.toUpperCase()) ?? code.toUpperCase();
   }, [locale, model.attributes?.nationality, t]);
+  const audienceLabel = useMemo(() => {
+    const list = model.attributes?.audience;
+    if (!list || !list.length) return t('profile.notInformed');
+    const map: Record<string, string> = {
+      men: t('common.audienceMen'),
+      women: t('common.audienceWomen'),
+      other: t('common.audienceOther'),
+    };
+    return list.map((item) => map[item] || item).join(', ');
+  }, [model.attributes?.audience, t]);
   const telDigits = toTelDigits(model.phone);
   const whatsappDigits = toWhatsappDigits(model.phone);
 
@@ -330,6 +341,12 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
                       {translateService(service)}
                     </span>
                   ))}
+                </div>
+                <div className="mt-5 pt-4 border-t border-gray-100">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                    {t('profile.audienceTitle')}
+                  </p>
+                  <p className="text-sm font-bold text-gray-900">{audienceLabel}</p>
                 </div>
               </section>
 
