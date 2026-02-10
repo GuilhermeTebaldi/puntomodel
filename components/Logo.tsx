@@ -12,7 +12,7 @@ const Logo: React.FC = () => {
         </svg>
       </div>
       <span className="text-xl md:text-2xl font-bold text-[#e3262e] tracking-tight">
-        Punto<span className="text-gray-400 font-medium">model</span>
+        Punto<span className="text-gray-400 font-medium">escort</span>
       </span>
     </div>
   );

@@ -397,7 +397,7 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onRegisterClick, currentU
           {/* Social Media Footer */}
           <div className="absolute bottom-10 left-0 right-0 px-6 text-center">
             <p className="text-gray-800 font-bold mb-6 flex items-center justify-center gap-2">
-              {t('header.follow')} <span className="text-[#e3262e]">Punto</span><span className="text-gray-500 font-medium">model</span>
+              {t('header.follow')} <span className="text-[#e3262e]">Punto</span><span className="text-gray-500 font-medium">escort</span>
             </p>
             <div className="flex justify-between items-center max-w-[280px] mx-auto text-gray-800">
               <Instagram size={28} className="cursor-pointer hover:text-[#e3262e]" />

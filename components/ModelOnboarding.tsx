@@ -578,6 +578,15 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     return age;
   };
 
+  useEffect(() => {
+    const derivedAge = getAgeFromBirthDate(identityBirthDate);
+    if (derivedAge) {
+      setAge(String(derivedAge));
+      return;
+    }
+    setAge('');
+  }, [identityBirthDate]);
+
   const formatBirthDateInput = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 8);
     if (!digits) return '';
@@ -1255,9 +1264,10 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                       type="number"
                       placeholder="22"
                       value={age}
-                      onChange={(event) => setAge(event.target.value)}
+                      readOnly
                       className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-6 focus:outline-none"
                     />
+                    <p className="text-[10px] text-gray-400 mt-2">{t('onboarding.step2.ageAutoHint')}</p>
                   </div>
                 </div>
 
