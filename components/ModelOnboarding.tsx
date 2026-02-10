@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Check, Camera, MapPin, Smartphone, User, ArrowRight, ChevronLeft, Info, Heart, Loader2 } from 'lucide-react';
 import Logo from './Logo';
 import { AuthUser, clearPendingModelProfile, getPendingModelProfile, PendingModelProfile, registerUser, setCurrentUser } from '../services/auth';
-import { uploadImage } from '../services/cloudinary';
+import { uploadImage, uploadImageWithProgress } from '../services/cloudinary';
 import { fetchCountries } from '../services/countries';
 import { scanIdentityDocument } from '../services/identityOcr';
 import { createModelProfile } from '../services/models';
@@ -50,6 +50,8 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const [selectedLocation, setSelectedLocation] = useState<LocationValue | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [photosUploadProgress, setPhotosUploadProgress] = useState(0);
+  const [photosUploadingCount, setPhotosUploadingCount] = useState(0);
   const [services, setServices] = useState<string[]>([]);
   const [bio, setBio] = useState('');
   const [publishing, setPublishing] = useState(false);
@@ -199,6 +201,8 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       setBio('');
       setPublishError('');
       setPublishing(false);
+      setPhotosUploadProgress(0);
+      setPhotosUploadingCount(0);
       manualCountryRef.current = false;
       return;
     }
@@ -527,13 +531,30 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     if (!files.length) return;
     setUploadingPhotos(true);
     setPublishError('');
+    setPhotosUploadProgress(0);
+    setPhotosUploadingCount(files.length);
     try {
-      const uploaded = await Promise.all(files.map((file) => uploadImage(file)));
+      const uploaded: string[] = [];
+      for (let index = 0; index < files.length; index += 1) {
+        const file = files[index];
+        const url = await uploadImageWithProgress(file, (progress) => {
+          const overall = Math.round(((index + progress / 100) / files.length) * 100);
+          setPhotosUploadProgress(overall);
+        });
+        uploaded.push(url);
+        const completed = Math.round(((index + 1) / files.length) * 100);
+        setPhotosUploadProgress(completed);
+      }
       setPhotos((prev) => [...prev, ...uploaded]);
+      setPhotosUploadProgress(100);
     } catch {
       setPublishError(t('errors.imageLoadFailedGeneric'));
     } finally {
       setUploadingPhotos(false);
+      window.setTimeout(() => {
+        setPhotosUploadProgress(0);
+        setPhotosUploadingCount(0);
+      }, 800);
       event.target.value = '';
     }
   };
@@ -1090,6 +1111,26 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                   <Camera size={20} />
                   {t('onboarding.step6.addPhoto')}
                 </label>
+
+                {(uploadingPhotos || photosUploadProgress > 0) && (
+                  <div className="mt-4 text-left">
+                    <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                      <span>{t('onboarding.step6.uploadingPhotos')}</span>
+                      <span>{photosUploadProgress}%</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                      <div
+                        className="h-full bg-[#e3262e] transition-all duration-300"
+                        style={{ width: `${photosUploadProgress}%` }}
+                      />
+                    </div>
+                    {photosUploadingCount > 1 && (
+                      <p className="text-[10px] text-gray-400 mt-2">
+                        {t('onboarding.step6.uploadingPhotosCount', { count: photosUploadingCount })}
+                      </p>
+                    )}
+                  </div>
+                )}
                 
                 <div className="p-4 bg-yellow-50 rounded-2xl mb-6 sm:mb-8 flex gap-3 text-left">
                   <div className="text-yellow-600 mt-1">⚠️</div>

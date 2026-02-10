@@ -567,6 +567,8 @@ export const translations = {
         title: 'Fotos do Perfil',
         subtitle: 'Anúncios com fotos de qualidade recebem até 10x mais contatos.',
         addPhoto: 'Adicionar Foto',
+        uploadingPhotos: 'Enviando fotos...',
+        uploadingPhotosCount: '{{count}} fotos em envio',
         warning:
           "As fotos devem ter boa iluminação e mostrar claramente o seu rosto. Não permitimos logos ou marcas d'água de outros sites.",
         publish: 'Publicar meu perfil',
@@ -1152,6 +1154,8 @@ export const translations = {
         title: 'Profile Photos',
         subtitle: 'Listings with quality photos get up to 10x more contacts.',
         addPhoto: 'Add Photo',
+        uploadingPhotos: 'Uploading photos...',
+        uploadingPhotosCount: '{{count}} photos uploading',
         warning:
           "Photos must be well lit and clearly show your face. We do not allow logos or watermarks from other sites.",
         publish: 'Publish my profile',
@@ -1737,6 +1741,8 @@ export const translations = {
         title: 'Profilfotos',
         subtitle: 'Inserate mit hochwertigen Fotos erhalten bis zu 10x mehr Kontakte.',
         addPhoto: 'Foto hinzufügen',
+        uploadingPhotos: 'Fotos werden hochgeladen...',
+        uploadingPhotosCount: '{{count}} Fotos werden hochgeladen',
         warning:
           'Fotos müssen gut beleuchtet sein und dein Gesicht klar zeigen. Keine Logos oder Wasserzeichen von anderen Seiten.',
         publish: 'Profil veröffentlichen',
@@ -2322,6 +2328,8 @@ export const translations = {
         title: 'Fotos del perfil',
         subtitle: 'Anuncios con fotos de calidad reciben hasta 10x más contactos.',
         addPhoto: 'Agregar foto',
+        uploadingPhotos: 'Subiendo fotos...',
+        uploadingPhotosCount: '{{count}} fotos en carga',
         warning:
           'Las fotos deben tener buena iluminación y mostrar claramente tu rostro. No permitimos logos o marcas de agua de otros sitios.',
         publish: 'Publicar mi perfil',
@@ -2907,6 +2915,8 @@ export const translations = {
         title: 'Foto del profilo',
         subtitle: 'Annunci con foto di qualità ricevono fino a 10x più contatti.',
         addPhoto: 'Aggiungi foto',
+        uploadingPhotos: 'Caricamento foto...',
+        uploadingPhotosCount: '{{count}} foto in caricamento',
         warning:
           'Le foto devono essere ben illuminate e mostrare chiaramente il viso. Non permettiamo loghi o filigrane di altri siti.',
         publish: 'Pubblica il mio profilo',
@@ -3491,6 +3501,8 @@ export const translations = {
         title: 'Photos de profil',
         subtitle: 'Les annonces avec des photos de qualité obtiennent jusqu’à 10x plus de contacts.',
         addPhoto: 'Ajouter une photo',
+        uploadingPhotos: 'Téléchargement des photos...',
+        uploadingPhotosCount: '{{count}} photos en téléchargement',
         warning:
           'Les photos doivent être bien éclairées et montrer clairement votre visage. Nous n’autorisons pas les logos ou les filigranes d’autres sites.',
         publish: 'Publier mon profil',
