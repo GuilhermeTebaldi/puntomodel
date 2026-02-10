@@ -746,6 +746,7 @@ export const translations = {
         upgradeTitle: 'Upgrade',
         upgradeDesc: 'Apareça no topo e aumente seus contatos.',
         viewPlans: 'Ver planos',
+        devMessage: 'Em desenvolvimento!',
         payment: {
           secure: 'Ambiente Seguro',
           planBadge: 'Plano Diamante',
@@ -1408,6 +1409,7 @@ export const translations = {
         upgradeTitle: 'Upgrade',
         upgradeDesc: 'Show up at the top and increase your contacts.',
         viewPlans: 'View plans',
+        devMessage: 'In development!',
         payment: {
           secure: 'Secure Environment',
           planBadge: 'Diamond Plan',
@@ -2070,6 +2072,7 @@ export const translations = {
         upgradeTitle: 'Upgrade',
         upgradeDesc: 'Erscheine oben und erhöhe deine Kontakte.',
         viewPlans: 'Pläne ansehen',
+        devMessage: 'In Entwicklung!',
         payment: {
           secure: 'Sichere Umgebung',
           planBadge: 'Diamant-Plan',
@@ -2732,6 +2735,7 @@ export const translations = {
         upgradeTitle: 'Upgrade',
         upgradeDesc: 'Aparece arriba y aumenta tus contactos.',
         viewPlans: 'Ver planes',
+        devMessage: '¡En desarrollo!',
         payment: {
           secure: 'Entorno seguro',
           planBadge: 'Plan Diamante',
@@ -3393,6 +3397,7 @@ export const translations = {
         upgradeTitle: 'Upgrade',
         upgradeDesc: 'Appari in cima e aumenta i contatti.',
         viewPlans: 'Vedi piani',
+        devMessage: 'In sviluppo!',
         payment: {
           secure: 'Ambiente sicuro',
           planBadge: 'Piano Diamante',
@@ -4054,6 +4059,7 @@ export const translations = {
         upgradeTitle: 'Mise à niveau',
         upgradeDesc: 'Apparaissez en haut et augmentez vos contacts.',
         viewPlans: 'Voir les plans',
+        devMessage: 'En développement !',
         payment: {
           secure: 'Environnement sécurisé',
           planBadge: 'Plan Diamant',

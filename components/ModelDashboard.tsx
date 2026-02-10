@@ -88,6 +88,8 @@ const PLAN_ID = 'diamond';
 const PLAN_AMOUNT = 150;
 const PLAN_DURATION_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const PAYMENT_UI_ENABLED = false;
+const ONLINE_STATUS_REQUIRES_PAYMENT = false;
 
 const parseDateToMs = (value?: string | number | null) => {
   if (!value) return null;
@@ -433,13 +435,14 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
 
   const billingExpiresAtMs = parseDateToMs(model.billing?.expiresAt);
   const billingActive = Boolean(billingExpiresAtMs && billingExpiresAtMs > Date.now());
+  const onlineAccessAllowed = !ONLINE_STATUS_REQUIRES_PAYMENT || billingActive;
   const billingDaysLeft = billingExpiresAtMs
     ? Math.max(0, Math.ceil((billingExpiresAtMs - Date.now()) / DAY_MS))
     : 0;
   const billingEndsAtLabel = billingExpiresAtMs
     ? new Date(billingExpiresAtMs).toLocaleDateString(locale)
     : '';
-  const isOnlineVisible = billingActive && isOnline;
+  const isOnlineVisible = onlineAccessAllowed && isOnline;
   const premiumDescription = billingActive
     ? t('dashboard.premium.description', {
       location: model.location?.city ? `${model.location.city} (${model.location.state || ''})` : t('dashboard.premium.fallbackLocation'),
@@ -571,9 +574,11 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   };
 
   const handleToggleOnline = async () => {
-    if (!billingActive) {
+    if (ONLINE_STATUS_REQUIRES_PAYMENT && !billingActive) {
       setSaveError(t('dashboard.billing.paymentRequired'));
-      setShowPaymentPage(true);
+      if (PAYMENT_UI_ENABLED) {
+        setShowPaymentPage(true);
+      }
       return;
     }
     if (!isOnline) {
@@ -592,10 +597,12 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   };
 
   const handleConfirmOnline = async () => {
-    if (!billingActive) {
+    if (ONLINE_STATUS_REQUIRES_PAYMENT && !billingActive) {
       setShowOnlinePicker(false);
       setSaveError(t('dashboard.billing.paymentRequired'));
-      setShowPaymentPage(true);
+      if (PAYMENT_UI_ENABLED) {
+        setShowPaymentPage(true);
+      }
       return;
     }
     const minutes = Number(onlineDuration);
@@ -1551,38 +1558,51 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
 
           {activeSection === 'billing' && (
             <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
-              <section className="lg:col-span-2 bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] border border-gray-100 shadow-sm">
-                <h3 className="text-lg font-black text-gray-900 uppercase tracking-tighter flex items-center gap-2 mb-6">
-                  <CreditCard size={18} className="text-[#e3262e]" /> {t('dashboard.billing.title')}
-                </h3>
-                <div className="border border-gray-100 rounded-[24px] sm:rounded-3xl p-5 sm:p-6">
-                  <p className="text-xs font-black text-gray-400 uppercase mb-4">{t('dashboard.billing.history')}</p>
-                  {historyItems.length === 0 ? (
-                    <p className="text-sm text-gray-500">{t('dashboard.billing.noHistory')}</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {historyItems.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">{item.label}</span>
-                          <span className="font-bold text-gray-900">
-                            {new Intl.NumberFormat(locale, { style: 'currency', currency: item.currency }).format(item.amount)}
-                          </span>
+              {!PAYMENT_UI_ENABLED ? (
+                <section className="lg:col-span-3 bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] border border-gray-100 shadow-sm">
+                  <h3 className="text-lg font-black text-gray-900 uppercase tracking-tighter flex items-center gap-2 mb-6">
+                    <CreditCard size={18} className="text-[#e3262e]" /> {t('dashboard.billing.title')}
+                  </h3>
+                  <div className="border border-amber-100 bg-amber-50 text-amber-700 text-sm font-bold px-4 py-3 rounded-2xl">
+                    {t('dashboard.billing.devMessage')}
+                  </div>
+                </section>
+              ) : (
+                <>
+                  <section className="lg:col-span-2 bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] border border-gray-100 shadow-sm">
+                    <h3 className="text-lg font-black text-gray-900 uppercase tracking-tighter flex items-center gap-2 mb-6">
+                      <CreditCard size={18} className="text-[#e3262e]" /> {t('dashboard.billing.title')}
+                    </h3>
+                    <div className="border border-gray-100 rounded-[24px] sm:rounded-3xl p-5 sm:p-6">
+                      <p className="text-xs font-black text-gray-400 uppercase mb-4">{t('dashboard.billing.history')}</p>
+                      {historyItems.length === 0 ? (
+                        <p className="text-sm text-gray-500">{t('dashboard.billing.noHistory')}</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {historyItems.map((item) => (
+                            <div key={item.id} className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600">{item.label}</span>
+                              <span className="font-bold text-gray-900">
+                                {new Intl.NumberFormat(locale, { style: 'currency', currency: item.currency }).format(item.amount)}
+                              </span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  )}
-                </div>
-              </section>
-              <aside className="bg-[#111827] p-6 sm:p-8 rounded-[28px] sm:rounded-[40px] text-white shadow-xl self-start">
-                <h4 className="text-lg font-black mb-2">{t('dashboard.billing.upgradeTitle')}</h4>
-                <p className="text-xs text-gray-400 mb-6">{t('dashboard.billing.upgradeDesc')}</p>
-                <button
-                  onClick={() => setShowPaymentPage(true)}
-                  className="w-full bg-white text-gray-900 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-100 transition-all"
-                >
-                  {t('dashboard.billing.viewPlans')}
-                </button>
-              </aside>
+                  </section>
+                  <aside className="bg-[#111827] p-6 sm:p-8 rounded-[28px] sm:rounded-[40px] text-white shadow-xl self-start">
+                    <h4 className="text-lg font-black mb-2">{t('dashboard.billing.upgradeTitle')}</h4>
+                    <p className="text-xs text-gray-400 mb-6">{t('dashboard.billing.upgradeDesc')}</p>
+                    <button
+                      onClick={() => setShowPaymentPage(true)}
+                      className="w-full bg-white text-gray-900 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-100 transition-all"
+                    >
+                      {t('dashboard.billing.viewPlans')}
+                    </button>
+                  </aside>
+                </>
+              )}
             </div>
           )}
 
@@ -1633,7 +1653,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
         </div>
       </main>
 
-      {showPaymentPage && (
+      {showPaymentPage && PAYMENT_UI_ENABLED && (
         <PaymentPage
           onClose={() => setShowPaymentPage(false)}
           onSuccess={() => setShowPaymentPage(false)}
