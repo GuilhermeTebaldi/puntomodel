@@ -24,7 +24,7 @@ const Hero: React.FC<HeroProps> = ({ onSearch, onRegisterClick }) => {
 
       <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
         {/* Left Content */}
-        <div className="z-10 text-center lg:text-left">
+        <div className="z-20 text-center lg:text-left">
           <div className="relative inline-block">
             <img
               src="/hero-text-bg.png"

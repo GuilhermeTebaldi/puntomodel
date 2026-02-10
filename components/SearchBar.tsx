@@ -98,7 +98,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ compact = false, onSearch }) => {
         }`}
       />
       {isFocused && filteredHistory.length > 0 && (
-        <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-20">
+        <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-50">
           {filteredHistory.map((item) => (
             <button
               key={item}
