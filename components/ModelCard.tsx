@@ -1,6 +1,6 @@
 import React from 'react';
 import { Heart } from 'lucide-react';
-import { ModelProfileData, isBillingActive } from '../services/models';
+import { ModelProfileData } from '../services/models';
 import { useI18n } from '../translations/i18n';
 
 interface ModelCardProps {
@@ -14,7 +14,6 @@ interface ModelCardProps {
 const ModelCard: React.FC<ModelCardProps> = ({ model, onClick, showSave = false, isSaved = false, onToggleSave }) => {
   const { t, translateService } = useI18n();
   const isOnline = model.isOnline !== false;
-  const isPremium = isBillingActive(model.billing);
 
   return (
     <div
@@ -57,11 +56,6 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onClick, showSave = false,
         )}
 
         <div className="absolute top-3 left-3 flex flex-col gap-2">
-          {isPremium && (
-            <div className="bg-[#e3262e] text-white text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest shadow-lg shadow-red-500/30">
-              {t('common.premium')}
-            </div>
-          )}
           <div
             className={`text-white text-[10px] font-bold px-2 py-1 rounded uppercase ${
               isOnline ? 'bg-green-500' : 'bg-red-500'
