@@ -1,5 +1,13 @@
 import { apiFetch } from './api';
 
+const INCLUDE_UNPAID_MODELS = true;
+
+const withIncludeUnpaid = (url: string) => {
+  if (!INCLUDE_UNPAID_MODELS) return url;
+  const joiner = url.includes('?') ? '&' : '?';
+  return `${url}${joiner}includeUnpaid=true`;
+};
+
 export interface ModelPrice {
   label: string;
   value: number;
@@ -113,7 +121,7 @@ export const isBillingActive = (billing?: ModelBilling | null) => {
 };
 
 export const fetchFeaturedModels = async () => {
-  const response = await apiFetch('/api/models?featured=true&online=true');
+  const response = await apiFetch(withIncludeUnpaid('/api/models?featured=true&online=true'));
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.error || 'Não foi possível carregar modelos.');
@@ -122,7 +130,7 @@ export const fetchFeaturedModels = async () => {
 };
 
 export const fetchModels = async () => {
-  const response = await apiFetch('/api/models?online=true');
+  const response = await apiFetch(withIncludeUnpaid('/api/models?online=true'));
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.error || 'Não foi possível carregar modelos.');
@@ -131,7 +139,7 @@ export const fetchModels = async () => {
 };
 
 export const fetchModelsByCity = async (city: string) => {
-  const response = await apiFetch(`/api/models?city=${encodeURIComponent(city)}&online=true`);
+  const response = await apiFetch(withIncludeUnpaid(`/api/models?city=${encodeURIComponent(city)}&online=true`));
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.error || 'Não foi possível carregar modelos.');
@@ -140,7 +148,7 @@ export const fetchModelsByCity = async (city: string) => {
 };
 
 export const fetchModelsAll = async () => {
-  const response = await apiFetch('/api/models');
+  const response = await apiFetch(withIncludeUnpaid('/api/models'));
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.error || 'Não foi possível carregar modelos.');
@@ -149,7 +157,7 @@ export const fetchModelsAll = async () => {
 };
 
 export const fetchModelsByCityAll = async (city: string) => {
-  const response = await apiFetch(`/api/models?city=${encodeURIComponent(city)}`);
+  const response = await apiFetch(withIncludeUnpaid(`/api/models?city=${encodeURIComponent(city)}`));
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.error || 'Não foi possível carregar modelos.');
