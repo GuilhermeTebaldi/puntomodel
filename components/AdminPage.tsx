@@ -20,6 +20,7 @@ interface AdminModel {
   identity?: {
     number?: string;
     documentUrl?: string;
+    faceUrl?: string;
     birthDate?: string;
   } | null;
   featured?: boolean;
@@ -378,19 +379,18 @@ const AdminPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
-                    {t('adminPage.identityPreview')}
-                  </p>
-                  {selectedModel.identity?.documentUrl ? (
-                    <div className="flex flex-col sm:flex-row gap-4 items-start">
-                      <img
-                        src={selectedModel.identity.documentUrl}
-                        alt={t('adminPage.identityPreview')}
-                        className="w-full sm:w-64 h-48 object-cover rounded-2xl border border-gray-100"
-                      />
-                      <div className="text-sm text-gray-600 space-y-2">
-                        <p className="font-semibold text-gray-800">{t('adminPage.viewDocument')}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
+                      {t('adminPage.identityPreview')}
+                    </p>
+                    {selectedModel.identity?.documentUrl ? (
+                      <div className="space-y-3">
+                        <img
+                          src={selectedModel.identity.documentUrl}
+                          alt={t('adminPage.identityPreview')}
+                          className="w-full h-48 object-cover rounded-2xl border border-gray-100"
+                        />
                         <a
                           href={selectedModel.identity.documentUrl}
                           target="_blank"
@@ -400,10 +400,34 @@ const AdminPage: React.FC = () => {
                           {t('adminPage.viewDocument')}
                         </a>
                       </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-400">{t('adminPage.identityMissing')}</p>
-                  )}
+                    ) : (
+                      <p className="text-sm text-gray-400">{t('adminPage.identityMissing')}</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
+                      {t('adminPage.facePhoto')}
+                    </p>
+                    {selectedModel.identity?.faceUrl ? (
+                      <div className="space-y-3">
+                        <img
+                          src={selectedModel.identity.faceUrl}
+                          alt={t('adminPage.facePhoto')}
+                          className="w-full h-48 object-cover rounded-2xl border border-gray-100"
+                        />
+                        <a
+                          href={selectedModel.identity.faceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#e3262e]"
+                        >
+                          {t('adminPage.viewDocument')}
+                        </a>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400">{t('adminPage.identityMissing')}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

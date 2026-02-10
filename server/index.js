@@ -158,6 +158,7 @@ const normalizeIdentity = (identity, current = null) => {
   if (typeof identity !== 'object') return null;
   const number = typeof identity.number === 'string' ? identity.number.trim() : current?.number ?? '';
   const documentUrl = typeof identity.documentUrl === 'string' ? identity.documentUrl.trim() : current?.documentUrl ?? '';
+  const faceUrl = typeof identity.faceUrl === 'string' ? identity.faceUrl.trim() : current?.faceUrl ?? '';
   const birthDate = normalizeBirthDate(identity.birthDate) ?? current?.birthDate ?? null;
   const verifiedAt = typeof identity.verifiedAt === 'string' ? identity.verifiedAt : current?.verifiedAt ?? null;
   if (!number || !documentUrl || !birthDate) return null;
@@ -165,6 +166,7 @@ const normalizeIdentity = (identity, current = null) => {
     number,
     documentUrl,
     birthDate,
+    faceUrl: faceUrl || null,
     verifiedAt,
   };
 };
@@ -476,6 +478,9 @@ app.post('/api/models', async (req, res) => {
   const normalizedIdentity = normalizeIdentity(payload.identity, existingModel?.identity ?? null);
   if (!normalizedIdentity) {
     return res.status(400).json({ ok: false, error: 'Identidade obrigatória.' });
+  }
+  if (!normalizedIdentity.faceUrl) {
+    return res.status(400).json({ ok: false, error: 'Foto do rosto obrigatória.' });
   }
   const derivedAge = getAgeFromBirthDate(normalizedIdentity.birthDate);
   if (!derivedAge) {

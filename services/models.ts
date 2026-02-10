@@ -18,6 +18,7 @@ export interface ModelIdentity {
   number: string;
   documentUrl: string;
   birthDate?: string | null;
+  faceUrl?: string | null;
   verifiedAt?: string | null;
 }
 

@@ -30,7 +30,13 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const [identityNumber, setIdentityNumber] = useState('');
   const [identityDocumentUrl, setIdentityDocumentUrl] = useState('');
   const [identityBirthDate, setIdentityBirthDate] = useState('');
+  const [identityFaceUrl, setIdentityFaceUrl] = useState('');
+  const [identityFacePreview, setIdentityFacePreview] = useState('');
   const [uploadingIdentity, setUploadingIdentity] = useState(false);
+  const [uploadingFace, setUploadingFace] = useState(false);
+  const [faceCameraActive, setFaceCameraActive] = useState(false);
+  const [faceCameraLoading, setFaceCameraLoading] = useState(false);
+  const [faceCameraError, setFaceCameraError] = useState('');
   const [scanningIdentity, setScanningIdentity] = useState(false);
   const [identityScanMessage, setIdentityScanMessage] = useState('');
   const [identityScanError, setIdentityScanError] = useState('');
@@ -65,6 +71,8 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const availableServices = serviceOptions;
   const countriesWithDial = useMemo(() => countries.filter((country) => country.dial), [countries]);
   const manualCountryRef = useRef(false);
+  const faceVideoRef = useRef<HTMLVideoElement | null>(null);
+  const faceStreamRef = useRef<MediaStream | null>(null);
 
   const getBrowserCountryCode = () => {
     if (typeof navigator === 'undefined') return '';
@@ -171,6 +179,18 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     return best?.cca2 ?? '';
   };
 
+  const stopFaceCamera = () => {
+    if (faceStreamRef.current) {
+      faceStreamRef.current.getTracks().forEach((track) => track.stop());
+      faceStreamRef.current = null;
+    }
+    if (faceVideoRef.current) {
+      faceVideoRef.current.srcObject = null;
+    }
+    setFaceCameraActive(false);
+    setFaceCameraLoading(false);
+  };
+
   useEffect(() => {
     if (!isOpen) {
       setCurrentStep(1);
@@ -188,7 +208,13 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       setIdentityNumber('');
       setIdentityDocumentUrl('');
       setIdentityBirthDate('');
+      setIdentityFaceUrl('');
+      setIdentityFacePreview('');
       setUploadingIdentity(false);
+      setUploadingFace(false);
+      setFaceCameraLoading(false);
+      setFaceCameraError('');
+      stopFaceCamera();
       setScanningIdentity(false);
       setIdentityScanMessage('');
       setIdentityScanError('');
@@ -213,6 +239,15 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       setRegisteredEmail(pending.email);
     }
   }, [isOpen, registration]);
+
+  useEffect(() => {
+    if (!isOpen || currentStep !== 1) {
+      stopFaceCamera();
+    }
+    return () => {
+      stopFaceCamera();
+    };
+  }, [isOpen, currentStep]);
 
 
   useEffect(() => {
@@ -342,6 +377,88 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     }
 
     setPhoneValue(formatPhone(nationalDigits, countryCode));
+  };
+
+  const startFaceCamera = async () => {
+    setFaceCameraError('');
+    stopFaceCamera();
+    setFaceCameraActive(true);
+    setFaceCameraLoading(true);
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      setFaceCameraError(t('errors.cameraUnavailable'));
+      setFaceCameraActive(false);
+      setFaceCameraLoading(false);
+      return;
+    }
+    try {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      faceStreamRef.current = stream;
+      if (faceVideoRef.current) {
+        faceVideoRef.current.setAttribute('playsinline', 'true');
+        faceVideoRef.current.setAttribute('webkit-playsinline', 'true');
+        faceVideoRef.current.muted = true;
+        faceVideoRef.current.autoplay = true;
+        faceVideoRef.current.srcObject = stream;
+        await new Promise<void>((resolve) => {
+          if (!faceVideoRef.current) return resolve();
+          faceVideoRef.current.onloadedmetadata = () => resolve();
+        });
+        try {
+          await faceVideoRef.current.play();
+        } catch {
+          // ignore autoplay errors
+        }
+      }
+      if (!faceVideoRef.current?.videoWidth) {
+        throw new Error('camera_unavailable');
+      }
+      setFaceCameraLoading(false);
+    } catch {
+      setFaceCameraError(t('errors.cameraUnavailable'));
+      setFaceCameraActive(false);
+      setFaceCameraLoading(false);
+    }
+  };
+
+  const captureFacePhoto = async () => {
+    const video = faceVideoRef.current;
+    if (!video || !video.videoWidth) {
+      setFaceCameraError(t('errors.cameraUnavailable'));
+      return;
+    }
+    const width = video.videoWidth || 640;
+    const height = video.videoHeight || 480;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, width, height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    setIdentityFacePreview(dataUrl);
+    stopFaceCamera();
+    setUploadingFace(true);
+    setFaceCameraError('');
+    try {
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `face-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      const uploadedUrl = await uploadImage(file);
+      setIdentityFaceUrl(uploadedUrl);
+    } catch {
+      setFaceCameraError(t('errors.identityFaceUploadFailed'));
+    } finally {
+      setUploadingFace(false);
+    }
+  };
+
+  const handleFaceRetake = () => {
+    setIdentityFaceUrl('');
+    setIdentityFacePreview('');
+    startFaceCamera();
   };
 
   const handleIdentityUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -498,6 +615,10 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       setStep1Error(t('errors.identityRequired'));
       return;
     }
+    if (!identityFaceUrl) {
+      setStep1Error(t('errors.identityFaceRequired'));
+      return;
+    }
     const age = getAgeFromBirthDate(identityBirthDate);
     if (!age) {
       setStep1Error(t('errors.identityAgeRequired'));
@@ -619,6 +740,11 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         setPublishing(false);
         return;
       }
+      if (!identityFaceUrl) {
+        setPublishError(t('errors.identityFaceRequired'));
+        setPublishing(false);
+        return;
+      }
       const ageFromBirthDate = getAgeFromBirthDate(identityBirthDate);
       if (!ageFromBirthDate) {
         setPublishError(t('errors.identityAgeRequired'));
@@ -641,6 +767,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         identity: {
           number: identityNumber.trim(),
           documentUrl: identityDocumentUrl,
+          faceUrl: identityFaceUrl,
           birthDate: normalizeBirthDateToIso(identityBirthDate),
         },
         bio,
@@ -844,6 +971,93 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                       />
                       <p className="text-[10px] text-gray-400 mt-2">{t('onboarding.step1.identityBirthHint')}</p>
                     </div>
+                    <div className="sm:col-span-2">
+                      <label className="text-[10px] font-black text-gray-400 uppercase mb-2 block tracking-widest">
+                        {t('onboarding.step1.faceTitle')}
+                      </label>
+                      <p className="text-[10px] text-gray-500 mb-3">{t('onboarding.step1.faceSubtitle')}</p>
+                      {(identityFacePreview || identityFaceUrl) && !faceCameraActive ? (
+                        <div className="relative">
+                          <img
+                            src={identityFacePreview || identityFaceUrl}
+                            alt={t('onboarding.step1.faceTitle')}
+                            className="w-full h-56 object-cover rounded-2xl border border-gray-100"
+                          />
+                          {uploadingFace && (
+                            <div className="absolute inset-0 bg-white/70 flex items-center justify-center text-xs font-bold text-gray-500 uppercase tracking-widest">
+                              {t('onboarding.step1.faceUploading')}
+                            </div>
+                          )}
+                        </div>
+                      ) : faceCameraActive || faceCameraLoading ? (
+                        <div className="relative w-full h-56 rounded-2xl overflow-hidden border border-gray-100 bg-black">
+                          <video
+                            ref={faceVideoRef}
+                            className="w-full h-full object-cover"
+                            playsInline
+                            muted
+                            autoPlay
+                          />
+                          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                            <div className="w-40 h-40 rounded-full border-2 border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.22)]" />
+                          </div>
+                          {faceCameraLoading && (
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-xs font-bold text-white uppercase tracking-widest">
+                              {t('onboarding.step1.faceOpening')}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="w-full h-56 rounded-2xl border border-dashed border-gray-200 bg-gray-50 flex items-center justify-center text-xs text-gray-400 uppercase tracking-widest font-bold">
+                          {t('onboarding.step1.faceGuide')}
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {faceCameraActive ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={captureFacePhoto}
+                              disabled={uploadingFace}
+                              className="px-4 py-2 rounded-xl bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              {t('onboarding.step1.faceCapture')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={stopFaceCamera}
+                              className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-gray-700"
+                            >
+                              {t('common.cancel')}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            {!identityFaceUrl && (
+                              <button
+                                type="button"
+                                onClick={startFaceCamera}
+                                disabled={uploadingFace}
+                                className="px-4 py-2 rounded-xl bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                              >
+                                {t('onboarding.step1.faceOpenCamera')}
+                              </button>
+                            )}
+                            {identityFaceUrl && (
+                              <button
+                                type="button"
+                                onClick={handleFaceRetake}
+                                className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-gray-700"
+                              >
+                                {t('onboarding.step1.faceRetake')}
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-2">{t('onboarding.step1.facePrivacy')}</p>
+                      {faceCameraError && <p className="text-[10px] text-red-500 mt-2">{faceCameraError}</p>}
+                    </div>
                   </div>
                   {identityDocumentUrl && (
                     <div className="flex items-center gap-4 bg-gray-50 border border-gray-100 rounded-2xl p-3">
@@ -865,7 +1079,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                 </div>
                 <button 
                   onClick={handleStep1Next}
-                  disabled={uploadingIdentity}
+                  disabled={identityBusy || uploadingFace}
                   className="w-full bg-[#e3262e] text-white py-4 sm:py-5 rounded-2xl font-bold uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-200 mt-6 sm:mt-8 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {t('onboarding.step1.sendCode')}
