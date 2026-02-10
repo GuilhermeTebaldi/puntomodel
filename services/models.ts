@@ -85,6 +85,10 @@ export interface ModelProfileData {
   }>;
 }
 
+export type ModelProfilePayload = Omit<ModelProfileData, 'id'> & {
+  phoneCountryDial?: string;
+};
+
 const parseDateToMs = (value?: string | number | null) => {
   if (!value) return null;
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
@@ -161,7 +165,7 @@ export const fetchModelById = async (id: string) => {
   return data.model as ModelProfileData;
 };
 
-export const createModelProfile = async (payload: Omit<ModelProfileData, 'id'>) => {
+export const createModelProfile = async (payload: ModelProfilePayload) => {
   const response = await apiFetch('/api/models', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -176,7 +180,7 @@ export const createModelProfile = async (payload: Omit<ModelProfileData, 'id'>) 
 
 export const updateModelProfile = async (
   id: string,
-  payload: Partial<Omit<ModelProfileData, 'id' | 'email'>>
+  payload: Partial<Omit<ModelProfileData, 'id' | 'email'>> & { phoneCountryDial?: string }
 ) => {
   const response = await apiFetch(`/api/models/${id}`, {
     method: 'PATCH',

@@ -6,6 +6,8 @@ import { X, MapPin, MessageCircle, Star, ChevronRight } from 'lucide-react';
 import { fetchModelsAll, fetchModelsByCityAll, ModelProfileData } from '../services/models';
 import { useI18n } from '../translations/i18n';
 
+const toWhatsappDigits = (phone?: string) => (phone ? phone.replace(/\D/g, '') : '');
+
 interface MapViewProps {
   onClose: () => void;
   onViewProfile: (model: ModelProfileData) => void;
@@ -323,7 +325,7 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
               <div className="flex flex-col sm:flex-row gap-3">
                 {selectedModel.phone && (
                   <a 
-                    href={`https://wa.me/${selectedModel.phone.replace(/\D/g,'')}`}
+                    href={`https://wa.me/${toWhatsappDigits(selectedModel.phone)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="bg-[#25D366] text-white px-6 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-lg shadow-green-100"

@@ -23,6 +23,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const [countries, setCountries] = useState<Array<{ name: string; cca2: string; dial: string }>>([]);
   const [selectedCountry, setSelectedCountry] = useState('BR');
   const [phoneValue, setPhoneValue] = useState('');
+  const [phoneRawValue, setPhoneRawValue] = useState('');
   const [registeredName, setRegisteredName] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [stageName, setStageName] = useState('');
@@ -55,6 +56,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       setHair(hairOptions[0]?.labels.br || '');
       setEyes(eyeOptions[0]?.labels.br || '');
       setPhoneValue('');
+      setPhoneRawValue('');
       setSelectedLocation(null);
       setPhotos([]);
       setServices([]);
@@ -125,7 +127,8 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       const limited = trimmed.slice(0, 11);
       const area = limited.slice(0, 2);
       const rest = limited.slice(2);
-      if (!area) return '';
+      if (!limited) return '';
+      if (limited.length <= 2) return limited;
       if (rest.length <= 4) return `(${area}) ${rest}`.trim();
       if (rest.length <= 8) return `(${area}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
       return `(${area}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
@@ -135,23 +138,79 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       const limited = trimmed.slice(0, 10);
       const area = limited.slice(0, 3);
       const rest = limited.slice(3);
-      if (!area) return '';
+      if (!limited) return '';
+      if (limited.length <= 3) return limited;
       if (rest.length <= 3) return `(${area}) ${rest}`.trim();
       return `(${area}) ${rest.slice(0, 3)}-${rest.slice(3)}`;
     }
 
-    return trimmed.slice(0, 15);
+    if (countryCode === 'IT') {
+      const limited = trimmed.slice(0, 11);
+      if (!limited) return '';
+      if (limited.length <= 3) return limited;
+      if (limited.length <= 6) return `${limited.slice(0, 3)} ${limited.slice(3)}`;
+      if (limited.length <= 10) return `${limited.slice(0, 3)} ${limited.slice(3, 6)} ${limited.slice(6)}`;
+      return `${limited.slice(0, 3)} ${limited.slice(3, 7)} ${limited.slice(7)}`;
+    }
+
+    const limited = trimmed.slice(0, 12);
+    if (!limited) return '';
+    if (limited.length <= 3) return limited;
+    const groups: string[] = [];
+    let index = 0;
+    while (index < limited.length) {
+      const remaining = limited.length - index;
+      let size = 3;
+      if (remaining === 4) size = 2;
+      if (remaining <= 2) size = remaining;
+      groups.push(limited.slice(index, index + size));
+      index += size;
+    }
+    return groups.join(' ');
+  };
+
+  const normalizePhoneE164 = (rawValue: string, digitsValue: string, countryDial: string) => {
+    const raw = rawValue.trim();
+    const rawDigits = raw.replace(/\D/g, '');
+    const digits = digitsValue.replace(/\D/g, '');
+    if (!rawDigits && !digits) return '';
+    const dialDigits = countryDial.replace(/\D/g, '');
+    if (raw.startsWith('+')) {
+      return rawDigits ? `+${rawDigits}` : '';
+    }
+    if (raw.startsWith('00')) {
+      const withoutPrefix = rawDigits.replace(/^00/, '');
+      return withoutPrefix ? `+${withoutPrefix}` : '';
+    }
+    if (!dialDigits) return null;
+    if (digits.startsWith(dialDigits)) return `+${digits}`;
+    return `+${dialDigits}${digits}`;
   };
 
   const handlePhoneChange = (value: string, countryCode: string) => {
-    const digits = value.replace(/\D/g, '');
-    setPhoneValue(formatPhone(digits, countryCode));
+    setPhoneRawValue(value);
+    const raw = value.trim();
+    const digits = raw.replace(/\D/g, '');
+    const dialDigits = countries.find((country) => country.cca2 === countryCode)?.dial.replace(/\D/g, '') ?? '';
+    let nationalDigits = digits;
+
+    if (raw.startsWith('+') || raw.startsWith('00')) {
+      const withoutPrefix = raw.startsWith('00') ? digits.replace(/^00/, '') : digits;
+      if (dialDigits && withoutPrefix.startsWith(dialDigits)) {
+        nationalDigits = withoutPrefix.slice(dialDigits.length);
+      } else {
+        nationalDigits = withoutPrefix;
+      }
+    }
+
+    setPhoneValue(formatPhone(nationalDigits, countryCode));
   };
 
   const handleCountryChange = (newCountry: string) => {
     setSelectedCountry(newCountry);
     const digits = phoneValue.replace(/\D/g, '');
     setPhoneValue(formatPhone(digits, newCountry));
+    setPhoneRawValue(formatPhone(digits, newCountry));
   };
 
   const handleLocationChange = (location: LocationValue) => {
@@ -222,12 +281,21 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       }
       setCurrentUser(registrationResult.user);
 
+      const selectedDial = countries.find((country) => country.cca2 === selectedCountry)?.dial ?? '';
+      const normalizedPhone = normalizePhoneE164(phoneRawValue || phoneValue, phoneValue, selectedDial);
+      if (normalizedPhone === null) {
+        setPublishError(t('errors.invalidPhone'));
+        setPublishing(false);
+        return;
+      }
+
       await createModelProfile({
         userId: registrationResult.user.id,
         name: displayName,
         email: registeredEmail.trim(),
         age: parsedAge,
-        phone: phoneValue.replace(/\\D/g, ''),
+        phone: normalizedPhone,
+        phoneCountryDial: selectedDial,
         bio,
         services,
         prices: [],

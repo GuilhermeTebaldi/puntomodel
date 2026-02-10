@@ -6,6 +6,9 @@ import { getCurrentUser } from '../services/auth';
 import { isModelSaved, toggleSavedModel } from '../services/savedModels';
 import { useI18n } from '../translations/i18n';
 
+const toWhatsappDigits = (phone?: string) => (phone ? phone.replace(/\D/g, '') : '');
+const toTelDigits = (phone?: string) => (phone ? phone.replace(/[^\d+]/g, '') : '');
+
 interface ModelProfileProps {
   model: {
     id: string;
@@ -46,6 +49,8 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [hasSwiped, setHasSwiped] = useState(false);
+  const telDigits = toTelDigits(model.phone);
+  const whatsappDigits = toWhatsappDigits(model.phone);
 
   const photos = model.photos || [];
   const activePhoto = activePhotoIndex !== null ? photos[activePhotoIndex] : null;
@@ -424,14 +429,14 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
         {model.phone ? (
           <>
             <a 
-              href={`tel:${model.phone.replace(/\\D/g,'')}`}
+              href={`tel:${telDigits}`}
               className="flex-1 max-w-xs bg-gray-900 text-white py-4 md:py-5 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all shadow-xl shadow-gray-200 uppercase text-xs md:text-sm tracking-widest"
             >
               <Phone size={18} />
               {t('profile.callNow')}
             </a>
             <a
-              href={`https://wa.me/${model.phone.replace(/\\D/g,'')}`}
+              href={`https://wa.me/${whatsappDigits}`}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackModelEvent(model.id, 'whatsapp').catch(() => undefined)}

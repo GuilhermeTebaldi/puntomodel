@@ -88,6 +88,30 @@ const ensureDb = async () => {
 };
 
 const normalizeEmail = (email) => (email || '').trim().toLowerCase();
+const normalizePhoneE164 = (rawPhone, phoneCountryDial) => {
+  if (rawPhone === null || rawPhone === undefined) return '';
+  if (typeof rawPhone !== 'string') return null;
+  const raw = rawPhone.trim();
+  if (!raw) return '';
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return '';
+  const dialDigits = typeof phoneCountryDial === 'string' ? phoneCountryDial.replace(/\D/g, '') : '';
+  let normalizedDigits = '';
+
+  if (raw.startsWith('+')) {
+    normalizedDigits = digits;
+  } else if (raw.startsWith('00')) {
+    normalizedDigits = digits.replace(/^00/, '');
+  } else if (dialDigits) {
+    normalizedDigits = digits.startsWith(dialDigits) ? digits : `${dialDigits}${digits}`;
+  } else {
+    return null;
+  }
+
+  if (!normalizedDigits) return null;
+  if (normalizedDigits.length < 8 || normalizedDigits.length > 15) return null;
+  return `+${normalizedDigits}`;
+};
 const getTodayKey = () => new Date().toISOString().slice(0, 10);
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -370,6 +394,10 @@ app.post('/api/models', async (req, res) => {
   }
 
   const normalizedModelEmail = normalizeEmail(payload.email);
+  const normalizedPhone = normalizePhoneE164(payload.phone, payload.phoneCountryDial);
+  if (normalizedPhone === null) {
+    return res.status(400).json({ ok: false, error: 'Número de WhatsApp inválido.' });
+  }
   const hasMap = payload.map && typeof payload.map.x === 'number' && typeof payload.map.y === 'number';
   const hasLocation = payload.location && typeof payload.location.lat === 'number' && typeof payload.location.lon === 'number';
 
@@ -392,7 +420,7 @@ app.post('/api/models', async (req, res) => {
     email: normalizedModelEmail,
     userId: typeof payload.userId === 'string' ? payload.userId : undefined,
     age: payload.age ?? null,
-    phone: payload.phone ?? '',
+    phone: normalizedPhone,
     bio: payload.bio ?? '',
     services: Array.isArray(payload.services) ? payload.services : [],
     prices: Array.isArray(payload.prices) ? payload.prices : [],
@@ -433,10 +461,18 @@ app.patch('/api/models/:id', async (req, res) => {
   }
 
   const payload = req.body || {};
+  let normalizedPhone = model.phone ?? '';
+  if (payload.phone !== undefined) {
+    const parsedPhone = normalizePhoneE164(payload.phone, payload.phoneCountryDial);
+    if (parsedPhone === null) {
+      return res.status(400).json({ ok: false, error: 'Número de WhatsApp inválido.' });
+    }
+    normalizedPhone = parsedPhone;
+  }
   const updates = {
     name: typeof payload.name === 'string' ? payload.name.trim() : model.name,
     age: payload.age ?? model.age ?? null,
-    phone: typeof payload.phone === 'string' ? payload.phone : model.phone ?? '',
+    phone: normalizedPhone,
     bio: typeof payload.bio === 'string' ? payload.bio : model.bio ?? '',
     services: Array.isArray(payload.services) ? payload.services : model.services ?? [],
     prices: Array.isArray(payload.prices) ? payload.prices : model.prices ?? [],
