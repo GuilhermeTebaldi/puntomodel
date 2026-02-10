@@ -10,6 +10,7 @@ interface HeroProps {
 
 const Hero: React.FC<HeroProps> = ({ onSearch, onRegisterClick }) => {
   const { t } = useI18n();
+  const overlayLines = t('hero.overlay').split('\n');
 
   return (
     <section className="relative overflow-hidden pt-8 md:pt-16 pb-20 px-4">
@@ -21,7 +22,7 @@ const Hero: React.FC<HeroProps> = ({ onSearch, onRegisterClick }) => {
         </svg>
       </div>
 
-      <div className="max-w-7xl mx-auto grid gap-12 items-center">
+      <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
         {/* Left Content */}
         <div className="z-20 text-center lg:text-left">
           <div className="relative inline-block">
@@ -43,7 +44,35 @@ const Hero: React.FC<HeroProps> = ({ onSearch, onRegisterClick }) => {
           </div>
         </div>
 
-        {/* Right content removed per request */}
+        {/* Right Content - Model Image */}
+        <div className="relative z-10 flex justify-center lg:justify-end">
+          <div className="relative w-full max-w-lg">
+            {/* Red Circle Background Shape */}
+            <div className="absolute bottom-0 left-0 right-0 h-[80%] bg-transparent border-[3px] border-red-500 rounded-full transform scale-110 opacity-20 -z-10"></div>
+            <div className="absolute -bottom-10 right-0 w-72 h-72 bg-red-100 rounded-full blur-3xl opacity-30 -z-20"></div>
+            
+            <div className="relative">
+              {/* FAKE_DATA: imagem ilustrativa fixa; substituir por asset/coleção real */}
+              <img 
+                src="https://i.pinimg.com/1200x/15/89/d9/1589d9d5678234a4fc62d25dbf940448.jpg" 
+                alt={t('hero.imageAlt')} 
+                className="w-full h-auto rounded-b-[100px] object-cover"
+              />
+              
+              {/* T-shirt Text Overlay Simulation */}
+              <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 w-full text-center">
+                 <p className="text-white/90 font-bold text-xl md:text-3xl leading-tight mix-blend-overlay px-12 italic">
+                   {overlayLines.map((line, index) => (
+                     <React.Fragment key={`${line}-${index}`}>
+                       {line}
+                       {index < overlayLines.length - 1 && <br />}
+                     </React.Fragment>
+                   ))}
+                 </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
