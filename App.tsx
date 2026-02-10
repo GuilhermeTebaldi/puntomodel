@@ -769,12 +769,14 @@ const App: React.FC = () => {
       <main>
         <Hero onSearch={handleSearch} onRegisterClick={openRegister} />
 
-        <div className="flex justify-center -mt-6 -mb-24 md:hidden relative z-10 translate-y-12 pointer-events-none">
+        <div className="">
+          
           <img
-            src="/logo-puntoescort.png"
-            alt=""
-            aria-hidden="true"
-            className="w-64 h-64 object-contain scale-[3.4] opacity-90"
+           
+
+
+
+           
           />
         </div>
         
