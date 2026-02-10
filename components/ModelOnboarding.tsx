@@ -742,7 +742,8 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     }
 
     const parsedAge = age ? Number(age) : null;
-    const registrationPassword = registration?.password?.trim();
+    const pendingRegistration = registration ?? getPendingModelProfile();
+    const registrationPassword = pendingRegistration?.password?.trim();
     if (!registrationPassword) {
       setPublishError(t('errors.registerFailed'));
       setPublishing(false);

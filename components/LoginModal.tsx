@@ -1,8 +1,14 @@
 
 import React, { useEffect, useState } from 'react';
-import { X, Mail, Lock, Facebook } from 'lucide-react';
+import { X, Mail, Lock, Facebook, Eye, EyeOff } from 'lucide-react';
 import Logo from './Logo';
-import { loginUser, setCurrentUser } from '../services/auth';
+import {
+  clearRememberedCredentials,
+  getRememberedCredentials,
+  loginUser,
+  saveRememberedCredentials,
+  setCurrentUser,
+} from '../services/auth';
 import { useI18n } from '../translations/i18n';
 
 interface LoginModalProps {
@@ -16,13 +22,31 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToRegi
   const { t, translateError } = useI18n();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberCredentials, setRememberCredentials] = useState(true);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (isOpen) return;
-    setIdentifier('');
-    setPassword('');
+    if (!isOpen) {
+      setIdentifier('');
+      setPassword('');
+      setShowPassword(false);
+      setRememberCredentials(true);
+      setError('');
+      return;
+    }
+    const remembered = getRememberedCredentials();
+    if (remembered) {
+      setIdentifier(remembered.email);
+      setPassword(remembered.password);
+      setRememberCredentials(true);
+    } else {
+      setIdentifier('');
+      setPassword('');
+      setRememberCredentials(true);
+    }
+    setShowPassword(false);
     setError('');
   }, [isOpen]);
 
@@ -37,6 +61,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToRegi
       return;
     }
 
+    if (rememberCredentials) {
+      saveRememberedCredentials({ email: identifier.trim(), password: password.trim() });
+    } else {
+      clearRememberedCredentials();
+    }
     setError('');
     setCurrentUser(result.user);
     onLoginSuccess?.();
@@ -85,16 +114,37 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToRegi
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input 
-                  type="password" 
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3.5 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-[#e3262e]/20 focus:border-[#e3262e] transition-all"
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3.5 pl-11 pr-16 sm:pr-40 focus:outline-none focus:ring-2 focus:ring-[#e3262e]/20 focus:border-[#e3262e] transition-all"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
+                  title={showPassword ? t('login.hidePassword') : t('login.showPassword')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400 hover:text-gray-700 inline-flex items-center gap-2"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  <span className="hidden sm:inline">
+                    {showPassword ? t('login.hidePassword') : t('login.showPassword')}
+                  </span>
+                </button>
               </div>
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between gap-4">
+              <label className="flex items-center gap-2 text-xs text-gray-500">
+                <input
+                  type="checkbox"
+                  checked={rememberCredentials}
+                  onChange={(event) => setRememberCredentials(event.target.checked)}
+                  className="accent-[#e3262e]"
+                />
+                {t('login.rememberCredentials')}
+              </label>
               <button className="text-xs font-bold text-[#e3262e] hover:underline">{t('login.forgot')}</button>
             </div>
 

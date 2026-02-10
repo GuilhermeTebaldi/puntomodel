@@ -25,6 +25,7 @@ export interface PendingModelProfile {
 
 const PENDING_MODEL_KEY = 'punto_pending_model';
 const CURRENT_USER_KEY = 'punto_current_user';
+const REMEMBERED_CREDENTIALS_KEY = 'punto_remembered_credentials';
 
 const isBrowser = () => typeof window !== 'undefined';
 
@@ -93,10 +94,45 @@ export const clearCurrentUser = () => {
   window.localStorage.removeItem(CURRENT_USER_KEY);
 };
 
+export type RememberedCredentials = {
+  email: string;
+  password: string;
+};
+
+export const saveRememberedCredentials = (credentials: RememberedCredentials) => {
+  if (!isBrowser()) return;
+  const email = (credentials.email || '').trim();
+  const password = credentials.password ?? '';
+  if (!email || !password) return;
+  window.localStorage.setItem(REMEMBERED_CREDENTIALS_KEY, JSON.stringify({ email, password }));
+};
+
+export const getRememberedCredentials = (): RememberedCredentials | null => {
+  if (!isBrowser()) return null;
+  const raw = window.localStorage.getItem(REMEMBERED_CREDENTIALS_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as RememberedCredentials;
+    if (parsed?.email && parsed?.password) return parsed;
+  } catch {
+    // ignore
+  }
+  return null;
+};
+
+export const clearRememberedCredentials = () => {
+  if (!isBrowser()) return;
+  window.localStorage.removeItem(REMEMBERED_CREDENTIALS_KEY);
+};
+
 export const savePendingModelProfile = (profile: PendingModelProfile) => {
   if (!isBrowser()) return;
-  const { name, email } = profile;
-  window.localStorage.setItem(PENDING_MODEL_KEY, JSON.stringify({ name, email }));
+  const { name, email, password } = profile;
+  const payload: PendingModelProfile = { name, email };
+  if (password) {
+    payload.password = password;
+  }
+  window.localStorage.setItem(PENDING_MODEL_KEY, JSON.stringify(payload));
 };
 
 export const getPendingModelProfile = (): PendingModelProfile | null => {
