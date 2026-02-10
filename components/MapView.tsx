@@ -113,6 +113,45 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
     [modelsWithLocation]
   );
 
+  const distributedModels = useMemo(() => {
+    const groups = new Map<string, ModelProfileData[]>();
+    modelsWithLocation.forEach((model) => {
+      const lat = model.location!.lat as number;
+      const lon = model.location!.lon as number;
+      const key = `${lat.toFixed(6)},${lon.toFixed(6)}`;
+      const list = groups.get(key);
+      if (list) {
+        list.push(model);
+      } else {
+        groups.set(key, [model]);
+      }
+    });
+
+    const result: Array<{ model: ModelProfileData; position: [number, number] }> = [];
+    const baseOffset = 0.00018;
+    const ringSize = 8;
+    groups.forEach((group) => {
+      if (group.length === 1) {
+        const model = group[0];
+        result.push({ model, position: [model.location!.lat as number, model.location!.lon as number] });
+        return;
+      }
+      group.forEach((model, index) => {
+        const lat = model.location!.lat as number;
+        const lon = model.location!.lon as number;
+        const ring = Math.floor(index / ringSize);
+        const slot = index % ringSize;
+        const angle = (slot / ringSize) * Math.PI * 2;
+        const radius = baseOffset * (1 + ring * 0.85);
+        const latOffset = radius * Math.cos(angle);
+        const lonOffset = (radius * Math.sin(angle)) / Math.cos((lat * Math.PI) / 180);
+        result.push({ model, position: [lat + latOffset, lon + lonOffset] });
+      });
+    });
+
+    return result;
+  }, [modelsWithLocation]);
+
   const defaultCenter = useMemo(() => {
     if (positions.length === 0) return [-14.235, -51.9253] as [number, number];
     if (positions.length === 1) return positions[0];
@@ -176,8 +215,8 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
       searchCircleRef.current = null;
     }
 
-    modelsWithLocation.forEach((model) => {
-      const marker = L.marker([model.location!.lat as number, model.location!.lon as number], {
+    distributedModels.forEach(({ model, position }) => {
+      const marker = L.marker(position, {
         icon: createMarkerIcon(model, selectedModel?.id === model.id),
       }).addTo(
         markersRef.current!
@@ -204,7 +243,7 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
       }
       didInitialFitRef.current = true;
     }
-  }, [modelsWithLocation, positions, defaultCenter, selectedModel, searchCenter]);
+  }, [distributedModels, positions, defaultCenter, selectedModel, searchCenter]);
 
   return (
     <div className="fixed inset-0 z-[150] bg-[#f8f9fa] flex flex-col animate-in fade-in duration-300">

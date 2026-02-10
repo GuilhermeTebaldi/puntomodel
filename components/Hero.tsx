@@ -71,7 +71,7 @@ const Hero: React.FC<HeroProps> = ({ onSearch, onRegisterClick }) => {
             <div className="relative">
               {/* FAKE_DATA: imagem ilustrativa fixa; substituir por asset/coleção real */}
               <img 
-                src="https://i.pinimg.com/736x/74/1a/71/741a71a2b9b2e9d38eac7caf848baf7d.jpg" 
+                src="https://i.pinimg.com/1200x/15/89/d9/1589d9d5678234a4fc62d25dbf940448.jpg" 
                 alt={t('hero.imageAlt')} 
                 className="w-full h-auto rounded-b-[100px] object-cover"
               />
