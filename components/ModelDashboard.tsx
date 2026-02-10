@@ -43,6 +43,7 @@ interface ModelDashboardModel {
   name: string;
   email: string;
   photos?: string[];
+  avatarUrl?: string | null;
   bio?: string;
   services?: string[];
   prices?: Array<{ label: string; value: number }>;
@@ -432,6 +433,8 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   const [isLangOpen, setIsLangOpen] = useState(false);
   const languageRef = useRef<HTMLDivElement>(null);
   const [showPaymentPage, setShowPaymentPage] = useState(false);
+  const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
+  const avatarRef = useRef<HTMLDivElement>(null);
 
   const billingExpiresAtMs = parseDateToMs(model.billing?.expiresAt);
   const billingActive = Boolean(billingExpiresAtMs && billingExpiresAtMs > Date.now());
@@ -469,6 +472,8 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   const [audienceInput, setAudienceInput] = useState<string[]>(model.attributes?.audience || []);
   const [photosInput, setPhotosInput] = useState<string[]>(model.photos || []);
   const [locationDraft, setLocationDraft] = useState<LocationValue | null>(toLocationValue(model.location));
+  const [avatarInput, setAvatarInput] = useState<string | null>(model.avatarUrl ?? null);
+  const avatarPhoto = avatarInput || model.avatarUrl || model.photos?.[0];
   const audienceOptions = useMemo(
     () => [
       { id: 'men', label: t('common.audienceMen') },
@@ -511,6 +516,9 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     setNationalityInput(model.attributes?.nationality || '');
     setAudienceInput(model.attributes?.audience || []);
     setPhotosInput(model.photos || []);
+    if (model.avatarUrl !== undefined) {
+      setAvatarInput(model.avatarUrl ?? null);
+    }
     setLocationDraft(toLocationValue(model.location));
   }, [model]);
 
@@ -527,6 +535,9 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     setNationalityInput(model.attributes?.nationality || '');
     setAudienceInput(model.attributes?.audience || []);
     setPhotosInput(model.photos || []);
+    if (model.avatarUrl !== undefined) {
+      setAvatarInput(model.avatarUrl ?? null);
+    }
     setLocationDraft(toLocationValue(model.location));
   };
 
@@ -678,6 +689,25 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     setPhotosInput((prev) => prev.filter((_, idx) => idx !== index));
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploadingPhotos(true);
+    setSaveError('');
+    try {
+      const uploaded = await uploadImage(file);
+      await handleSave({ avatarUrl: uploaded }, () => {
+        setAvatarInput(uploaded);
+        setIsAvatarPickerOpen(false);
+      });
+    } catch {
+      setSaveError(t('errors.imageLoadFailedGeneric'));
+    } finally {
+      setUploadingPhotos(false);
+      event.target.value = '';
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
     const load = () => {
@@ -723,6 +753,9 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
       }
       if (languageRef.current && !languageRef.current.contains(event.target as Node)) {
         setIsLangOpen(false);
+      }
+      if (avatarRef.current && !avatarRef.current.contains(event.target as Node)) {
+        setIsAvatarPickerOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -972,11 +1005,88 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
               )}
             </div>
 
-          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#e3262e] bg-gray-100">
-            {model.photos?.[0] ? (
-              <img src={model.photos[0]} alt={model.name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full" />
+          <div className="relative" ref={avatarRef}>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setIsAvatarPickerOpen((prev) => !prev);
+              }}
+              title={t('dashboard.photos.avatarAction')}
+              className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-[#e3262e] bg-gray-100 group"
+            >
+              {avatarPhoto ? (
+                <img src={avatarPhoto} alt={model.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full" />
+              )}
+              <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#e3262e] text-white flex items-center justify-center shadow-md">
+                <Camera size={12} />
+              </span>
+            </button>
+
+            {isAvatarPickerOpen && (
+              <div className="fixed inset-x-0 top-24 mx-auto w-[min(92vw,18rem)] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[120] sm:absolute sm:top-full sm:mt-3 sm:inset-x-auto sm:right-0 sm:mx-0 sm:w-72">
+                <div className="p-3 border-b border-gray-100">
+                  <p className="text-xs font-black uppercase tracking-widest text-gray-500">
+                    {t('dashboard.photos.avatarTitle')}
+                  </p>
+                  <p className="text-[11px] text-gray-400">{t('dashboard.photos.profileHint')}</p>
+                </div>
+                <div className="p-3">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <input
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      disabled={uploadingPhotos}
+                      className="sr-only"
+                    />
+                    <label
+                      htmlFor="avatar-upload"
+                      className={`inline-flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-[#e3262e] text-white text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-red-200 transition-colors ${
+                        uploadingPhotos ? 'opacity-70 pointer-events-none' : 'hover:bg-red-700 cursor-pointer'
+                      }`}
+                    >
+                      <Camera size={12} />
+                      {uploadingPhotos ? t('dashboard.photos.uploading') : t('dashboard.photos.uploadButton')}
+                    </label>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                      {photosInput.length > 0
+                        ? t('dashboard.photos.selectedCount', { count: photosInput.length })
+                        : t('dashboard.photos.noSelection')}
+                    </span>
+                  </div>
+                  {photosInput.length === 0 ? (
+                    <p className="text-xs text-gray-400">{t('dashboard.photos.noPhotos')}</p>
+                  ) : (
+                    <div className="grid grid-cols-4 gap-2">
+                      {photosInput.map((photo, index) => {
+                        const currentAvatar = avatarInput || model.avatarUrl;
+                        const isProfile = currentAvatar ? currentAvatar === photo : index === 0;
+                        return (
+                          <button
+                            key={`${photo}-${index}`}
+                            type="button"
+                            onClick={() => {
+                              handleSave({ avatarUrl: photo }, () => {
+                                setAvatarInput(photo);
+                                setIsAvatarPickerOpen(false);
+                              });
+                            }}
+                            className={`relative rounded-lg overflow-hidden focus:outline-none ${
+                              isProfile ? 'ring-2 ring-[#e3262e]' : 'ring-1 ring-gray-200'
+                            }`}
+                          >
+                            <img src={photo} alt={`avatar-${index}`} className="w-full h-14 object-cover" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
           </div>
@@ -1508,19 +1618,51 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                 </button>
               </div>
               {editingPhotos ? (
-                <div className="space-y-3">
-                  <input type="file" multiple accept="image/*" onChange={handlePhotoAdd} disabled={uploadingPhotos} />
-                  <div className="grid grid-cols-3 gap-2">
-                    {photosInput.map((photo, index) => (
-                      <button
-                        key={`${photo}-${index}`}
-                        type="button"
-                        onClick={() => handleRemovePhoto(index)}
-                        className="relative"
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-bold text-gray-800">{t('dashboard.photos.uploadTitle')}</p>
+                      <p className="text-xs text-gray-400">{t('dashboard.photos.uploadHint')}</p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                      <input
+                        id="photos-upload"
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={handlePhotoAdd}
+                        disabled={uploadingPhotos}
+                        className="sr-only"
+                      />
+                      <label
+                        htmlFor="photos-upload"
+                        className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest shadow-lg shadow-red-200 transition-colors ${
+                          uploadingPhotos ? 'opacity-70 pointer-events-none' : 'hover:bg-red-700 cursor-pointer'
+                        }`}
                       >
-                        <img src={photo} alt={`foto-${index}`} className="w-full h-24 object-cover rounded-xl" />
-                        <span className="absolute top-1 right-1 text-[10px] bg-black/60 text-white px-1 rounded">x</span>
-                      </button>
+                        <Camera size={14} />
+                        {uploadingPhotos ? t('dashboard.photos.uploading') : t('dashboard.photos.uploadButton')}
+                      </label>
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                        {photosInput.length > 0
+                          ? t('dashboard.photos.selectedCount', { count: photosInput.length })
+                          : t('dashboard.photos.noSelection')}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {photosInput.map((photo, index) => (
+                      <div key={`${photo}-${index}`} className="relative">
+                        <img src={photo} alt={`foto-${index}`} className="w-full h-20 sm:h-24 object-cover rounded-xl" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(index)}
+                          className="absolute top-1 right-1 text-[10px] bg-[#e3262e] text-white w-5 h-5 rounded-full flex items-center justify-center font-bold shadow"
+                        >
+                          ×
+                        </button>
+                      </div>
                     ))}
                   </div>
                   <div className="flex gap-2">

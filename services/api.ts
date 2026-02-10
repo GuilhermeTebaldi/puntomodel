@@ -1,7 +1,7 @@
 const rawBaseUrl =
   import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_API_URL ||
-  'https://puntomodel.onrender.com/api';
+  (import.meta.env.DEV ? 'http://localhost:5174/api' : '/api');
 
 const normalizedBaseUrl = rawBaseUrl.replace(/\/+$/, '');
 

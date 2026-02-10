@@ -85,6 +85,7 @@ export interface ModelProfileData {
   location?: ModelLocation | null;
   map?: ModelMapPoint | null;
   photos: string[];
+  avatarUrl?: string | null;
   featured?: boolean;
   isOnline?: boolean;
   onlineUntil?: number | null;

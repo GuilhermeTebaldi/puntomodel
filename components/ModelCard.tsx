@@ -14,6 +14,7 @@ interface ModelCardProps {
 const ModelCard: React.FC<ModelCardProps> = ({ model, onClick, showSave = false, isSaved = false, onToggleSave }) => {
   const { t, translateService } = useI18n();
   const isOnline = model.isOnline !== false;
+  const avatarUrl = model.avatarUrl || model.photos?.[0];
 
   return (
     <div
@@ -32,6 +33,14 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onClick, showSave = false,
         ) : (
           <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
             {t('featured.noPhoto')}
+          </div>
+        )}
+
+        {avatarUrl && (
+          <div
+            className={`absolute ${showSave ? 'top-12 right-3' : 'top-3 right-3'} w-9 h-9 rounded-full overflow-hidden border border-white ring-2 ring-white shadow-lg`}
+          >
+            <img src={avatarUrl} alt={model.name} className="w-full h-full object-cover" />
           </div>
         )}
 

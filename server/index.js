@@ -509,6 +509,7 @@ app.post('/api/models', async (req, res) => {
     location: payload.location ?? null,
     map: mapPoint,
     photos: Array.isArray(payload.photos) ? payload.photos : [],
+    avatarUrl: typeof payload.avatarUrl === 'string' ? payload.avatarUrl : existingModel?.avatarUrl ?? null,
     featured: Boolean(payload.featured),
     isOnline: typeof payload.isOnline === 'boolean' ? payload.isOnline : false,
     currency: typeof payload.currency === 'string' ? payload.currency : 'BRL',
@@ -573,6 +574,13 @@ app.patch('/api/models/:id', async (req, res) => {
     }
     derivedAge = numericAge;
   }
+  const avatarUrl =
+    payload.avatarUrl !== undefined
+      ? typeof payload.avatarUrl === 'string'
+        ? payload.avatarUrl
+        : null
+      : model.avatarUrl ?? null;
+
   const updates = {
     name: typeof payload.name === 'string' ? payload.name.trim() : model.name,
     age: derivedAge,
@@ -585,6 +593,7 @@ app.patch('/api/models/:id', async (req, res) => {
     location: payload.location ?? model.location ?? null,
     map: payload.map ?? model.map ?? null,
     photos: Array.isArray(payload.photos) ? payload.photos : model.photos ?? [],
+    avatarUrl,
     featured: typeof payload.featured === 'boolean' ? payload.featured : Boolean(model.featured),
     isOnline: typeof payload.isOnline === 'boolean' ? payload.isOnline : Boolean(model.isOnline),
     currency: typeof payload.currency === 'string' ? payload.currency : model.currency ?? 'BRL',
