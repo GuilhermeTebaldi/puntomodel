@@ -1,0 +1,8 @@
+
+{
+  "name": "ID Age Verifier Pro",
+  "description": "A high-precision document scanner that identifies age and identity information from passports and IDs to verify if a person is 18+.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
