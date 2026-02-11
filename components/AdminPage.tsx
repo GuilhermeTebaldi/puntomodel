@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../services/api';
 import Logo from './Logo';
 import { useI18n } from '../translations/i18n';
+import { getTranslationTarget } from '../services/translate';
 
 interface AdminUser {
   id: string;
@@ -17,6 +18,13 @@ interface AdminModel {
   email: string;
   age?: number | null;
   phone?: string;
+  bio?: string;
+  bioLanguage?: string | null;
+  bioHash?: string | null;
+  bioTranslations?: Record<
+    string,
+    string | { text?: string; status?: string; updatedAt?: string; attempts?: number; error?: string }
+  >;
   identity?: {
     number?: string;
     documentUrl?: string;
@@ -25,6 +33,7 @@ interface AdminModel {
   } | null;
   featured?: boolean;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 const readJsonSafe = async <T,>(response: Response): Promise<T | null> => {
@@ -37,16 +46,49 @@ const readJsonSafe = async <T,>(response: Response): Promise<T | null> => {
   }
 };
 
+const getBioTranslationEntry = (
+  value?: string | { text?: string; status?: string; updatedAt?: string; attempts?: number; error?: string } | null
+) => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return { text: trimmed, status: trimmed ? 'done' : 'pending', updatedAt: null, attempts: 0, error: null };
+  }
+  if (value && typeof value === 'object') {
+    const text = typeof value.text === 'string' ? value.text.trim() : '';
+    const status = typeof value.status === 'string' && value.status.trim()
+      ? value.status.trim()
+      : text
+      ? 'done'
+      : 'pending';
+    const updatedAt = typeof value.updatedAt === 'string' ? value.updatedAt : null;
+    const attempts = Number.isFinite(value.attempts) ? Math.max(0, Number(value.attempts)) : 0;
+    const error = typeof value.error === 'string' ? value.error : null;
+    return { text, status, updatedAt, attempts, error };
+  }
+  return { text: '', status: 'pending', updatedAt: null, attempts: 0, error: null };
+};
+
 const AdminPage: React.FC = () => {
-  const { t, translateError, locale } = useI18n();
+  const { t, translateError, locale, languageOptions } = useI18n();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [models, setModels] = useState<AdminModel[]>([]);
-  const [tab, setTab] = useState<'users' | 'models'>('users');
+  const [tab, setTab] = useState<'users' | 'models' | 'translations'>('users');
   const [error, setError] = useState('');
   const [resetting, setResetting] = useState(false);
   const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<AdminModel | null>(null);
+  const [selectedTranslationModel, setSelectedTranslationModel] = useState<AdminModel | null>(null);
+  const [refreshingTranslations, setRefreshingTranslations] = useState(false);
+  const translationTargets = useMemo(
+    () =>
+      languageOptions.map((option) => ({
+        code: option.code,
+        label: option.label,
+        target: getTranslationTarget(option.code),
+      })),
+    [languageOptions]
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -78,6 +120,21 @@ const AdminPage: React.FC = () => {
       mounted = false;
     };
   }, [t, translateError]);
+
+  const refreshModels = async () => {
+    setRefreshingTranslations(true);
+    setError('');
+    try {
+      const modelsRes = await apiFetch('/api/admin/models');
+      const modelsData = await readJsonSafe<{ models?: AdminModel[]; error?: string }>(modelsRes);
+      if (!modelsRes.ok) throw new Error(modelsData?.error || t('errors.loadModels'));
+      setModels(modelsData?.models || []);
+    } catch (err) {
+      setError(err instanceof Error ? translateError(err.message) : t('errors.loadData'));
+    } finally {
+      setRefreshingTranslations(false);
+    }
+  };
 
   const handleReset = async () => {
     const confirmed = window.confirm(t('adminPage.confirmReset'));
@@ -210,6 +267,14 @@ const AdminPage: React.FC = () => {
             >
               {t('adminPage.modelsTab')}
             </button>
+            <button
+              onClick={() => setTab('translations')}
+              className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${
+                tab === 'translations' ? 'bg-[#e3262e] text-white' : 'bg-white text-gray-500 border border-gray-200'
+              }`}
+            >
+              {t('adminPage.translationsTab')}
+            </button>
           </div>
         </div>
 
@@ -259,7 +324,7 @@ const AdminPage: React.FC = () => {
               </tbody>
             </table>
           </div>
-        ) : (
+        ) : tab === 'models' ? (
           <div className="bg-white border border-gray-100 rounded-2xl overflow-x-auto">
             <table className="w-full min-w-[980px] text-sm">
               <thead className="bg-gray-50 text-gray-500">
@@ -328,6 +393,90 @@ const AdminPage: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-black text-gray-900">{t('adminPage.translationsTitle')}</h2>
+                <p className="text-xs text-gray-500">{t('adminPage.translationsHint')}</p>
+              </div>
+              <button
+                onClick={refreshModels}
+                disabled={refreshingTranslations}
+                className="px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest bg-white text-gray-500 border border-gray-200 disabled:opacity-60"
+              >
+                {refreshingTranslations ? t('adminPage.translationsRefreshing') : t('adminPage.translationsRefresh')}
+              </button>
+            </div>
+            <div className="bg-white border border-gray-100 rounded-2xl overflow-x-auto">
+              <table className="w-full min-w-[980px] text-sm">
+                <thead className="bg-gray-50 text-gray-500">
+                  <tr>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.name')}</th>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.email')}</th>
+                    <th className="text-left px-4 py-3">{t('adminPage.translationsOriginalLanguage')}</th>
+                    <th className="text-left px-4 py-3">{t('adminPage.translationsStatus')}</th>
+                    <th className="text-right px-4 py-3">{t('adminPage.table.actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {models.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-6 text-gray-400 text-center">{t('adminPage.translationsEmpty')}</td>
+                    </tr>
+                  )}
+                  {models.map((model) => (
+                    <tr key={`translation-${model.id}`} className="border-t border-gray-100">
+                      <td className="px-4 py-3 font-semibold text-gray-800">{model.name}</td>
+                      <td className="px-4 py-3 text-gray-600">{model.email}</td>
+                      <td className="px-4 py-3 text-gray-600">{model.bioLanguage || '-'}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          {translationTargets.map((option) => {
+                            const entry = getBioTranslationEntry(model.bioTranslations?.[option.target]);
+                            const status = entry.status;
+                            const ready = status === 'done';
+                            const failed = status === 'failed';
+                            const processing = status === 'processing';
+                            return (
+                              <span
+                                key={`${model.id}-${option.target}`}
+                                className={`flex items-center gap-1 px-2 py-1 rounded-full border text-[10px] font-bold ${
+                                  ready
+                                    ? 'border-green-200 bg-green-50 text-green-700'
+                                    : failed
+                                    ? 'border-red-200 bg-red-50 text-red-700'
+                                    : processing
+                                    ? 'border-yellow-200 bg-yellow-50 text-yellow-700'
+                                    : 'border-gray-200 bg-gray-50 text-gray-400'
+                                }`}
+                                title={`${option.label} · ${t(`adminPage.translationStatus.${status}`)}`}
+                              >
+                                <img
+                                  src={`https://flagcdn.com/w20/${option.code}.png`}
+                                  alt={option.code.toUpperCase()}
+                                  className="w-4 h-3 rounded-[2px]"
+                                />
+                                {ready ? '✓' : failed ? '!' : processing ? '…' : '…'}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => setSelectedTranslationModel(model)}
+                          className="text-xs font-bold uppercase tracking-widest text-gray-600 hover:text-gray-800"
+                        >
+                          {t('adminPage.translationsView')}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
         {selectedModel && (
@@ -428,6 +577,82 @@ const AdminPage: React.FC = () => {
                       <p className="text-sm text-gray-400">{t('adminPage.identityMissing')}</p>
                     )}
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {selectedTranslationModel && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setSelectedTranslationModel(null)}
+            />
+            <div className="relative w-full max-w-3xl bg-white rounded-3xl shadow-xl border border-gray-100">
+              <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400">{t('adminPage.translationsTitle')}</p>
+                  <h2 className="text-xl font-black text-gray-900">{selectedTranslationModel.name}</h2>
+                  <p className="text-sm text-gray-500">{selectedTranslationModel.email}</p>
+                </div>
+                <button
+                  onClick={() => setSelectedTranslationModel(null)}
+                  className="text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-gray-700"
+                >
+                  {t('common.close')}
+                </button>
+              </div>
+
+              <div className="px-6 py-6 space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{t('adminPage.translationsOriginalLanguage')}</p>
+                    <p className="text-sm font-semibold text-gray-800">{selectedTranslationModel.bioLanguage || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{t('adminPage.translationsUpdated')}</p>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {selectedTranslationModel.updatedAt ? new Date(selectedTranslationModel.updatedAt).toLocaleString(locale) : '-'}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">{t('adminPage.translationsOriginalText')}</p>
+                  <p className="text-sm text-gray-700 whitespace-pre-line">
+                    {selectedTranslationModel.bio || '-'}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {translationTargets.map((option) => {
+                    const entry = getBioTranslationEntry(selectedTranslationModel.bioTranslations?.[option.target]);
+                    return (
+                      <div key={`translation-detail-${option.target}`} className="border border-gray-100 rounded-2xl p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <img
+                            src={`https://flagcdn.com/w20/${option.code}.png`}
+                            alt={option.code.toUpperCase()}
+                            className="w-5 h-4 rounded-[2px]"
+                          />
+                          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{option.label}</p>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                            {t(`adminPage.translationStatus.${entry.status}`)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mb-2">
+                          {t('adminPage.translationsAttempts', { count: entry.attempts })} ·{' '}
+                          {entry.updatedAt ? new Date(entry.updatedAt).toLocaleString(locale) : '-'}
+                        </p>
+                        <p className="text-sm text-gray-700 whitespace-pre-line">
+                          {entry.text || t('adminPage.translationsEmptyText')}
+                        </p>
+                        {entry.error && (
+                          <p className="text-xs text-red-500 mt-2">{entry.error}</p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

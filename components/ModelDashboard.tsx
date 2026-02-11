@@ -488,7 +488,10 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
       try {
         const refreshed = await fetchModelById(model.id);
         onModelUpdated?.(refreshed);
-        const complete = bioTranslationTargets.every((option) => Boolean(refreshed.bioTranslations?.[option.target]));
+        const complete = bioTranslationTargets.every((option) => {
+          const entry = getBioTranslationEntry(refreshed.bioTranslations?.[option.target]);
+          return entry.status === 'done' && Boolean(entry.text);
+        });
         if (complete) {
           stopBioTranslationPoll();
         }
