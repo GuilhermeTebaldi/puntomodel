@@ -67,25 +67,52 @@ const TRANSLATE_API_BASE =
   process.env.TRANSLATE_API_BASE_URL || 'https://libretranslate.de';
 const TRANSLATE_API_KEY = process.env.TRANSLATE_API_KEY || '';
 const TRANSLATE_API_BASES = Array.from(
-  new Set([TRANSLATE_API_BASE, 'https://translate.astian.org', 'https://libretranslate.com'].filter(Boolean))
+  new Set([
+    TRANSLATE_API_BASE,
+    'https://translate.astian.org',
+    'https://libretranslate.com',
+    'https://translate.argosopentech.com',
+  ].filter(Boolean))
 );
 const BIO_TRANSLATION_TARGETS = ['pt', 'en', 'es', 'it', 'de', 'fr'];
 
 const postTranslateJson = async (url, payload, signal) => {
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'PuntoModel/1.0 (+https://puntomodel.com)',
+    },
     body: JSON.stringify(payload),
     signal,
   });
   if (!response.ok) {
-    throw new Error('translate_failed');
+    const raw = await response.text();
+    let detail = '';
+    try {
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (parsed && typeof parsed.error === 'string') {
+        detail = parsed.error.trim().slice(0, 160);
+      }
+    } catch {
+      // ignore parse errors
+    }
+    const message = detail
+      ? `translate_failed_${response.status}:${detail}`
+      : `translate_failed_${response.status}`;
+    throw new Error(message);
   }
-  return response.json();
+  const raw = await response.text();
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 };
 
 const buildTranslatePayload = (text, source, target) => {
-  const payload = { q: text, source, target };
+  const payload = { q: text, source, target, format: 'text' };
   if (TRANSLATE_API_KEY) {
     payload.api_key = TRANSLATE_API_KEY;
   }
@@ -106,22 +133,27 @@ const getTranslateCacheKey = (text, target) => `${target}|${text}`;
 const translateWithMyMemory = async (text, source, target) => {
   const sourceLang = source && source !== 'auto' ? source : 'pt';
   const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${encodeURIComponent(`${sourceLang}|${target}`)}`;
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: { 'User-Agent': 'PuntoModel/1.0 (+https://puntomodel.com)' },
+  });
   if (!response.ok) {
     throw new Error(`mymemory_${response.status}`);
   }
   const data = await response.json();
   if (!data || data.responseStatus !== 200) {
-    throw new Error('mymemory_failed');
+    const detail = typeof data?.responseDetails === 'string' ? data.responseDetails.trim().slice(0, 160) : '';
+    throw new Error(detail ? `mymemory_failed:${detail}` : 'mymemory_failed');
   }
   const translatedText = data?.responseData?.translatedText;
   if (typeof translatedText !== 'string') return null;
   const trimmed = translatedText.trim();
-  if (!trimmed || trimmed.startsWith('MYMEMORY WARNING')) return null;
+  if (!trimmed || trimmed.startsWith('MYMEMORY WARNING')) {
+    throw new Error('mymemory_quota');
+  }
   return trimmed;
 };
 
-const translateWithFallbacks = async (text, source, target) => {
+const translateWithFallbacks = async (text, source, target, { timeoutMs = 8000 } = {}) => {
   const cacheKey = getTranslateCacheKey(text, target);
   const cached = translationCache.get(cacheKey);
   if (cached) return { text: cached, error: null };
@@ -129,7 +161,7 @@ const translateWithFallbacks = async (text, source, target) => {
   let lastError = null;
   for (const baseUrl of TRANSLATE_API_BASES) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4500);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const translated = await translateWithProvider(baseUrl, text, source, target, controller.signal);
       if (translated) {
@@ -300,7 +332,7 @@ const translateAndPersistBio = async (modelId, sourceText, sourceLang, target) =
   const entry = getBioTranslationEntry(prepared.bioTranslations, target);
   if (entry.status === 'done' && entry.text) return;
   const retryLimit =
-    entry.status === 'failed' && entry.error === 'translate_failed'
+    entry.status === 'failed' && typeof entry.error === 'string' && entry.error.startsWith('translate_failed')
       ? MAX_BIO_TRANSLATION_ATTEMPTS + 2
       : MAX_BIO_TRANSLATION_ATTEMPTS;
   if (entry.attempts >= retryLimit) {
@@ -322,7 +354,7 @@ const translateAndPersistBio = async (modelId, sourceText, sourceLang, target) =
   if (normalizedSourceLang && target === normalizedSourceLang) {
     translated = sourceText;
   } else {
-    const result = await translateWithFallbacks(sourceText, normalizedSourceLang || 'auto', target);
+    const result = await translateWithFallbacks(sourceText, normalizedSourceLang || 'auto', target, { timeoutMs: 8000 });
     translated = result.text;
     translateError = result.error;
   }
