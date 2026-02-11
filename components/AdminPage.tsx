@@ -80,6 +80,7 @@ const AdminPage: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<AdminModel | null>(null);
   const [selectedTranslationModel, setSelectedTranslationModel] = useState<AdminModel | null>(null);
   const [refreshingTranslations, setRefreshingTranslations] = useState(false);
+  const [translatingModelId, setTranslatingModelId] = useState<string | null>(null);
   const translationTargets = useMemo(
     () =>
       languageOptions.map((option) => ({
@@ -121,6 +122,11 @@ const AdminPage: React.FC = () => {
     };
   }, [t, translateError]);
 
+  const updateModelInState = (updated: AdminModel) => {
+    setModels((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+    setSelectedTranslationModel((prev) => (prev && prev.id === updated.id ? updated : prev));
+  };
+
   const refreshModels = async () => {
     setRefreshingTranslations(true);
     setError('');
@@ -133,6 +139,27 @@ const AdminPage: React.FC = () => {
       setError(err instanceof Error ? translateError(err.message) : t('errors.loadData'));
     } finally {
       setRefreshingTranslations(false);
+    }
+  };
+
+  const handleTranslateNow = async (model: AdminModel, force = false) => {
+    setTranslatingModelId(model.id);
+    setError('');
+    try {
+      const response = await apiFetch(`/api/admin/models/${model.id}/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force }),
+      });
+      const data = await readJsonSafe<{ model?: AdminModel; error?: string }>(response);
+      if (!response.ok) throw new Error(data?.error || t('errors.updateFailed'));
+      if (data?.model) {
+        updateModelInState(data.model);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? translateError(err.message) : t('errors.updateFailed'));
+    } finally {
+      setTranslatingModelId(null);
     }
   };
 
@@ -595,12 +622,23 @@ const AdminPage: React.FC = () => {
                   <h2 className="text-xl font-black text-gray-900">{selectedTranslationModel.name}</h2>
                   <p className="text-sm text-gray-500">{selectedTranslationModel.email}</p>
                 </div>
-                <button
-                  onClick={() => setSelectedTranslationModel(null)}
-                  className="text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-gray-700"
-                >
-                  {t('common.close')}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleTranslateNow(selectedTranslationModel)}
+                    disabled={translatingModelId === selectedTranslationModel.id}
+                    className="px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest bg-[#e3262e] text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {translatingModelId === selectedTranslationModel.id
+                      ? t('adminPage.translationsTriggering')
+                      : t('adminPage.translationsTrigger')}
+                  </button>
+                  <button
+                    onClick={() => setSelectedTranslationModel(null)}
+                    className="text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-gray-700"
+                  >
+                    {t('common.close')}
+                  </button>
+                </div>
               </div>
 
               <div className="px-6 py-6 space-y-6">

@@ -65,6 +65,7 @@ const corsOptions = {
 
 const TRANSLATE_API_BASE =
   process.env.TRANSLATE_API_BASE_URL || 'https://libretranslate.de';
+const TRANSLATE_API_KEY = process.env.TRANSLATE_API_KEY || '';
 const TRANSLATE_API_BASES = Array.from(
   new Set([TRANSLATE_API_BASE, 'https://translate.astian.org', 'https://libretranslate.com'].filter(Boolean))
 );
@@ -83,8 +84,16 @@ const postTranslateJson = async (url, payload, signal) => {
   return response.json();
 };
 
+const buildTranslatePayload = (text, source, target) => {
+  const payload = { q: text, source, target };
+  if (TRANSLATE_API_KEY) {
+    payload.api_key = TRANSLATE_API_KEY;
+  }
+  return payload;
+};
+
 const translateWithProvider = async (baseUrl, text, source, target, signal) => {
-  const data = await postTranslateJson(`${baseUrl}/translate`, { q: text, source, target }, signal);
+  const data = await postTranslateJson(`${baseUrl}/translate`, buildTranslatePayload(text, source, target), signal);
   if (!data || typeof data.translatedText !== 'string') return null;
   const trimmed = data.translatedText.trim();
   return trimmed ? trimmed : null;
@@ -94,11 +103,30 @@ const translationCache = new Map();
 const TRANSLATION_CACHE_MAX = 300;
 const getTranslateCacheKey = (text, target) => `${target}|${text}`;
 
+const translateWithMyMemory = async (text, source, target) => {
+  const sourceLang = source && source !== 'auto' ? source : 'pt';
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${encodeURIComponent(`${sourceLang}|${target}`)}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`mymemory_${response.status}`);
+  }
+  const data = await response.json();
+  if (!data || data.responseStatus !== 200) {
+    throw new Error('mymemory_failed');
+  }
+  const translatedText = data?.responseData?.translatedText;
+  if (typeof translatedText !== 'string') return null;
+  const trimmed = translatedText.trim();
+  if (!trimmed || trimmed.startsWith('MYMEMORY WARNING')) return null;
+  return trimmed;
+};
+
 const translateWithFallbacks = async (text, source, target) => {
   const cacheKey = getTranslateCacheKey(text, target);
   const cached = translationCache.get(cacheKey);
-  if (cached) return cached;
+  if (cached) return { text: cached, error: null };
 
+  let lastError = null;
   for (const baseUrl of TRANSLATE_API_BASES) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4500);
@@ -109,15 +137,29 @@ const translateWithFallbacks = async (text, source, target) => {
           translationCache.clear();
         }
         translationCache.set(cacheKey, translated);
-        return translated;
+        return { text: translated, error: null };
       }
     } catch (err) {
-      // ignore and try next provider
+      lastError = err instanceof Error ? err.message : 'translate_failed';
     } finally {
       clearTimeout(timeout);
     }
   }
-  return null;
+
+  try {
+    const translated = await translateWithMyMemory(text, source, target);
+    if (translated) {
+      if (translationCache.size >= TRANSLATION_CACHE_MAX) {
+        translationCache.clear();
+      }
+      translationCache.set(cacheKey, translated);
+      return { text: translated, error: null };
+    }
+  } catch (err) {
+    lastError = err instanceof Error ? err.message : lastError;
+  }
+
+  return { text: null, error: lastError || 'translate_failed' };
 };
 
 const bioTranslationJobs = new Map();
@@ -178,6 +220,46 @@ const getBioTranslationEntry = (translations, target) => {
   if (entry) return entry;
   return { text: '', status: 'pending', attempts: 0, updatedAt: null };
 };
+const resetBioTranslationsForRetry = async (model, { force = false } = {}) => {
+  const sourceText = typeof model?.bio === 'string' ? model.bio.trim() : '';
+  if (!sourceText) return model;
+  const sourceLang = normalizeBioLanguage(model.bioLanguage);
+  const nowIso = new Date().toISOString();
+  const normalized = normalizeBioTranslations(model.bioTranslations);
+  const seed = buildBioTranslationsSeed(sourceText, sourceLang);
+  const nextTranslations = { ...seed, ...normalized };
+
+  BIO_TRANSLATION_TARGETS.forEach((target) => {
+    if (sourceLang && target === sourceLang) {
+      nextTranslations[target] = {
+        text: sourceText,
+        status: 'done',
+        attempts: 0,
+        updatedAt: nowIso,
+        error: null,
+      };
+      return;
+    }
+
+    const entry = normalizeBioTranslationEntry(nextTranslations[target]) || {
+      text: '',
+      status: 'pending',
+      attempts: 0,
+      updatedAt: null,
+      error: null,
+    };
+    const shouldReset = force || entry.status !== 'done' || !entry.text;
+    nextTranslations[target] = shouldReset
+      ? { text: '', status: 'pending', attempts: 0, updatedAt: nowIso, error: null }
+      : { ...entry, updatedAt: entry.updatedAt || nowIso };
+  });
+
+  model.bioTranslations = nextTranslations;
+  model.bioHash = hashBioText(sourceText);
+  model.updatedAt = nowIso;
+  const updated = await updateModel(model.id, model);
+  return updated || model;
+};
 const hasAllBioTranslations = (model) => {
   const source = typeof model?.bio === 'string' ? model.bio.trim() : '';
   if (!source) return false;
@@ -217,7 +299,11 @@ const translateAndPersistBio = async (modelId, sourceText, sourceLang, target) =
   const prepared = await ensureBioTranslationsInitialized(model, sourceText, normalizedSourceLang);
   const entry = getBioTranslationEntry(prepared.bioTranslations, target);
   if (entry.status === 'done' && entry.text) return;
-  if (entry.attempts >= MAX_BIO_TRANSLATION_ATTEMPTS) {
+  const retryLimit =
+    entry.status === 'failed' && entry.error === 'translate_failed'
+      ? MAX_BIO_TRANSLATION_ATTEMPTS + 2
+      : MAX_BIO_TRANSLATION_ATTEMPTS;
+  if (entry.attempts >= retryLimit) {
     if (entry.status !== 'failed') {
       await markBioTranslation(prepared, target, { ...entry, status: 'failed', updatedAt: new Date().toISOString() });
     }
@@ -232,10 +318,13 @@ const translateAndPersistBio = async (modelId, sourceText, sourceLang, target) =
   });
 
   let translated = null;
+  let translateError = null;
   if (normalizedSourceLang && target === normalizedSourceLang) {
     translated = sourceText;
   } else {
-    translated = await translateWithFallbacks(sourceText, normalizedSourceLang || 'auto', target);
+    const result = await translateWithFallbacks(sourceText, normalizedSourceLang || 'auto', target);
+    translated = result.text;
+    translateError = result.error;
   }
   if (translated) {
     await markBioTranslation(prepared, target, {
@@ -251,7 +340,7 @@ const translateAndPersistBio = async (modelId, sourceText, sourceLang, target) =
       status: 'failed',
       attempts: entry.attempts + 1,
       updatedAt: new Date().toISOString(),
-      error: 'translate_failed',
+      error: translateError || 'translate_failed',
     });
   }
 };
@@ -292,9 +381,9 @@ app.post('/api/translate', async (req, res) => {
   }
 
   try {
-    const translated = await translateWithFallbacks(safeText, 'auto', target);
-    if (translated) {
-      return res.json({ ok: true, translatedText: translated, detectedLanguage: null });
+    const result = await translateWithFallbacks(safeText, 'auto', target);
+    if (result.text) {
+      return res.json({ ok: true, translatedText: result.text, detectedLanguage: null });
     }
   } catch (err) {
     // ignore translate errors
@@ -684,7 +773,29 @@ app.get('/api/admin/models', async (_req, res) => {
   await ensureDb();
   let models = await listModels();
   models = await Promise.all(models.map((model) => refreshModelState(model)));
+  models.forEach((model) => {
+    if (!hasAllBioTranslations(model)) {
+      scheduleBioTranslations(model.id, model.bio, model.bioLanguage);
+    }
+  });
   res.json({ ok: true, models });
+});
+
+app.post('/api/admin/models/:id/translate', async (req, res) => {
+  await ensureDb();
+  const model = await getModelByIdRepo(req.params.id);
+  if (!model) {
+    return res.status(404).json({ ok: false, error: 'Perfil não encontrado.' });
+  }
+  const sourceText = typeof model.bio === 'string' ? model.bio.trim() : '';
+  if (!sourceText) {
+    return res.status(400).json({ ok: false, error: 'Bio vazia.' });
+  }
+  const payload = req.body || {};
+  const force = payload.force === true;
+  const updated = await resetBioTranslationsForRetry(model, { force });
+  scheduleBioTranslations(updated.id, updated.bio, updated.bioLanguage);
+  res.json({ ok: true, model: sanitizeModelPublic(updated) });
 });
 
 app.delete('/api/admin/models/:id', async (req, res) => {
