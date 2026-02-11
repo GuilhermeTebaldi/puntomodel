@@ -41,6 +41,24 @@ import { getTranslationTarget } from '../services/translate';
 import { useI18n } from '../translations/i18n';
 import { getIdentityLabel, identityOptions, serviceOptions } from '../translations';
 
+const getBioTranslationEntry = (value?: unknown) => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return { text: trimmed, status: trimmed ? 'done' : 'pending' };
+  }
+  if (value && typeof value === 'object') {
+    const entry = value as { text?: string; status?: string };
+    const text = typeof entry.text === 'string' ? entry.text.trim() : '';
+    const status = typeof entry.status === 'string' && entry.status.trim()
+      ? entry.status.trim()
+      : text
+      ? 'done'
+      : 'pending';
+    return { text, status };
+  }
+  return { text: '', status: 'pending' };
+};
+
 interface ModelDashboardModel {
   id: string;
   name: string;
@@ -48,7 +66,7 @@ interface ModelDashboardModel {
   photos?: string[];
   avatarUrl?: string | null;
   bio?: string;
-  bioTranslations?: Record<string, string>;
+  bioTranslations?: Record<string, string | { text?: string; status?: string; updatedAt?: string; attempts?: number; error?: string }>;
   bioLanguage?: string;
   services?: string[];
   prices?: Array<{ label: string; value: number }>;
@@ -1381,12 +1399,19 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                               {t('dashboard.form.bioTranslationsLabel')}
                             </span>
                             {bioTranslationTargets.map((option) => {
-                              const ready = Boolean(bioTranslations[option.target]);
+                              const entry = getBioTranslationEntry(bioTranslations[option.target]);
+                              const status = entry.status;
+                              const ready = status === 'done';
+                              const failed = status === 'failed';
                               return (
                                 <span
                                   key={option.code}
                                   className={`flex items-center gap-1 px-2 py-1 rounded-full border text-[10px] font-bold ${
-                                    ready ? 'border-green-200 bg-green-50 text-green-700' : 'border-gray-200 bg-gray-50 text-gray-400'
+                                    ready
+                                      ? 'border-green-200 bg-green-50 text-green-700'
+                                      : failed
+                                      ? 'border-red-200 bg-red-50 text-red-700'
+                                      : 'border-gray-200 bg-gray-50 text-gray-400'
                                   }`}
                                   title={option.label}
                                 >
@@ -1395,7 +1420,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                                     alt={option.code.toUpperCase()}
                                     className="w-4 h-3 rounded-[2px]"
                                   />
-                                  {ready ? '✓' : '…'}
+                                  {ready ? '✓' : failed ? '!' : '…'}
                                 </span>
                               );
                             })}
@@ -1411,12 +1436,19 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                               {t('dashboard.form.bioTranslationsLabel')}
                             </span>
                             {bioTranslationTargets.map((option) => {
-                              const ready = Boolean(bioTranslations[option.target]);
+                              const entry = getBioTranslationEntry(bioTranslations[option.target]);
+                              const status = entry.status;
+                              const ready = status === 'done';
+                              const failed = status === 'failed';
                               return (
                                 <span
                                   key={option.code}
                                   className={`flex items-center gap-1 px-2 py-1 rounded-full border text-[10px] font-bold ${
-                                    ready ? 'border-green-200 bg-green-50 text-green-700' : 'border-gray-200 bg-gray-50 text-gray-400'
+                                    ready
+                                      ? 'border-green-200 bg-green-50 text-green-700'
+                                      : failed
+                                      ? 'border-red-200 bg-red-50 text-red-700'
+                                      : 'border-gray-200 bg-gray-50 text-gray-400'
                                   }`}
                                   title={option.label}
                                 >
@@ -1425,7 +1457,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                                     alt={option.code.toUpperCase()}
                                     className="w-4 h-3 rounded-[2px]"
                                   />
-                                  {ready ? '✓' : '…'}
+                                  {ready ? '✓' : failed ? '!' : '…'}
                                 </span>
                               );
                             })}

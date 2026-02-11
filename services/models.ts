@@ -80,7 +80,7 @@ export interface ModelProfileData {
   phone?: string;
   identity?: ModelIdentity | null;
   bio?: string;
-  bioTranslations?: Record<string, string>;
+  bioTranslations?: Record<string, string | { text?: string; status?: string; updatedAt?: string; attempts?: number; error?: string }>;
   bioLanguage?: string;
   services: string[];
   prices: ModelPrice[];

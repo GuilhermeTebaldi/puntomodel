@@ -10,6 +10,24 @@ import { getTranslationTarget } from '../services/translate';
 
 const toWhatsappDigits = (phone?: string) => (phone ? phone.replace(/\D/g, '') : '');
 const toTelDigits = (phone?: string) => (phone ? phone.replace(/[^\d+]/g, '') : '');
+const getBioTranslationText = (value?: unknown) => {
+  if (typeof value === 'string') return value.trim();
+  if (value && typeof value === 'object') {
+    const text = (value as { text?: string }).text;
+    return typeof text === 'string' ? text.trim() : '';
+  }
+  return '';
+};
+const getBioTranslationStatus = (value?: unknown) => {
+  if (typeof value === 'string') return value.trim() ? 'done' : 'pending';
+  if (value && typeof value === 'object') {
+    const status = (value as { status?: string }).status;
+    if (typeof status === 'string' && status.trim()) return status.trim();
+    const text = getBioTranslationText(value);
+    return text ? 'done' : 'pending';
+  }
+  return 'pending';
+};
 
 interface ModelProfileProps {
   model: {
@@ -19,7 +37,7 @@ interface ModelProfileProps {
     phone?: string;
     photos?: string[];
     bio?: string;
-    bioTranslations?: Record<string, string>;
+    bioTranslations?: Record<string, string | { text?: string; status?: string; updatedAt?: string; attempts?: number; error?: string }>;
     bioLanguage?: string;
     services?: string[];
     prices?: Array<{ label: string; value: number }>;
@@ -98,8 +116,7 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
     const translations = model.bioTranslations;
     if (!translations) return null;
     const cached = translations[targetLanguage];
-    if (typeof cached !== 'string') return null;
-    const trimmed = cached.trim();
+    const trimmed = getBioTranslationText(cached);
     return trimmed ? trimmed : null;
   }, [model.bioTranslations, targetLanguage]);
 
@@ -199,7 +216,8 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
   const displayBio = rawBio
     ? (shouldTranslate && cachedBio ? cachedBio : rawBio)
     : t('dashboard.form.bioMissing');
-  const showTranslatedBadge = rawBio && shouldTranslate && Boolean(cachedBio);
+  const translationStatus = getBioTranslationStatus(model.bioTranslations?.[targetLanguage]);
+  const showTranslatedBadge = rawBio && shouldTranslate && translationStatus === 'done' && Boolean(cachedBio);
 
   const handleRate = async (value: number) => {
     setRatingSubmitting(true);

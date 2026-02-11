@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createHash } from 'crypto';
 import { nanoid } from 'nanoid';
 import dotenv from 'dotenv';
 import { ensureSchema, checkDb } from './db.js';
@@ -120,41 +121,150 @@ const translateWithFallbacks = async (text, source, target) => {
 };
 
 const bioTranslationJobs = new Map();
+const MAX_BIO_TRANSLATION_ATTEMPTS = 3;
 const normalizeBioLanguage = (value) => {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim().toLowerCase();
   return trimmed || null;
 };
-const persistBioTranslation = async (modelId, sourceText, target, translatedText) => {
-  if (!translatedText) return;
+const hashBioText = (text) => createHash('sha1').update(text).digest('hex');
+const normalizeBioTranslationEntry = (value) => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    return { text: trimmed, status: 'done', attempts: 0, updatedAt: new Date().toISOString() };
+  }
+  if (value && typeof value === 'object') {
+    const text = typeof value.text === 'string' ? value.text.trim() : '';
+    const status = typeof value.status === 'string' && value.status.trim()
+      ? value.status.trim()
+      : text
+      ? 'done'
+      : 'pending';
+    const attempts = Number.isFinite(value.attempts) ? Math.max(0, Number(value.attempts)) : 0;
+    const updatedAt = typeof value.updatedAt === 'string' ? value.updatedAt : null;
+    const error = typeof value.error === 'string' ? value.error : null;
+    return { text, status, attempts, updatedAt, error };
+  }
+  return null;
+};
+const normalizeBioTranslations = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const entries = Object.entries(value);
+  const normalized = {};
+  for (const [key, entry] of entries) {
+    const lang = key.trim().toLowerCase();
+    if (!lang || !BIO_TRANSLATION_TARGETS.includes(lang)) continue;
+    const normalizedEntry = normalizeBioTranslationEntry(entry);
+    if (!normalizedEntry) continue;
+    normalized[lang] = normalizedEntry;
+  }
+  return normalized;
+};
+const buildBioTranslationsSeed = (sourceText, sourceLang) => {
+  const nowIso = new Date().toISOString();
+  const translations = {};
+  BIO_TRANSLATION_TARGETS.forEach((target) => {
+    if (sourceLang && target === sourceLang) {
+      translations[target] = { text: sourceText, status: 'done', attempts: 0, updatedAt: nowIso };
+    } else {
+      translations[target] = { text: '', status: 'pending', attempts: 0, updatedAt: nowIso };
+    }
+  });
+  return translations;
+};
+const getBioTranslationEntry = (translations, target) => {
+  const entry = normalizeBioTranslationEntry(translations?.[target]);
+  if (entry) return entry;
+  return { text: '', status: 'pending', attempts: 0, updatedAt: null };
+};
+const hasAllBioTranslations = (model) => {
+  const source = typeof model?.bio === 'string' ? model.bio.trim() : '';
+  if (!source) return false;
+  const translations = model?.bioTranslations || {};
+  return BIO_TRANSLATION_TARGETS.every((target) => {
+    const entry = getBioTranslationEntry(translations, target);
+    return entry.status === 'done' && entry.text.length > 0;
+  });
+};
+const markBioTranslation = async (model, target, entry) => {
+  const nextTranslations = { ...(model.bioTranslations || {}) };
+  nextTranslations[target] = entry;
+  model.bioTranslations = nextTranslations;
+  model.updatedAt = new Date().toISOString();
+  await updateModel(model.id, model);
+};
+const ensureBioTranslationsInitialized = async (model, sourceText, sourceLang) => {
+  const normalized = normalizeBioTranslations(model.bioTranslations);
+  const hash = hashBioText(sourceText);
+  if (!model.bioTranslations || model.bioHash !== hash || !Object.keys(normalized).length) {
+    model.bioTranslations = buildBioTranslationsSeed(sourceText, sourceLang);
+    model.bioHash = hash;
+    model.updatedAt = new Date().toISOString();
+    const updated = await updateModel(model.id, model);
+    return updated || model;
+  }
+  model.bioTranslations = { ...buildBioTranslationsSeed(sourceText, sourceLang), ...normalized };
+  return model;
+};
+const translateAndPersistBio = async (modelId, sourceText, sourceLang, target) => {
   await ensureDb();
   const model = await getModelByIdRepo(modelId);
   if (!model) return;
   const currentBio = typeof model.bio === 'string' ? model.bio.trim() : '';
   if (currentBio !== sourceText) return;
-  const nextTranslations = { ...(model.bioTranslations || {}) };
-  if (nextTranslations[target] === translatedText) return;
-  nextTranslations[target] = translatedText;
-  model.bioTranslations = nextTranslations;
-  model.updatedAt = new Date().toISOString();
-  await updateModel(model.id, model);
+  const normalizedSourceLang = normalizeBioLanguage(sourceLang);
+  const prepared = await ensureBioTranslationsInitialized(model, sourceText, normalizedSourceLang);
+  const entry = getBioTranslationEntry(prepared.bioTranslations, target);
+  if (entry.status === 'done' && entry.text) return;
+  if (entry.attempts >= MAX_BIO_TRANSLATION_ATTEMPTS) {
+    if (entry.status !== 'failed') {
+      await markBioTranslation(prepared, target, { ...entry, status: 'failed', updatedAt: new Date().toISOString() });
+    }
+    return;
+  }
+  await markBioTranslation(prepared, target, {
+    ...entry,
+    status: 'processing',
+    attempts: entry.attempts + 1,
+    updatedAt: new Date().toISOString(),
+    error: null,
+  });
+
+  let translated = null;
+  if (normalizedSourceLang && target === normalizedSourceLang) {
+    translated = sourceText;
+  } else {
+    translated = await translateWithFallbacks(sourceText, normalizedSourceLang || 'auto', target);
+  }
+  if (translated) {
+    await markBioTranslation(prepared, target, {
+      text: translated,
+      status: 'done',
+      attempts: entry.attempts + 1,
+      updatedAt: new Date().toISOString(),
+      error: null,
+    });
+  } else {
+    await markBioTranslation(prepared, target, {
+      ...entry,
+      status: 'failed',
+      attempts: entry.attempts + 1,
+      updatedAt: new Date().toISOString(),
+      error: 'translate_failed',
+    });
+  }
 };
 const scheduleBioTranslations = (modelId, bio, sourceLanguage) => {
   const sourceText = typeof bio === 'string' ? bio.trim() : '';
   if (!sourceText) return;
   const sourceLang = normalizeBioLanguage(sourceLanguage);
-  const jobKey = `${modelId}:${sourceText}`;
+  const jobKey = `${modelId}:${hashBioText(sourceText)}`;
   if (bioTranslationJobs.has(jobKey)) return;
   const job = (async () => {
     for (const target of BIO_TRANSLATION_TARGETS) {
-      if (sourceLang && target === sourceLang) {
-        await persistBioTranslation(modelId, sourceText, target, sourceText);
-        continue;
-      }
-      const translated = await translateWithFallbacks(sourceText, sourceLang || 'auto', target);
-      if (translated) {
-        await persistBioTranslation(modelId, sourceText, target, translated);
-      }
+      await translateAndPersistBio(modelId, sourceText, sourceLang, target);
+      await new Promise((resolve) => setTimeout(resolve, 150));
     }
   })();
   bioTranslationJobs.set(jobKey, job);
@@ -298,19 +408,6 @@ const normalizeIdentity = (identity, current = null) => {
     faceUrl: faceUrl || null,
     verifiedAt,
   };
-};
-const normalizeBioTranslations = (value) => {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
-  const entries = Object.entries(value);
-  const normalized = {};
-  for (const [key, text] of entries) {
-    if (typeof text !== 'string') continue;
-    const lang = key.trim().toLowerCase();
-    const trimmed = text.trim();
-    if (!lang || !trimmed) continue;
-    normalized[lang] = trimmed.length > 5000 ? trimmed.slice(0, 5000) : trimmed;
-  }
-  return normalized;
 };
 const getTodayKey = () => new Date().toISOString().slice(0, 10);
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -546,6 +643,12 @@ app.get('/api/models', async (req, res) => {
     models = models.filter((model) => normalizeEmail(model.email) === query);
   }
 
+  models.forEach((model) => {
+    if (!hasAllBioTranslations(model)) {
+      scheduleBioTranslations(model.id, model.bio, model.bioLanguage);
+    }
+  });
+
   res.json({ ok: true, models: models.map(sanitizeModelPublic) });
 });
 
@@ -556,6 +659,9 @@ app.get('/api/models/:id', async (req, res) => {
     return res.status(404).json({ ok: false, error: 'Perfil não encontrado.' });
   }
   const refreshed = await refreshModelState(model);
+  if (!hasAllBioTranslations(refreshed)) {
+    scheduleBioTranslations(refreshed.id, refreshed.bio, refreshed.bioLanguage);
+  }
   res.json({ ok: true, model: sanitizeModelPublic(refreshed) });
 });
 
@@ -652,8 +758,17 @@ app.post('/api/models', async (req, res) => {
     return res.status(400).json({ ok: false, error: 'Campos obrigatórios não preenchidos.' });
   }
 
-  const bioTranslations = normalizeBioTranslations(payload.bioTranslations);
-  const bioLanguage = typeof payload.bioLanguage === 'string' ? payload.bioLanguage.trim().toLowerCase() : '';
+  const bioText = typeof payload.bio === 'string' ? payload.bio.trim() : '';
+  const bioLanguage = normalizeBioLanguage(payload.bioLanguage);
+  const incomingBioTranslations = normalizeBioTranslations(payload.bioTranslations);
+  let bioTranslations = {};
+  if (bioText) {
+    bioTranslations = buildBioTranslationsSeed(bioText, bioLanguage);
+    if (Object.keys(incomingBioTranslations).length) {
+      bioTranslations = { ...bioTranslations, ...incomingBioTranslations };
+    }
+  }
+  const bioHash = bioText ? hashBioText(bioText) : null;
 
   const existingBilling = existingModel?.billing ?? null;
   const existingPayments = existingModel?.payments ?? [];
@@ -668,6 +783,7 @@ app.post('/api/models', async (req, res) => {
     bio: payload.bio ?? '',
     bioTranslations,
     bioLanguage: bioLanguage || null,
+    bioHash,
     services: Array.isArray(payload.services) ? payload.services : [],
     prices: Array.isArray(payload.prices) ? payload.prices : [],
     attributes: normalizedAttributes,
@@ -748,20 +864,26 @@ app.patch('/api/models/:id', async (req, res) => {
         : null
       : model.avatarUrl ?? null;
   const nextBio = typeof payload.bio === 'string' ? payload.bio : model.bio ?? '';
-  const bioChanged = typeof payload.bio === 'string' && payload.bio !== (model.bio ?? '');
+  const nextBioText = typeof nextBio === 'string' ? nextBio.trim() : '';
+  const currentBioText = typeof model.bio === 'string' ? model.bio.trim() : '';
+  const bioChanged = typeof payload.bio === 'string' && nextBioText !== currentBioText;
   const incomingBioTranslations = normalizeBioTranslations(payload.bioTranslations);
-  let nextBioTranslations = bioChanged ? {} : model.bioTranslations ?? {};
-  if (payload.bioTranslations === null) {
-    nextBioTranslations = {};
-  } else if (Object.keys(incomingBioTranslations).length) {
-    nextBioTranslations = { ...nextBioTranslations, ...incomingBioTranslations };
-  }
   const nextBioLanguage =
     payload.bioLanguage === null
       ? null
       : typeof payload.bioLanguage === 'string'
-      ? payload.bioLanguage.trim().toLowerCase()
+      ? normalizeBioLanguage(payload.bioLanguage)
       : model.bioLanguage ?? null;
+  let nextBioTranslations = normalizeBioTranslations(model.bioTranslations);
+  if (payload.bioTranslations === null || bioChanged) {
+    nextBioTranslations = nextBioText ? buildBioTranslationsSeed(nextBioText, nextBioLanguage) : {};
+    if (Object.keys(incomingBioTranslations).length) {
+      nextBioTranslations = { ...nextBioTranslations, ...incomingBioTranslations };
+    }
+  } else if (Object.keys(incomingBioTranslations).length) {
+    nextBioTranslations = { ...nextBioTranslations, ...incomingBioTranslations };
+  }
+  const nextBioHash = nextBioText ? hashBioText(nextBioText) : null;
 
   const updates = {
     name: typeof payload.name === 'string' ? payload.name.trim() : model.name,
@@ -771,6 +893,7 @@ app.patch('/api/models/:id', async (req, res) => {
     bio: nextBio,
     bioTranslations: nextBioTranslations,
     bioLanguage: nextBioLanguage,
+    bioHash: nextBioHash,
     services: Array.isArray(payload.services) ? payload.services : model.services ?? [],
     prices: Array.isArray(payload.prices) ? payload.prices : model.prices ?? [],
     attributes: payload.attributes ?? model.attributes ?? {},
