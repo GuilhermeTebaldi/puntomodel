@@ -2,6 +2,7 @@
 import React from 'react';
 import SearchBar from './SearchBar';
 import { useI18n } from '../translations/i18n';
+import heroLogo from '../logo-cropped-1770741775204.png';
 
 interface HeroProps {
   onSearch: (query: string) => void;
@@ -14,12 +15,14 @@ const Hero: React.FC<HeroProps> = ({ onSearch, onRegisterClick }) => {
 
   return (
     <section className="relative overflow-hidden pt-8 md:pt-16 pb-20 px-4">
-      {/* Background Watermark Butterfly */}
+      {/* Background Watermark Logo */}
       <div className="absolute top-10 left-[-10%] opacity-[0.03] select-none pointer-events-none transform -rotate-12">
-        <svg width="600" height="600" viewBox="0 0 100 100" className="text-[#e3262e] fill-current">
-          <path d="M50 50 C20 20 10 60 50 80 C90 60 80 20 50 50" />
-          <path d="M50 50 C20 80 10 40 50 20 C90 40 80 80 50 50" />
-        </svg>
+        <img
+          src={heroLogo}
+          alt=""
+          aria-hidden="true"
+          className="w-[600px] h-auto"
+        />
       </div>
 
       <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">

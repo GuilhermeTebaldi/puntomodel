@@ -5,6 +5,8 @@ import { fetchModelMetrics, rateModel, trackModelEvent } from '../services/model
 import { getCurrentUser } from '../services/auth';
 import { isModelSaved, toggleSavedModel } from '../services/savedModels';
 import { useI18n } from '../translations/i18n';
+import { getIdentityLabel } from '../translations';
+import { translateText } from '../services/translate';
 
 const toWhatsappDigits = (phone?: string) => (phone ? phone.replace(/\D/g, '') : '');
 const toTelDigits = (phone?: string) => (phone ? phone.replace(/[^\d+]/g, '') : '');
@@ -27,6 +29,7 @@ interface ModelProfileProps {
       feet?: string;
       nationality?: string;
       audience?: string[];
+      profileIdentity?: string;
     };
     location?: { city?: string; state?: string; lat?: number; lon?: number } | null;
     isOnline?: boolean;
@@ -36,7 +39,7 @@ interface ModelProfileProps {
 }
 
 const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
-  const { t, translateError, translateService, translateHair, translateEyes, locale } = useI18n();
+  const { t, translateError, translateService, translateHair, translateEyes, locale, language } = useI18n();
   const [metrics, setMetrics] = useState({
     viewsToday: 0,
     whatsappToday: 0,
@@ -49,6 +52,7 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
   const [ratingSuccess, setRatingSuccess] = useState('');
   const [isSaved, setIsSaved] = useState(() => isModelSaved(model.id));
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
+  const [translatedBio, setTranslatedBio] = useState<string | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [hasSwiped, setHasSwiped] = useState(false);
   const nationalityLabel = useMemo(() => {
@@ -68,11 +72,54 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
     };
     return list.map((item) => map[item] || item).join(', ');
   }, [model.attributes?.audience, t]);
+  const profileIdentityLabel = useMemo(() => {
+    const value = model.attributes?.profileIdentity;
+    if (!value) return t('profile.notInformed');
+    return getIdentityLabel(value, language);
+  }, [language, model.attributes?.profileIdentity, t]);
   const telDigits = toTelDigits(model.phone);
   const whatsappDigits = toWhatsappDigits(model.phone);
 
   const photos = model.photos || [];
   const activePhoto = activePhotoIndex !== null ? photos[activePhotoIndex] : null;
+  const rawBio = (model.bio || '').trim();
+  const targetLanguage = useMemo(() => {
+    const map: Record<string, string> = {
+      br: 'pt',
+      us: 'en',
+      es: 'es',
+      it: 'it',
+      de: 'de',
+      fr: 'fr',
+    };
+    return map[language] || 'en';
+  }, [language]);
+
+  useEffect(() => {
+    let isActive = true;
+    const controller = new AbortController();
+    setTranslatedBio(null);
+    if (!rawBio || rawBio.length < 3) {
+    return () => {
+      controller.abort();
+    };
+  }
+    translateText(rawBio, targetLanguage, controller.signal)
+      .then((result) => {
+        if (!isActive) return;
+        setTranslatedBio(result);
+      })
+      .catch((err) => {
+        if (!isActive) return;
+        if (!(err instanceof DOMException && err.name === 'AbortError')) {
+          setTranslatedBio(null);
+        }
+      });
+    return () => {
+      isActive = false;
+      controller.abort();
+    };
+  }, [rawBio, targetLanguage]);
 
   const goNextPhoto = () => {
     if (!photos.length) return;
@@ -334,7 +381,7 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
                   {t('profile.about')}
                 </h3>
                 <p className="text-gray-600 leading-relaxed">
-                  {model.bio || t('dashboard.form.bioMissing')}
+                  {rawBio ? translatedBio || rawBio : t('dashboard.form.bioMissing')}
                 </p>
               </section>
 
@@ -355,6 +402,12 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
                     {t('profile.audienceTitle')}
                   </p>
                   <p className="text-sm font-bold text-gray-900">{audienceLabel}</p>
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                    {t('profile.identityTitle')}
+                  </p>
+                  <p className="text-sm font-bold text-gray-900">{profileIdentityLabel}</p>
                 </div>
               </section>
 

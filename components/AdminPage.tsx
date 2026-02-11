@@ -175,7 +175,7 @@ const AdminPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="w-full px-6 h-16 flex items-center justify-between">
           <Logo />
           <button onClick={handleBackToSite} className="text-sm font-bold text-[#e3262e]">
             {t('common.backToSite')}
@@ -183,7 +183,7 @@ const AdminPage: React.FC = () => {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-10">
+      <main className="w-full px-6 py-10">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-black text-gray-900">{t('adminPage.title')}</h1>
           <div className="flex items-center gap-2">
@@ -220,8 +220,8 @@ const AdminPage: React.FC = () => {
         )}
 
         {tab === 'users' ? (
-          <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-white border border-gray-100 rounded-2xl overflow-x-auto">
+            <table className="w-full min-w-[720px] text-sm">
               <thead className="bg-gray-50 text-gray-500">
                 <tr>
                   <th className="text-left px-4 py-3">{t('adminPage.table.name')}</th>
@@ -260,8 +260,8 @@ const AdminPage: React.FC = () => {
             </table>
           </div>
         ) : (
-          <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-white border border-gray-100 rounded-2xl overflow-x-auto">
+            <table className="w-full min-w-[980px] text-sm">
               <thead className="bg-gray-50 text-gray-500">
                 <tr>
                   <th className="text-left px-4 py-3">{t('adminPage.table.name')}</th>

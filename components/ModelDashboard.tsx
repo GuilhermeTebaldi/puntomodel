@@ -37,6 +37,7 @@ import {
 } from '../services/models';
 import { uploadImage } from '../services/cloudinary';
 import { useI18n } from '../translations/i18n';
+import { getIdentityLabel, identityOptions, serviceOptions } from '../translations';
 
 interface ModelDashboardModel {
   id: string;
@@ -55,6 +56,7 @@ interface ModelDashboardModel {
     feet?: string;
     nationality?: string;
     audience?: string[];
+    profileIdentity?: string;
   };
   location?: { city?: string; state?: string; lat?: number; lon?: number } | null;
   isOnline?: boolean;
@@ -446,11 +448,12 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     ? new Date(billingExpiresAtMs).toLocaleDateString(locale)
     : '';
   const isOnlineVisible = onlineAccessAllowed && isOnline;
+  const premiumTitle = billingActive ? t('dashboard.premium.title') : t('dashboard.premium.freeTitle');
   const premiumDescription = billingActive
     ? t('dashboard.premium.description', {
       location: model.location?.city ? `${model.location.city} (${model.location.state || ''})` : t('dashboard.premium.fallbackLocation'),
     })
-    : t('dashboard.premium.expired');
+    : t('dashboard.premium.freeDescription');
   const premiumMeta = billingActive && billingEndsAtLabel
     ? `${t('dashboard.premium.activeUntil', { date: billingEndsAtLabel })} · ${t('dashboard.premium.daysLeft', { days: billingDaysLeft })}`
     : undefined;
@@ -463,6 +466,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   const [servicesInput, setServicesInput] = useState<string[]>(model.services || []);
   const [serviceDraft, setServiceDraft] = useState('');
   const [editingAudience, setEditingAudience] = useState(false);
+  const [editingProfileIdentity, setEditingProfileIdentity] = useState(false);
   const [heightInput, setHeightInput] = useState(model.attributes?.height || '');
   const [weightInput, setWeightInput] = useState(model.attributes?.weight || '');
   const [hairInput, setHairInput] = useState(model.attributes?.hair || '');
@@ -470,6 +474,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   const [eyesInput, setEyesInput] = useState(model.attributes?.eyes || '');
   const [nationalityInput, setNationalityInput] = useState(model.attributes?.nationality || '');
   const [audienceInput, setAudienceInput] = useState<string[]>(model.attributes?.audience || []);
+  const [profileIdentityInput, setProfileIdentityInput] = useState(model.attributes?.profileIdentity || '');
   const [photosInput, setPhotosInput] = useState<string[]>(model.photos || []);
   const [locationDraft, setLocationDraft] = useState<LocationValue | null>(toLocationValue(model.location));
   const [avatarInput, setAvatarInput] = useState<string | null>(model.avatarUrl ?? null);
@@ -481,6 +486,14 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
       { id: 'other', label: t('common.audienceOther') },
     ],
     [t]
+  );
+  const profileIdentityOptions = useMemo(
+    () =>
+      identityOptions.map((option) => ({
+        id: option.id,
+        label: option.labels[language] || option.labels.br,
+      })),
+    [language]
   );
 
   const nationalityLabel = useMemo(() => {
@@ -502,12 +515,19 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     return list.map((item) => map[item] || item).join(', ');
   }, [model.attributes?.audience, t]);
 
+  const profileIdentityLabel = useMemo(() => {
+    const value = model.attributes?.profileIdentity;
+    if (!value) return t('profile.notInformed');
+    return getIdentityLabel(value, language);
+  }, [language, model.attributes?.profileIdentity, t]);
+
   useEffect(() => {
     setIsOnline(Boolean(model.isOnline ?? true));
     setNameInput(model.name);
     setBioInput(model.bio || '');
     setServicesInput(model.services || []);
     setEditingAudience(false);
+    setEditingProfileIdentity(false);
     setHeightInput(model.attributes?.height || '');
     setWeightInput(model.attributes?.weight || '');
     setHairInput(model.attributes?.hair || '');
@@ -515,6 +535,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     setEyesInput(model.attributes?.eyes || '');
     setNationalityInput(model.attributes?.nationality || '');
     setAudienceInput(model.attributes?.audience || []);
+    setProfileIdentityInput(model.attributes?.profileIdentity || '');
     setPhotosInput(model.photos || []);
     if (model.avatarUrl !== undefined) {
       setAvatarInput(model.avatarUrl ?? null);
@@ -534,6 +555,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     setEyesInput(model.attributes?.eyes || '');
     setNationalityInput(model.attributes?.nationality || '');
     setAudienceInput(model.attributes?.audience || []);
+    setProfileIdentityInput(model.attributes?.profileIdentity || '');
     setPhotosInput(model.photos || []);
     if (model.avatarUrl !== undefined) {
       setAvatarInput(model.avatarUrl ?? null);
@@ -665,6 +687,27 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     setServiceDraft('');
   };
 
+  const normalizeService = (value: string) => value.trim().toLowerCase();
+
+  const isServiceMatch = (value: string, option: (typeof serviceOptions)[number]) => {
+    const normalized = normalizeService(value);
+    if (normalized === normalizeService(option.id)) return true;
+    return Object.values(option.labels).some((label) => normalizeService(label) === normalized);
+  };
+
+  const isServiceSelected = (option: (typeof serviceOptions)[number]) =>
+    servicesInput.some((value) => isServiceMatch(value, option));
+
+  const toggleServiceOption = (option: (typeof serviceOptions)[number]) => {
+    setServicesInput((prev) => {
+      const exists = prev.some((value) => isServiceMatch(value, option));
+      if (exists) {
+        return prev.filter((value) => !isServiceMatch(value, option));
+      }
+      return [...prev, option.id];
+    });
+  };
+
   const handleRemoveService = (service: string) => {
     setServicesInput((prev) => prev.filter((item) => item !== service));
   };
@@ -687,6 +730,14 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
 
   const handleRemovePhoto = (index: number) => {
     setPhotosInput((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleSavePhotos = () => {
+    if (photosInput.length < 4) {
+      setSaveError(t('errors.minPhotos'));
+      return;
+    }
+    handleSave({ photos: photosInput }, () => setEditingPhotos(false));
   };
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1287,6 +1338,25 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                       </div>
                       {editingServices ? (
                         <div className="space-y-3">
+                          <div className="flex flex-wrap gap-2">
+                            {serviceOptions.map((service) => {
+                              const active = isServiceSelected(service);
+                              return (
+                                <button
+                                  key={service.id}
+                                  type="button"
+                                  onClick={() => toggleServiceOption(service)}
+                                  className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${
+                                    active
+                                      ? 'bg-[#e3262e] text-white border-[#e3262e] shadow-sm'
+                                      : 'bg-white text-gray-500 border-gray-100 hover:border-gray-200'
+                                  }`}
+                                >
+                                  {service.labels[language] || service.labels.br}
+                                </button>
+                              );
+                            })}
+                          </div>
                           <div className="flex gap-2">
                             <input
                               type="text"
@@ -1419,6 +1489,75 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                       )}
                     </div>
 
+                    <div className="pt-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('dashboard.form.identityLabel')}</label>
+                        <button
+                          onClick={() => {
+                            setEditingProfileIdentity(!editingProfileIdentity);
+                            if (editingProfileIdentity) resetEdits();
+                          }}
+                          className="text-gray-300 hover:text-[#e3262e]"
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                      </div>
+                      {editingProfileIdentity ? (
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap gap-2">
+                            {profileIdentityOptions.map((option) => (
+                              <button
+                                key={option.id}
+                                type="button"
+                                onClick={() => setProfileIdentityInput((prev) => (prev === option.id ? '' : option.id))}
+                                className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${
+                                  profileIdentityInput === option.id
+                                    ? 'bg-[#e3262e] text-white border-[#e3262e] shadow-sm'
+                                    : 'bg-white text-gray-500 border-gray-100 hover:border-gray-200'
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              disabled={saving}
+                              onClick={() =>
+                                handleSave(
+                                  {
+                                    attributes: {
+                                      ...(model.attributes ?? {}),
+                                      profileIdentity: profileIdentityInput || undefined,
+                                    },
+                                  },
+                                  () => setEditingProfileIdentity(false)
+                                )
+                              }
+                              className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
+                            >
+                              {saving ? t('common.saving') : t('common.save')}
+                            </button>
+                            <button
+                              onClick={() => {
+                                resetEdits();
+                                setEditingProfileIdentity(false);
+                              }}
+                              className="px-4 py-2 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest"
+                            >
+                              {t('common.cancel')}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          <span className="bg-gray-50 text-gray-600 px-4 py-2 rounded-xl text-xs font-bold border border-gray-100">
+                            {profileIdentityLabel}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="pt-6 border-t border-gray-100">
                       <div className="flex justify-between items-center mb-4">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('dashboard.form.physicalTitle')}</label>
@@ -1492,6 +1631,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                                       eyes: eyesInput || undefined,
                                       nationality: nationalityInput || undefined,
                                       audience: audienceInput.length ? audienceInput : undefined,
+                                      profileIdentity: profileIdentityInput || undefined,
                                     },
                                   },
                                   () => setEditingAttributes(false)
@@ -1593,7 +1733,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
 
               <div className="space-y-6">
                 <PremiumCard
-                  title={t('dashboard.premium.title')}
+                  title={premiumTitle}
                   description={premiumDescription}
                   meta={premiumMeta}
                 />
@@ -1668,7 +1808,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                   <div className="flex gap-2">
                     <button
                       disabled={saving || uploadingPhotos}
-                      onClick={() => handleSave({ photos: photosInput }, () => setEditingPhotos(false))}
+                      onClick={handleSavePhotos}
                       className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
                     >
                       {saving ? t('common.saving') : t('common.save')}
@@ -1705,8 +1845,16 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                   <h3 className="text-lg font-black text-gray-900 uppercase tracking-tighter flex items-center gap-2 mb-6">
                     <CreditCard size={18} className="text-[#e3262e]" /> {t('dashboard.billing.title')}
                   </h3>
-                  <div className="border border-amber-100 bg-amber-50 text-amber-700 text-sm font-bold px-4 py-3 rounded-2xl">
-                    {t('dashboard.billing.devMessage')}
+                  <div className="border border-emerald-100 bg-emerald-50 rounded-3xl p-5 sm:p-6 flex flex-col gap-3">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">
+                      {t('dashboard.billing.freeBadge')}
+                    </span>
+                    <h4 className="text-2xl sm:text-3xl font-black text-gray-900">
+                      {t('dashboard.billing.freeTitle')}
+                    </h4>
+                    <p className="text-xs sm:text-sm text-emerald-700 font-semibold">
+                      {t('dashboard.billing.freeMessage')}
+                    </p>
                   </div>
                 </section>
               ) : (

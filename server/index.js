@@ -62,9 +62,78 @@ const corsOptions = {
   },
 };
 
+const TRANSLATE_MIRRORS = [
+  'https://translate.argosopentech.com',
+  'https://libretranslate.de',
+  'https://translate.api.skitzen.com',
+  'https://translate.mentality.rip',
+  'https://translate.fortytwo-it.com',
+  'https://trans.zillyhuhn.com',
+  'https://translate.cutie.dating',
+];
+
+const postTranslateJson = async (url, payload, signal) => {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error('translate_failed');
+  }
+  return response.json();
+};
+
+const detectLanguage = async (baseUrl, text, signal) => {
+  const data = await postTranslateJson(`${baseUrl}/detect`, { q: text }, signal);
+  if (!Array.isArray(data) || !data.length) return null;
+  const best = data[0];
+  return typeof best?.language === 'string' && best.language ? best.language : null;
+};
+
+const translateWithProvider = async (baseUrl, text, source, target, signal) => {
+  const data = await postTranslateJson(`${baseUrl}/translate`, { q: text, source, target }, signal);
+  if (!data || typeof data.translatedText !== 'string') return null;
+  const trimmed = data.translatedText.trim();
+  return trimmed ? trimmed : null;
+};
+
 const app = express();
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
+
+app.post('/api/translate', async (req, res) => {
+  const payload = req.body || {};
+  const rawText = typeof payload.text === 'string' ? payload.text.trim() : '';
+  const target = typeof payload.target === 'string' ? payload.target.trim() : '';
+  if (!rawText || !target) {
+    return res.status(400).json({ ok: false, error: 'invalid_payload' });
+  }
+  const safeText = rawText.length > 5000 ? rawText.slice(0, 5000) : rawText;
+
+  for (const baseUrl of TRANSLATE_MIRRORS) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5500);
+    try {
+      const detected = await detectLanguage(baseUrl, safeText, controller.signal);
+      if (detected && detected === target) {
+        clearTimeout(timeout);
+        return res.json({ ok: true, translatedText: '', detectedLanguage: detected });
+      }
+      const source = detected || 'auto';
+      const translated = await translateWithProvider(baseUrl, safeText, source, target, controller.signal);
+      clearTimeout(timeout);
+      if (translated) {
+        return res.json({ ok: true, translatedText: translated, detectedLanguage: detected || null });
+      }
+    } catch (err) {
+      clearTimeout(timeout);
+    }
+  }
+
+  return res.json({ ok: true, translatedText: '', detectedLanguage: null });
+});
 
 app.post('/api/upload/image', upload.single('file'), async (req, res) => {
   try {
@@ -492,6 +561,26 @@ app.post('/api/models', async (req, res) => {
     return res.status(400).json({ ok: false, error: 'Menor de idade.' });
   }
 
+  const rawAttributes = payload.attributes && typeof payload.attributes === 'object' ? payload.attributes : {};
+  const normalizedAttributes = { ...rawAttributes };
+  const hair = typeof rawAttributes.hair === 'string' ? rawAttributes.hair.trim() : '';
+  const eyes = typeof rawAttributes.eyes === 'string' ? rawAttributes.eyes.trim() : '';
+  const nationality = typeof rawAttributes.nationality === 'string' ? rawAttributes.nationality.trim() : '';
+  const profileIdentity = typeof rawAttributes.profileIdentity === 'string' ? rawAttributes.profileIdentity.trim() : '';
+  const audience = Array.isArray(rawAttributes.audience)
+    ? rawAttributes.audience.filter((item) => typeof item === 'string' && item.trim())
+    : [];
+
+  if (hair) normalizedAttributes.hair = hair;
+  if (eyes) normalizedAttributes.eyes = eyes;
+  if (nationality) normalizedAttributes.nationality = nationality;
+  if (profileIdentity) normalizedAttributes.profileIdentity = profileIdentity;
+  if (audience.length) normalizedAttributes.audience = audience;
+
+  if (!hair || !eyes || !nationality || !audience.length || !profileIdentity) {
+    return res.status(400).json({ ok: false, error: 'Campos obrigatórios não preenchidos.' });
+  }
+
   const existingBilling = existingModel?.billing ?? null;
   const existingPayments = existingModel?.payments ?? [];
 
@@ -505,7 +594,7 @@ app.post('/api/models', async (req, res) => {
     bio: payload.bio ?? '',
     services: Array.isArray(payload.services) ? payload.services : [],
     prices: Array.isArray(payload.prices) ? payload.prices : [],
-    attributes: payload.attributes ?? {},
+    attributes: normalizedAttributes,
     location: payload.location ?? null,
     map: mapPoint,
     photos: Array.isArray(payload.photos) ? payload.photos : [],

@@ -3,6 +3,7 @@ import { ChevronLeft, Heart, Search, SlidersHorizontal } from 'lucide-react';
 import { ModelProfileData, isBillingActive } from '../services/models';
 import { getSavedModelIds, toggleSavedModel } from '../services/savedModels';
 import { useI18n } from '../translations/i18n';
+import { getIdentityLabel } from '../translations';
 import ModelCard from './ModelCard';
 
 interface ModelListingProps {
@@ -12,7 +13,7 @@ interface ModelListingProps {
 }
 
 const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProfile }) => {
-  const { t, translateService, translateHair, translateEyes } = useI18n();
+  const { t, translateService, translateHair, translateEyes, language } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -24,6 +25,7 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
     state: '',
     hair: '',
     eyes: '',
+    identity: '',
     minAge: '',
     maxAge: '',
   });
@@ -48,6 +50,7 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
     const services = new Set<string>();
     const hair = new Set<string>();
     const eyes = new Set<string>();
+    const identities = new Set<string>();
     let minAge: number | null = null;
     let maxAge: number | null = null;
     let hasOffline = false;
@@ -59,6 +62,7 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
       model.services?.forEach((service) => services.add(service));
       if (model.attributes?.hair) hair.add(model.attributes.hair);
       if (model.attributes?.eyes) eyes.add(model.attributes.eyes);
+      if (model.attributes?.profileIdentity) identities.add(model.attributes.profileIdentity);
       if (typeof model.age === 'number') {
         minAge = minAge === null ? model.age : Math.min(minAge, model.age);
         maxAge = maxAge === null ? model.age : Math.max(maxAge, model.age);
@@ -77,12 +81,13 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
       services: Array.from(services).sort((a, b) => a.localeCompare(b)),
       hair: Array.from(hair).sort((a, b) => a.localeCompare(b)),
       eyes: Array.from(eyes).sort((a, b) => a.localeCompare(b)),
+      identities: Array.from(identities).sort((a, b) => getIdentityLabel(a, language).localeCompare(getIdentityLabel(b, language))),
       minAge,
       maxAge,
       hasOffline,
       hasPremium,
     };
-  }, [models]);
+  }, [language, models]);
 
   const filteredModels = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -102,6 +107,7 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
       if (filters.state && (model.location?.state || '') !== filters.state) return false;
       if (filters.hair && (model.attributes?.hair || '') !== filters.hair) return false;
       if (filters.eyes && (model.attributes?.eyes || '') !== filters.eyes) return false;
+      if (filters.identity && (model.attributes?.profileIdentity || '') !== filters.identity) return false;
 
       if (selectedServices.length > 0) {
         const modelServices = model.services || [];
@@ -138,6 +144,7 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
         state: '',
         hair: '',
         eyes: '',
+        identity: '',
         minAge: '',
         maxAge: '',
       });
@@ -284,6 +291,21 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
                 {filterOptions.eyes.map((option) => (
                   <option key={option} value={option}>
                     {translateEyes(option)}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {filterOptions.identities.length > 0 && (
+              <select
+                value={filters.identity}
+                onChange={(event) => setFilters((prev) => ({ ...prev, identity: event.target.value }))}
+                className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-600"
+              >
+                <option value="">{t('listing.filtersIdentity')}</option>
+                {filterOptions.identities.map((option) => (
+                  <option key={option} value={option}>
+                    {getIdentityLabel(option, language)}
                   </option>
                 ))}
               </select>

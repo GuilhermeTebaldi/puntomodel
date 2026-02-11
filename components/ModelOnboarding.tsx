@@ -7,7 +7,7 @@ import { uploadImage, uploadImageWithProgress } from '../services/cloudinary';
 import { fetchCountries } from '../services/countries';
 import { scanIdentityDocument } from '../services/identityOcr';
 import { createModelProfile } from '../services/models';
-import { hairOptions, eyeOptions, serviceOptions } from '../translations';
+import { hairOptions, eyeOptions, serviceOptions, identityOptions } from '../translations';
 import { useI18n } from '../translations/i18n';
 import LocationPicker, { LocationValue } from './LocationPicker';
 import NationalityPicker from './NationalityPicker';
@@ -43,6 +43,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const [identityScanError, setIdentityScanError] = useState('');
   const [identityScanSuccess, setIdentityScanSuccess] = useState(false);
   const [step1Error, setStep1Error] = useState('');
+  const [step2Error, setStep2Error] = useState('');
   const [nationality, setNationality] = useState('');
   const [registeredName, setRegisteredName] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState('');
@@ -53,6 +54,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const [feet, setFeet] = useState('');
   const [hair, setHair] = useState(hairOptions[0]?.labels.br || 'Morena');
   const [eyes, setEyes] = useState(eyeOptions[0]?.labels.br || 'Castanhos');
+  const [profileIdentity, setProfileIdentity] = useState('');
   const [audience, setAudience] = useState<string[]>([]);
   const [loadingCountries, setLoadingCountries] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<LocationValue | null>(null);
@@ -82,6 +84,14 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       { id: 'other', label: t('common.audienceOther') },
     ],
     [t]
+  );
+  const profileIdentityOptions = useMemo(
+    () =>
+      identityOptions.map((option) => ({
+        id: option.id,
+        label: option.labels[language] || option.labels.br,
+      })),
+    [language]
   );
   const manualCountryRef = useRef(false);
   const faceVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -235,6 +245,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       setIdentityScanError('');
       setIdentityScanSuccess(false);
       setStep1Error('');
+      setStep2Error('');
       setNationality('');
       setSelectedLocation(null);
       setPhotos([]);
@@ -247,6 +258,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       setPublishing(false);
       setPhotosUploadProgress(0);
       setPhotosUploadingCount(0);
+      setProfileIdentity('');
       manualCountryRef.current = false;
       return;
     }
@@ -669,6 +681,26 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     nextStep();
   };
 
+  const handleStep2Next = () => {
+    setStep2Error('');
+    const missing: string[] = [];
+
+    if (!registeredName.trim()) missing.push(t('onboarding.step2.registeredName'));
+    if (!stageName.trim()) missing.push(t('onboarding.step2.stageName'));
+    if (!age.trim()) missing.push(t('onboarding.step2.age'));
+    if (!hair.trim()) missing.push(t('onboarding.step2.hair'));
+    if (!eyes.trim()) missing.push(t('onboarding.step2.eyes'));
+    if (!nationality.trim()) missing.push(t('onboarding.step2.nationality'));
+    if (!profileIdentity) missing.push(t('onboarding.step2.identityLabel'));
+    if (!audience.length) missing.push(t('onboarding.step2.audienceLabel'));
+
+    if (missing.length) {
+      setStep2Error(t('onboarding.step2.requiredFields', { fields: missing.join(', ') }));
+      return;
+    }
+    nextStep();
+  };
+
   const handleCountryChange = (newCountry: string) => {
     setSelectedCountry(newCountry);
     const digits = phoneValue.replace(/\D/g, '');
@@ -848,6 +880,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
           feet: feet || undefined,
           nationality: nationality || undefined,
           audience: audience.length ? audience : undefined,
+          profileIdentity: profileIdentity || undefined,
         },
         location: selectedLocation
           ? {
@@ -1376,6 +1409,27 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                 />
 
                 <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase mb-3 block tracking-widest">{t('onboarding.step2.identityLabel')}</label>
+                  <div className="flex flex-wrap gap-2">
+                    {profileIdentityOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => setProfileIdentity((prev) => (prev === option.id ? '' : option.id))}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all border ${
+                          profileIdentity === option.id
+                            ? 'bg-[#e3262e] text-white border-[#e3262e] shadow-lg shadow-red-100'
+                            : 'bg-white text-gray-500 border-gray-100 hover:border-gray-300'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-2">{t('onboarding.step2.identityHint')}</p>
+                </div>
+
+                <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase mb-3 block tracking-widest">{t('onboarding.step2.audienceLabel')}</label>
                   <div className="flex flex-wrap gap-2">
                     {audienceOptions.map((option) => (
@@ -1396,7 +1450,8 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                   <p className="text-[10px] text-gray-400 mt-2">{t('onboarding.step2.audienceHint')}</p>
                 </div>
 
-                <button onClick={nextStep} className="w-full bg-[#e3262e] text-white py-4 sm:py-5 rounded-2xl font-bold uppercase tracking-widest hover:bg-red-700 transition-all mt-4">{t('onboarding.step2.next')}</button>
+                {step2Error && <p className="text-xs text-red-500 font-semibold">{step2Error}</p>}
+                <button onClick={handleStep2Next} className="w-full bg-[#e3262e] text-white py-4 sm:py-5 rounded-2xl font-bold uppercase tracking-widest hover:bg-red-700 transition-all mt-4">{t('onboarding.step2.next')}</button>
               </div>
             </div>
           )}

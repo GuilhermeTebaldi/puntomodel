@@ -122,6 +122,18 @@ export const serviceOptions = [
     },
   },
   { id: 'vip', labels: { br: 'Atendimento VIP', us: 'VIP service', es: 'Servicio VIP', it: 'Servizio VIP', de: 'VIP-Service', fr: 'Service VIP' } },
+  { id: 'kissing', labels: { br: 'Beijo na boca', us: 'Kissing', es: 'Beso en la boca', it: 'Bacio sulla bocca', de: 'Kuss auf den Mund', fr: 'Baiser sur la bouche' } },
+  { id: 'anal', labels: { br: 'Anal', us: 'Anal', es: 'Anal', it: 'Anale', de: 'Anal', fr: 'Anal' } },
+  { id: 'dinner', labels: { br: 'Jantar/companhia', us: 'Dinner date', es: 'Cena/compañía', it: 'Cena/compagnia', de: 'Dinnerbegleitung', fr: 'Dîner/compagnie' } },
+  { id: 'travel', labels: { br: 'Viagem', us: 'Travel companion', es: 'Viaje', it: 'Viaggio', de: 'Reisebegleitung', fr: 'Voyage' } },
+  { id: 'threesome', labels: { br: 'Ménage', us: 'Threesome', es: 'Trío', it: 'Tris', de: 'Dreier', fr: 'Plan à trois' } },
+  { id: 'striptease', labels: { br: 'Striptease', us: 'Striptease', es: 'Striptease', it: 'Spogliarello', de: 'Striptease', fr: 'Striptease' } },
+  { id: 'domination', labels: { br: 'Dominação', us: 'Domination', es: 'Dominación', it: 'Dominazione', de: 'Dominanz', fr: 'Domination' } },
+  { id: 'submission', labels: { br: 'Submissão', us: 'Submission', es: 'Sumisión', it: 'Sottomissione', de: 'Unterwerfung', fr: 'Soumission' } },
+  { id: 'roleplay', labels: { br: 'Fantasias', us: 'Roleplay', es: 'Juegos de rol', it: 'Giochi di ruolo', de: 'Rollenspiel', fr: 'Jeu de rôle' } },
+  { id: 'outcall', labels: { br: 'Atendimento em domicílio', us: 'Outcall (home visit)', es: 'A domicilio', it: 'A domicilio', de: 'Hausbesuch', fr: 'À domicile' } },
+  { id: 'hotel', labels: { br: 'Atendimento em hotel', us: 'Hotel visit', es: 'En hotel', it: 'In hotel', de: 'Hotelbesuch', fr: 'En hôtel' } },
+  { id: 'couples', labels: { br: 'Casais', us: 'Couples', es: 'Parejas', it: 'Coppie', de: 'Paare', fr: 'Couples' } },
 ] as const satisfies readonly LabeledOption[];
 
 export const hairOptions = [
@@ -137,6 +149,17 @@ export const eyeOptions = [
   { id: 'green', labels: { br: 'Verdes', us: 'Green', es: 'Verdes', it: 'Verdi', de: 'Grün', fr: 'Vert' } },
   { id: 'black', labels: { br: 'Pretos', us: 'Black', es: 'Negros', it: 'Neri', de: 'Schwarz', fr: 'Noir' } },
 ] as const satisfies readonly LabeledOption[];
+
+export const identityOptions = [
+  { id: 'woman', labels: { br: 'Mulher', us: 'Woman', es: 'Mujer', it: 'Donna', de: 'Frau', fr: 'Femme' } },
+  { id: 'man', labels: { br: 'Homem', us: 'Man', es: 'Hombre', it: 'Uomo', de: 'Mann', fr: 'Homme' } },
+  { id: 'gay', labels: { br: 'Gay', us: 'Gay', es: 'Gay', it: 'Gay', de: 'Schwul', fr: 'Gay' } },
+  { id: 'lesbian', labels: { br: 'Lésbica', us: 'Lesbian', es: 'Lesbiana', it: 'Lesbica', de: 'Lesbisch', fr: 'Lesbienne' } },
+  { id: 'bi', labels: { br: 'Bi', us: 'Bi', es: 'Bi', it: 'Bi', de: 'Bi', fr: 'Bi' } },
+  { id: 'swing', labels: { br: 'Swing', us: 'Swing', es: 'Swing', it: 'Swing', de: 'Swinger', fr: 'Swing' } },
+] as const satisfies readonly LabeledOption[];
+
+export type IdentityId = (typeof identityOptions)[number]['id'];
 
 export const priceOptions = [
   {
@@ -195,6 +218,17 @@ export const translateHairLabel = (label: string, lang: LanguageCode) => {
 
 export const translateEyeLabel = (label: string, lang: LanguageCode) => {
   const match = matchLabeledOption(label, eyeOptions);
+  if (!match) return label;
+  return match.labels[lang] ?? match.labels[fallbackLanguage] ?? label;
+};
+
+export const getIdentityLabel = (id: string, lang: LanguageCode) => {
+  const option = identityOptions.find((item) => item.id === id);
+  return option?.labels[lang] ?? option?.labels[fallbackLanguage] ?? id;
+};
+
+export const translateIdentityLabel = (label: string, lang: LanguageCode) => {
+  const match = matchLabeledOption(label, identityOptions);
   if (!match) return label;
   return match.labels[lang] ?? match.labels[fallbackLanguage] ?? label;
 };
@@ -351,6 +385,7 @@ export const translations = {
       filtersState: 'Todos os estados',
       filtersHair: 'Todos os cabelos',
       filtersEyes: 'Todos os olhos',
+      filtersIdentity: 'Todas as identidades',
       filtersAgeMin: 'Idade mínima {{count}}',
       filtersAgeMax: 'Idade máxima {{count}}',
       filtersPriceMin: 'Preço mínimo {{count}}',
@@ -552,8 +587,11 @@ export const translations = {
         eyes: 'Olhos',
         nationality: 'Nacionalidade',
         nationalityPlaceholder: 'Buscar nacionalidade',
+        identityLabel: 'Eu sou',
+        identityHint: 'Selecione como você se identifica.',
         audienceLabel: 'Público que atendo',
         audienceHint: 'Selecione quem você deseja atender.',
+        requiredFields: 'Preencha os campos obrigatórios: {{fields}}',
         next: 'Próximo Passo',
       },
       step3: {
@@ -691,6 +729,8 @@ export const translations = {
         activeUntil: 'Ativo até {{date}}',
         daysLeft: 'Restam {{days}} dias',
         expired: 'Plano expirado',
+        freeTitle: 'Plano Grátis',
+        freeDescription: 'Você está no plano grátis (FREE) até liberar os planos pagos.',
       },
       tips: {
         title: 'Dicas de Sucesso',
@@ -714,6 +754,7 @@ export const translations = {
         eyesLabel: 'Olhos',
         nationalityLabel: 'Nacionalidade',
         audienceLabel: 'Público',
+        identityLabel: 'Eu sou',
         heightPlaceholder: 'Altura (m)',
         weightPlaceholder: 'Peso (kg)',
         hairPlaceholder: 'Cabelos',
@@ -762,7 +803,9 @@ export const translations = {
         upgradeTitle: 'Upgrade',
         upgradeDesc: 'Apareça no topo e aumente seus contatos.',
         viewPlans: 'Ver planos',
-        devMessage: 'Em desenvolvimento!',
+        freeBadge: 'Plano atual',
+        freeTitle: 'FREE',
+        freeMessage: 'Você está no plano gratuito até a liberação dos planos pagos.',
         payment: {
           secure: 'Ambiente Seguro',
           planBadge: 'Plano Diamante',
@@ -834,6 +877,7 @@ export const translations = {
       commentEmpty: 'Nenhum comentário ainda.',
       attributesTitle: 'Características',
       audienceTitle: 'Público',
+      identityTitle: 'Eu sou',
       notInformed: 'Não informado',
       today: 'Hoje',
       views: 'Visualizações',
@@ -892,6 +936,7 @@ export const translations = {
       identityFaceUploadFailed: 'Não foi possível enviar a foto do rosto.',
       identityAgeRequired: 'Informe sua data de nascimento.',
       identityUnderage: 'Cadastro permitido apenas para maiores de 18 anos.',
+      profileRequired: 'Campos obrigatórios não preenchidos.',
       bioRequired: 'Preencha sua biografia.',
       servicesRequired: 'Selecione pelo menos 1 serviço.',
       cameraUnavailable: 'Não foi possível acessar a câmera.',
@@ -1032,6 +1077,7 @@ export const translations = {
       filtersState: 'All states',
       filtersHair: 'All hair',
       filtersEyes: 'All eyes',
+      filtersIdentity: 'All identities',
       filtersAgeMin: 'Min age {{count}}',
       filtersAgeMax: 'Max age {{count}}',
       filtersPriceMin: 'Min price {{count}}',
@@ -1232,8 +1278,11 @@ export const translations = {
         eyes: 'Eyes',
         nationality: 'Nationality',
         nationalityPlaceholder: 'Search nationality',
+        identityLabel: 'I am',
+        identityHint: 'Select how you identify.',
         audienceLabel: 'Preferred audience',
         audienceHint: 'Select who you want to meet.',
+        requiredFields: 'Please fill the required fields: {{fields}}',
         next: 'Next step',
       },
       step3: {
@@ -1371,6 +1420,8 @@ export const translations = {
         activeUntil: 'Active until {{date}}',
         daysLeft: '{{days}} days left',
         expired: 'Plan expired',
+        freeTitle: 'Free Plan',
+        freeDescription: 'You are on the free plan until paid plans are released.',
       },
       tips: {
         title: 'Success Tips',
@@ -1394,6 +1445,7 @@ export const translations = {
         eyesLabel: 'Eyes',
         nationalityLabel: 'Nationality',
         audienceLabel: 'Audience',
+        identityLabel: 'I am',
         heightPlaceholder: 'Height (m)',
         weightPlaceholder: 'Weight (kg)',
         hairPlaceholder: 'Hair',
@@ -1442,7 +1494,9 @@ export const translations = {
         upgradeTitle: 'Upgrade',
         upgradeDesc: 'Show up at the top and increase your contacts.',
         viewPlans: 'View plans',
-        devMessage: 'In development!',
+        freeBadge: 'Current plan',
+        freeTitle: 'FREE',
+        freeMessage: 'You are on the free plan until paid plans are released.',
         payment: {
           secure: 'Secure Environment',
           planBadge: 'Diamond Plan',
@@ -1514,6 +1568,7 @@ export const translations = {
       commentEmpty: 'No comments yet.',
       attributesTitle: 'Attributes',
       audienceTitle: 'Audience',
+      identityTitle: 'I am',
       notInformed: 'Not provided',
       today: 'Today',
       views: 'Views',
@@ -1572,6 +1627,7 @@ export const translations = {
       identityFaceUploadFailed: 'Unable to upload face photo.',
       identityAgeRequired: 'Please enter your date of birth.',
       identityUnderage: 'Registration is only allowed for adults 18+.',
+      profileRequired: 'Required profile fields are missing.',
       bioRequired: 'Please fill in your bio.',
       servicesRequired: 'Select at least 1 service.',
       cameraUnavailable: 'Unable to access the camera.',
@@ -1712,6 +1768,7 @@ export const translations = {
       filtersState: 'Alle Bundesländer',
       filtersHair: 'Alle Haare',
       filtersEyes: 'Alle Augen',
+      filtersIdentity: 'Alle Identitäten',
       filtersAgeMin: 'Mindestalter {{count}}',
       filtersAgeMax: 'Höchstalter {{count}}',
       filtersPriceMin: 'Mindestpreis {{count}}',
@@ -1912,8 +1969,11 @@ export const translations = {
         eyes: 'Augen',
         nationality: 'Nationalität',
         nationalityPlaceholder: 'Nationalität suchen',
+        identityLabel: 'Ich bin',
+        identityHint: 'Wähle, wie du dich identifizierst.',
         audienceLabel: 'Bevorzugtes Publikum',
         audienceHint: 'Wähle, wen du treffen möchtest.',
+        requiredFields: 'Bitte fülle die Pflichtfelder aus: {{fields}}',
         next: 'Nächster Schritt',
       },
       step3: {
@@ -2051,6 +2111,8 @@ export const translations = {
         activeUntil: 'Aktiv bis {{date}}',
         daysLeft: 'Noch {{days}} Tage',
         expired: 'Plan abgelaufen',
+        freeTitle: 'Kostenloser Plan',
+        freeDescription: 'Du bist im kostenlosen Plan, bis die bezahlten Pläne freigeschaltet werden.',
       },
       tips: {
         title: 'Erfolgs-Tipps',
@@ -2074,6 +2136,7 @@ export const translations = {
         eyesLabel: 'Augen',
         nationalityLabel: 'Nationalität',
         audienceLabel: 'Publikum',
+        identityLabel: 'Ich bin',
         heightPlaceholder: 'Größe (m)',
         weightPlaceholder: 'Gewicht (kg)',
         hairPlaceholder: 'Haare',
@@ -2122,7 +2185,9 @@ export const translations = {
         upgradeTitle: 'Upgrade',
         upgradeDesc: 'Erscheine oben und erhöhe deine Kontakte.',
         viewPlans: 'Pläne ansehen',
-        devMessage: 'In Entwicklung!',
+        freeBadge: 'Aktueller Plan',
+        freeTitle: 'FREE',
+        freeMessage: 'Du bist im kostenlosen Plan, bis die bezahlten Pläne freigeschaltet werden.',
         payment: {
           secure: 'Sichere Umgebung',
           planBadge: 'Diamant-Plan',
@@ -2194,6 +2259,7 @@ export const translations = {
       commentEmpty: 'Noch keine Kommentare.',
       attributesTitle: 'Attribute',
       audienceTitle: 'Publikum',
+      identityTitle: 'Ich bin',
       notInformed: 'Nicht angegeben',
       today: 'Heute',
       views: 'Aufrufe',
@@ -2252,6 +2318,7 @@ export const translations = {
       identityFaceUploadFailed: 'Gesichtsfoto konnte nicht hochgeladen werden.',
       identityAgeRequired: 'Bitte Geburtsdatum angeben.',
       identityUnderage: 'Registrierung nur für Personen ab 18 Jahren.',
+      profileRequired: 'Erforderliche Profildaten fehlen.',
       bioRequired: 'Bitte fülle deine Bio aus.',
       servicesRequired: 'Wähle mindestens 1 Service.',
       cameraUnavailable: 'Kamera konnte nicht gestartet werden.',
@@ -2392,6 +2459,7 @@ export const translations = {
       filtersState: 'Todos los estados',
       filtersHair: 'Todo el cabello',
       filtersEyes: 'Todos los ojos',
+      filtersIdentity: 'Todas las identidades',
       filtersAgeMin: 'Edad mínima {{count}}',
       filtersAgeMax: 'Edad máxima {{count}}',
       filtersPriceMin: 'Precio mínimo {{count}}',
@@ -2592,8 +2660,11 @@ export const translations = {
         eyes: 'Ojos',
         nationality: 'Nacionalidad',
         nationalityPlaceholder: 'Buscar nacionalidad',
+        identityLabel: 'Soy',
+        identityHint: 'Selecciona cómo te identificas.',
         audienceLabel: 'Público preferido',
         audienceHint: 'Selecciona con quién quieres reunirte.',
+        requiredFields: 'Completa los campos obligatorios: {{fields}}',
         next: 'Siguiente paso',
       },
       step3: {
@@ -2731,6 +2802,8 @@ export const translations = {
         activeUntil: 'Activo hasta {{date}}',
         daysLeft: 'Quedan {{days}} días',
         expired: 'Plan expirado',
+        freeTitle: 'Plan gratis',
+        freeDescription: 'Estás en el plan gratis hasta que se activen los planes pagos.',
       },
       tips: {
         title: 'Consejos de éxito',
@@ -2754,6 +2827,7 @@ export const translations = {
         eyesLabel: 'Ojos',
         nationalityLabel: 'Nacionalidad',
         audienceLabel: 'Público',
+        identityLabel: 'Soy',
         heightPlaceholder: 'Altura (m)',
         weightPlaceholder: 'Peso (kg)',
         hairPlaceholder: 'Cabello',
@@ -2802,7 +2876,9 @@ export const translations = {
         upgradeTitle: 'Upgrade',
         upgradeDesc: 'Aparece arriba y aumenta tus contactos.',
         viewPlans: 'Ver planes',
-        devMessage: '¡En desarrollo!',
+        freeBadge: 'Plan actual',
+        freeTitle: 'FREE',
+        freeMessage: 'Estás en el plan gratuito hasta que se activen los planes pagos.',
         payment: {
           secure: 'Entorno seguro',
           planBadge: 'Plan Diamante',
@@ -2873,6 +2949,8 @@ export const translations = {
       commentSuccess: '¡Comentario enviado!',
       commentEmpty: 'Aún no hay comentarios.',
       attributesTitle: 'Características',
+      audienceTitle: 'Público',
+      identityTitle: 'Soy',
       notInformed: 'No informado',
       today: 'Hoy',
       views: 'Visualizaciones',
@@ -2931,6 +3009,7 @@ export const translations = {
       identityFaceUploadFailed: 'No se pudo subir la foto del rostro.',
       identityAgeRequired: 'Ingresa tu fecha de nacimiento.',
       identityUnderage: 'Registro permitido solo para mayores de 18 años.',
+      profileRequired: 'Faltan campos obligatorios del perfil.',
       bioRequired: 'Completa tu biografía.',
       servicesRequired: 'Selecciona al menos 1 servicio.',
       cameraUnavailable: 'No se pudo acceder a la cámara.',
@@ -3071,6 +3150,7 @@ export const translations = {
       filtersState: 'Tutti gli stati',
       filtersHair: 'Tutti i capelli',
       filtersEyes: 'Tutti gli occhi',
+      filtersIdentity: 'Tutte le identità',
       filtersAgeMin: 'Età minima {{count}}',
       filtersAgeMax: 'Età massima {{count}}',
       filtersPriceMin: 'Prezzo minimo {{count}}',
@@ -3271,8 +3351,11 @@ export const translations = {
         eyes: 'Occhi',
         nationality: 'Nazionalità',
         nationalityPlaceholder: 'Cerca nazionalità',
+        identityLabel: 'Io sono',
+        identityHint: 'Seleziona come ti identifichi.',
         audienceLabel: 'Pubblico preferito',
         audienceHint: 'Seleziona con chi vuoi incontrarti.',
+        requiredFields: 'Compila i campi obbligatori: {{fields}}',
         next: 'Passo successivo',
       },
       step3: {
@@ -3410,6 +3493,8 @@ export const translations = {
         activeUntil: 'Attivo fino al {{date}}',
         daysLeft: 'Restano {{days}} giorni',
         expired: 'Piano scaduto',
+        freeTitle: 'Piano gratuito',
+        freeDescription: 'Sei nel piano gratuito finché non vengono attivati i piani a pagamento.',
       },
       tips: {
         title: 'Consigli di successo',
@@ -3433,6 +3518,7 @@ export const translations = {
         eyesLabel: 'Occhi',
         nationalityLabel: 'Nazionalità',
         audienceLabel: 'Pubblico',
+        identityLabel: 'Io sono',
         heightPlaceholder: 'Altezza (m)',
         weightPlaceholder: 'Peso (kg)',
         hairPlaceholder: 'Capelli',
@@ -3481,7 +3567,9 @@ export const translations = {
         upgradeTitle: 'Upgrade',
         upgradeDesc: 'Appari in cima e aumenta i contatti.',
         viewPlans: 'Vedi piani',
-        devMessage: 'In sviluppo!',
+        freeBadge: 'Piano attuale',
+        freeTitle: 'FREE',
+        freeMessage: 'Sei nel piano gratuito fino all’attivazione dei piani a pagamento.',
         payment: {
           secure: 'Ambiente sicuro',
           planBadge: 'Piano Diamante',
@@ -3553,6 +3641,7 @@ export const translations = {
       commentEmpty: 'Nessun commento ancora.',
       attributesTitle: 'Caratteristiche',
       audienceTitle: 'Pubblico',
+      identityTitle: 'Io sono',
       notInformed: 'Non informato',
       today: 'Oggi',
       views: 'Visualizzazioni',
@@ -3611,6 +3700,7 @@ export const translations = {
       identityFaceUploadFailed: 'Impossibile caricare la foto del volto.',
       identityAgeRequired: 'Inserisci la data di nascita.',
       identityUnderage: 'Registrazione consentita solo ai maggiori di 18 anni.',
+      profileRequired: 'Mancano campi obbligatori del profilo.',
       bioRequired: 'Compila la biografia.',
       servicesRequired: 'Seleziona almeno 1 servizio.',
       cameraUnavailable: 'Impossibile accedere alla fotocamera.',
@@ -3751,6 +3841,7 @@ export const translations = {
       filtersState: 'Tous les états',
       filtersHair: 'Tous les cheveux',
       filtersEyes: 'Tous les yeux',
+      filtersIdentity: 'Toutes les identités',
       filtersAgeMin: 'Âge minimum {{count}}',
       filtersAgeMax: 'Âge maximum {{count}}',
       filtersPriceMin: 'Prix minimum {{count}}',
@@ -3951,8 +4042,11 @@ export const translations = {
         eyes: 'Yeux',
         nationality: 'Nationalité',
         nationalityPlaceholder: 'Rechercher une nationalité',
+        identityLabel: 'Je suis',
+        identityHint: 'Sélectionnez comment vous vous identifiez.',
         audienceLabel: 'Public préféré',
         audienceHint: 'Sélectionnez avec qui vous souhaitez vous rencontrer.',
+        requiredFields: 'Veuillez remplir les champs obligatoires : {{fields}}',
         next: 'Étape suivante',
       },
       step3: {
@@ -4089,6 +4183,8 @@ export const translations = {
         activeUntil: 'Actif jusqu’au {{date}}',
         daysLeft: 'Il reste {{days}} jours',
         expired: 'Plan expiré',
+        freeTitle: 'Plan gratuit',
+        freeDescription: 'Vous êtes sur le plan gratuit jusqu’à l’activation des plans payants.',
       },
       tips: {
         title: 'Conseils de succès',
@@ -4112,6 +4208,7 @@ export const translations = {
         eyesLabel: 'Yeux',
         nationalityLabel: 'Nationalité',
         audienceLabel: 'Public',
+        identityLabel: 'Je suis',
         heightPlaceholder: 'Taille (m)',
         weightPlaceholder: 'Poids (kg)',
         hairPlaceholder: 'Cheveux',
@@ -4160,7 +4257,9 @@ export const translations = {
         upgradeTitle: 'Mise à niveau',
         upgradeDesc: 'Apparaissez en haut et augmentez vos contacts.',
         viewPlans: 'Voir les plans',
-        devMessage: 'En développement !',
+        freeBadge: 'Plan actuel',
+        freeTitle: 'FREE',
+        freeMessage: 'Vous êtes sur le plan gratuit jusqu’à l’activation des plans payants.',
         payment: {
           secure: 'Environnement sécurisé',
           planBadge: 'Plan Diamant',
@@ -4232,6 +4331,7 @@ export const translations = {
       commentEmpty: 'Aucun commentaire pour le moment.',
       attributesTitle: 'Attributs',
       audienceTitle: 'Public',
+      identityTitle: 'Je suis',
       notInformed: 'Non renseigné',
       today: 'Aujourd’hui',
       views: 'Vues',
@@ -4290,6 +4390,7 @@ export const translations = {
       identityFaceUploadFailed: 'Impossible de téléverser la photo du visage.',
       identityAgeRequired: 'Veuillez saisir votre date de naissance.',
       identityUnderage: 'Inscription réservée aux personnes de 18 ans et plus.',
+      profileRequired: 'Des champs de profil obligatoires sont manquants.',
       bioRequired: 'Veuillez remplir votre bio.',
       servicesRequired: 'Sélectionnez au moins 1 service.',
       cameraUnavailable: 'Impossible d’accéder à la caméra.',
@@ -4344,6 +4445,7 @@ const errorMessageKeyMap: Record<string, string> = {
   'Identidade inválida.': 'errors.identityInvalid',
   'Data de nascimento inválida.': 'errors.identityAgeRequired',
   'Menor de idade.': 'errors.identityUnderage',
+  'Campos obrigatórios não preenchidos.': 'errors.profileRequired',
   'Envie no minimo 4 fotos para publicar o perfil.': 'errors.minPhotos',
   'Envie no mínimo 4 fotos para publicar o perfil.': 'errors.minPhotos',
   'Não foi possível comentar.': 'errors.commentFailed',

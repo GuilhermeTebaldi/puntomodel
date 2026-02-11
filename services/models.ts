@@ -21,6 +21,7 @@ export interface ModelAttributes {
   feet?: string;
   nationality?: string;
   audience?: string[];
+  profileIdentity?: string;
 }
 
 export interface ModelIdentity {
