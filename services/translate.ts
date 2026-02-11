@@ -1,4 +1,5 @@
 import { apiFetch } from './api';
+import { LanguageCode, locales } from '../translations';
 
 const translationCache = new Map<string, string>();
 const inFlight = new Map<string, Promise<string | null>>();
@@ -50,4 +51,38 @@ export const translateText = async (text: string, target: string, signal?: Abort
   } finally {
     inFlight.delete(cacheKey);
   }
+};
+
+export const getTranslationTarget = (language: LanguageCode) => {
+  const locale = locales[language];
+  if (!locale) return 'en';
+  return locale.split('-')[0]?.toLowerCase() || 'en';
+};
+
+const getSupportedTranslationTargets = () => {
+  const targets = new Set<string>();
+  (Object.keys(locales) as LanguageCode[]).forEach((lang) => {
+    targets.add(getTranslationTarget(lang));
+  });
+  return Array.from(targets);
+};
+
+export const buildBioTranslations = async (text: string, sourceLanguage?: string) => {
+  const normalized = text.trim();
+  if (!normalized) return {};
+  const targets = getSupportedTranslationTargets();
+  const results: Record<string, string> = {};
+  await Promise.allSettled(
+    targets.map(async (target) => {
+      if (sourceLanguage && target === sourceLanguage) {
+        results[target] = normalized;
+        return;
+      }
+      const translated = await translateText(normalized, target);
+      if (translated) {
+        results[target] = translated;
+      }
+    })
+  );
+  return results;
 };

@@ -1,12 +1,12 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { X, MessageCircle, Phone, MapPin, CheckCircle2, ShieldCheck, Heart, Share2, Info, Star, ChevronLeft, ChevronRight } from 'lucide-react';
-import { fetchModelMetrics, rateModel, trackModelEvent, updateModelProfile } from '../services/models';
+import { fetchModelMetrics, rateModel, trackModelEvent } from '../services/models';
 import { getCurrentUser } from '../services/auth';
 import { isModelSaved, toggleSavedModel } from '../services/savedModels';
 import { useI18n } from '../translations/i18n';
 import { getIdentityLabel } from '../translations';
-import { translateText } from '../services/translate';
+import { getTranslationTarget } from '../services/translate';
 
 const toWhatsappDigits = (phone?: string) => (phone ? phone.replace(/\D/g, '') : '');
 const toTelDigits = (phone?: string) => (phone ? phone.replace(/[^\d+]/g, '') : '');
@@ -20,6 +20,7 @@ interface ModelProfileProps {
     photos?: string[];
     bio?: string;
     bioTranslations?: Record<string, string>;
+    bioLanguage?: string;
     services?: string[];
     prices?: Array<{ label: string; value: number }>;
     attributes?: {
@@ -53,7 +54,6 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
   const [ratingSuccess, setRatingSuccess] = useState('');
   const [isSaved, setIsSaved] = useState(() => isModelSaved(model.id));
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
-  const [translatedBio, setTranslatedBio] = useState<string | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [hasSwiped, setHasSwiped] = useState(false);
   const nationalityLabel = useMemo(() => {
@@ -84,17 +84,16 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
   const photos = model.photos || [];
   const activePhoto = activePhotoIndex !== null ? photos[activePhotoIndex] : null;
   const rawBio = (model.bio || '').trim();
-  const targetLanguage = useMemo(() => {
-    const map: Record<string, string> = {
-      br: 'pt',
-      us: 'en',
-      es: 'es',
-      it: 'it',
-      de: 'de',
-      fr: 'fr',
-    };
-    return map[language] || 'en';
-  }, [language]);
+  const targetLanguage = useMemo(() => getTranslationTarget(language), [language]);
+  const bioSourceLanguage = useMemo(() => {
+    if (typeof model.bioLanguage !== 'string') return null;
+    const trimmed = model.bioLanguage.trim().toLowerCase();
+    return trimmed || null;
+  }, [model.bioLanguage]);
+  const shouldTranslate = useMemo(() => {
+    if (!bioSourceLanguage) return true;
+    return bioSourceLanguage !== targetLanguage;
+  }, [bioSourceLanguage, targetLanguage]);
   const cachedBio = useMemo(() => {
     const translations = model.bioTranslations;
     if (!translations) return null;
@@ -104,40 +103,6 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
     return trimmed ? trimmed : null;
   }, [model.bioTranslations, targetLanguage]);
 
-  useEffect(() => {
-    let isActive = true;
-    setTranslatedBio(null);
-    if (!rawBio || rawBio.length < 3) {
-      return () => {
-        isActive = false;
-      };
-    }
-    if (cachedBio) {
-      setTranslatedBio(cachedBio);
-      return () => {
-        isActive = false;
-      };
-    }
-    translateText(rawBio, targetLanguage)
-      .then((result) => {
-        if (!isActive) return;
-        if (!result) {
-          setTranslatedBio(null);
-          return;
-        }
-        setTranslatedBio(result);
-        if (!model.bioTranslations?.[targetLanguage]) {
-          updateModelProfile(model.id, { bioTranslations: { [targetLanguage]: result } }).catch(() => undefined);
-        }
-      })
-      .catch((err) => {
-        if (!isActive) return;
-        setTranslatedBio(null);
-      });
-    return () => {
-      isActive = false;
-    };
-  }, [cachedBio, model.bioTranslations, model.id, rawBio, targetLanguage]);
 
   const goNextPhoto = () => {
     if (!photos.length) return;
@@ -231,7 +196,10 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
     }
   }, [activePhotoIndex]);
 
-  const displayBio = rawBio ? cachedBio || translatedBio || rawBio : t('dashboard.form.bioMissing');
+  const displayBio = rawBio
+    ? (shouldTranslate && cachedBio ? cachedBio : rawBio)
+    : t('dashboard.form.bioMissing');
+  const showTranslatedBadge = rawBio && shouldTranslate && Boolean(cachedBio);
 
   const handleRate = async (value: number) => {
     setRatingSubmitting(true);
@@ -398,6 +366,11 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
                 <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <Info size={20} className="text-[#e3262e]" />
                   {t('profile.about')}
+                  {showTranslatedBadge && (
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                      {t('profile.bioTranslated')}
+                    </span>
+                  )}
                 </h3>
                 <p className="text-gray-600 leading-relaxed">
                   {displayBio}

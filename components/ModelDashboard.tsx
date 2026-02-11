@@ -28,6 +28,7 @@ import LocationPicker, { LocationValue } from './LocationPicker';
 import NationalityPicker from './NationalityPicker';
 import {
   createModelPayment,
+  fetchModelById,
   fetchModelMetrics,
   fetchModelNotifications,
   markModelNotificationsRead,
@@ -36,6 +37,7 @@ import {
   ModelPayment,
 } from '../services/models';
 import { uploadImage } from '../services/cloudinary';
+import { getTranslationTarget } from '../services/translate';
 import { useI18n } from '../translations/i18n';
 import { getIdentityLabel, identityOptions, serviceOptions } from '../translations';
 
@@ -46,6 +48,8 @@ interface ModelDashboardModel {
   photos?: string[];
   avatarUrl?: string | null;
   bio?: string;
+  bioTranslations?: Record<string, string>;
+  bioLanguage?: string;
   services?: string[];
   prices?: Array<{ label: string; value: number }>;
   attributes?: {
@@ -404,6 +408,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   const [isOnline, setIsOnline] = useState(Boolean(model.isOnline ?? true));
   const [activeSection, setActiveSection] = useState<'dashboard' | 'profile' | 'photos' | 'billing' | 'settings'>('dashboard');
   const [editingBio, setEditingBio] = useState(false);
+  const bioPollRef = useRef<number | null>(null);
   const [editingServices, setEditingServices] = useState(false);
   const [editingAttributes, setEditingAttributes] = useState(false);
   const [editingLocation, setEditingLocation] = useState(false);
@@ -437,6 +442,43 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   const [showPaymentPage, setShowPaymentPage] = useState(false);
   const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
+  const bioTranslationTargets = useMemo(
+    () =>
+      languageOptions.map((option) => ({
+        code: option.code,
+        label: option.label,
+        target: getTranslationTarget(option.code),
+      })),
+    [languageOptions]
+  );
+  const bioTranslations = model.bioTranslations ?? {};
+  const stopBioTranslationPoll = () => {
+    if (bioPollRef.current) {
+      window.clearInterval(bioPollRef.current);
+      bioPollRef.current = null;
+    }
+  };
+
+  const startBioTranslationPoll = () => {
+    stopBioTranslationPoll();
+    const deadline = Date.now() + 60000;
+    bioPollRef.current = window.setInterval(async () => {
+      if (Date.now() > deadline) {
+        stopBioTranslationPoll();
+        return;
+      }
+      try {
+        const refreshed = await fetchModelById(model.id);
+        onModelUpdated?.(refreshed);
+        const complete = bioTranslationTargets.every((option) => Boolean(refreshed.bioTranslations?.[option.target]));
+        if (complete) {
+          stopBioTranslationPoll();
+        }
+      } catch {
+        // ignore polling errors
+      }
+    }, 3000);
+  };
 
   const billingExpiresAtMs = parseDateToMs(model.billing?.expiresAt);
   const billingActive = Boolean(billingExpiresAtMs && billingExpiresAtMs > Date.now());
@@ -543,6 +585,12 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     setLocationDraft(toLocationValue(model.location));
   }, [model]);
 
+  useEffect(() => {
+    return () => {
+      stopBioTranslationPoll();
+    };
+  }, []);
+
   const resetEdits = () => {
     setNameInput(model.name);
     setBioInput(model.bio || '');
@@ -579,6 +627,31 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSaveBio = async () => {
+    const nextBio = bioInput;
+    setSaving(true);
+    setSaveError('');
+    const sourceLanguage = getTranslationTarget(language);
+    try {
+      const updated = await updateModelProfile(model.id, {
+        bio: nextBio,
+        bioTranslations: { [sourceLanguage]: nextBio.trim() },
+        bioLanguage: sourceLanguage,
+      });
+      onModelUpdated?.(updated);
+      setEditingBio(false);
+    } catch (err) {
+      setSaveError(err instanceof Error ? translateError(err.message) : t('errors.updateFailed'));
+      return;
+    } finally {
+      setSaving(false);
+    }
+
+    const trimmed = nextBio.trim();
+    if (!trimmed) return;
+    startBioTranslationPoll();
   };
 
   const handleSaveLocation = async () => {
@@ -1288,11 +1361,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                           <div className="flex gap-2">
                             <button
                               disabled={saving}
-                              onClick={() =>
-                                handleSave({ bio: bioInput }, () => {
-                                  setEditingBio(false);
-                                })
-                              }
+                              onClick={handleSaveBio}
                               className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
                             >
                               {saving ? t('common.saving') : t('common.save')}
@@ -1307,12 +1376,60 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                               {t('common.cancel')}
                             </button>
                           </div>
+                          <div className="flex flex-wrap items-center gap-2 pt-2">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                              {t('dashboard.form.bioTranslationsLabel')}
+                            </span>
+                            {bioTranslationTargets.map((option) => {
+                              const ready = Boolean(bioTranslations[option.target]);
+                              return (
+                                <span
+                                  key={option.code}
+                                  className={`flex items-center gap-1 px-2 py-1 rounded-full border text-[10px] font-bold ${
+                                    ready ? 'border-green-200 bg-green-50 text-green-700' : 'border-gray-200 bg-gray-50 text-gray-400'
+                                  }`}
+                                  title={option.label}
+                                >
+                                  <img
+                                    src={`https://flagcdn.com/w20/${option.code}.png`}
+                                    alt={option.code.toUpperCase()}
+                                    className="w-4 h-3 rounded-[2px]"
+                                  />
+                                  {ready ? '✓' : '…'}
+                                </span>
+                              );
+                            })}
+                          </div>
                         </div>
                       ) : (
                         <>
                           <p className="text-sm text-gray-600 leading-relaxed pr-10">
                             {model.bio || t('dashboard.form.bioMissing')}
                           </p>
+                          <div className="flex flex-wrap items-center gap-2 pt-2">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                              {t('dashboard.form.bioTranslationsLabel')}
+                            </span>
+                            {bioTranslationTargets.map((option) => {
+                              const ready = Boolean(bioTranslations[option.target]);
+                              return (
+                                <span
+                                  key={option.code}
+                                  className={`flex items-center gap-1 px-2 py-1 rounded-full border text-[10px] font-bold ${
+                                    ready ? 'border-green-200 bg-green-50 text-green-700' : 'border-gray-200 bg-gray-50 text-gray-400'
+                                  }`}
+                                  title={option.label}
+                                >
+                                  <img
+                                    src={`https://flagcdn.com/w20/${option.code}.png`}
+                                    alt={option.code.toUpperCase()}
+                                    className="w-4 h-3 rounded-[2px]"
+                                  />
+                                  {ready ? '✓' : '…'}
+                                </span>
+                              );
+                            })}
+                          </div>
                           <button
                             onClick={() => setEditingBio(true)}
                             className="absolute right-0 top-0 p-2 text-gray-300 hover:text-[#e3262e] transition-colors"

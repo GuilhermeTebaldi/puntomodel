@@ -7,6 +7,7 @@ import { uploadImage, uploadImageWithProgress } from '../services/cloudinary';
 import { fetchCountries } from '../services/countries';
 import { scanIdentityDocument } from '../services/identityOcr';
 import { createModelProfile } from '../services/models';
+import { getTranslationTarget } from '../services/translate';
 import { hairOptions, eyeOptions, serviceOptions, identityOptions } from '../translations';
 import { useI18n } from '../translations/i18n';
 import LocationPicker, { LocationValue } from './LocationPicker';
@@ -856,6 +857,9 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         return;
       }
 
+      const bioLanguage = getTranslationTarget(language);
+      const bioTranslations = bio.trim() ? { [bioLanguage]: bio.trim() } : {};
+
       await createModelProfile({
         userId: registrationResult.user.id,
         name: displayName,
@@ -870,6 +874,8 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
           birthDate: normalizeBirthDateToIso(identityBirthDate),
         },
         bio,
+        bioTranslations,
+        bioLanguage,
         services,
         prices: [],
         attributes: {

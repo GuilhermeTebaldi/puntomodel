@@ -81,6 +81,7 @@ export interface ModelProfileData {
   identity?: ModelIdentity | null;
   bio?: string;
   bioTranslations?: Record<string, string>;
+  bioLanguage?: string;
   services: string[];
   prices: ModelPrice[];
   attributes?: ModelAttributes;

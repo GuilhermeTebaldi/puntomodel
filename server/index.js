@@ -64,6 +64,10 @@ const corsOptions = {
 
 const TRANSLATE_API_BASE =
   process.env.TRANSLATE_API_BASE_URL || 'https://libretranslate.de';
+const TRANSLATE_API_BASES = Array.from(
+  new Set([TRANSLATE_API_BASE, 'https://translate.astian.org', 'https://libretranslate.com'].filter(Boolean))
+);
+const BIO_TRANSLATION_TARGETS = ['pt', 'en', 'es', 'it', 'de', 'fr'];
 
 const postTranslateJson = async (url, payload, signal) => {
   const response = await fetch(url, {
@@ -89,6 +93,76 @@ const translationCache = new Map();
 const TRANSLATION_CACHE_MAX = 300;
 const getTranslateCacheKey = (text, target) => `${target}|${text}`;
 
+const translateWithFallbacks = async (text, source, target) => {
+  const cacheKey = getTranslateCacheKey(text, target);
+  const cached = translationCache.get(cacheKey);
+  if (cached) return cached;
+
+  for (const baseUrl of TRANSLATE_API_BASES) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4500);
+    try {
+      const translated = await translateWithProvider(baseUrl, text, source, target, controller.signal);
+      if (translated) {
+        if (translationCache.size >= TRANSLATION_CACHE_MAX) {
+          translationCache.clear();
+        }
+        translationCache.set(cacheKey, translated);
+        return translated;
+      }
+    } catch (err) {
+      // ignore and try next provider
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  return null;
+};
+
+const bioTranslationJobs = new Map();
+const normalizeBioLanguage = (value) => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim().toLowerCase();
+  return trimmed || null;
+};
+const persistBioTranslation = async (modelId, sourceText, target, translatedText) => {
+  if (!translatedText) return;
+  await ensureDb();
+  const model = await getModelByIdRepo(modelId);
+  if (!model) return;
+  const currentBio = typeof model.bio === 'string' ? model.bio.trim() : '';
+  if (currentBio !== sourceText) return;
+  const nextTranslations = { ...(model.bioTranslations || {}) };
+  if (nextTranslations[target] === translatedText) return;
+  nextTranslations[target] = translatedText;
+  model.bioTranslations = nextTranslations;
+  model.updatedAt = new Date().toISOString();
+  await updateModel(model.id, model);
+};
+const scheduleBioTranslations = (modelId, bio, sourceLanguage) => {
+  const sourceText = typeof bio === 'string' ? bio.trim() : '';
+  if (!sourceText) return;
+  const sourceLang = normalizeBioLanguage(sourceLanguage);
+  const jobKey = `${modelId}:${sourceText}`;
+  if (bioTranslationJobs.has(jobKey)) return;
+  const job = (async () => {
+    for (const target of BIO_TRANSLATION_TARGETS) {
+      if (sourceLang && target === sourceLang) {
+        await persistBioTranslation(modelId, sourceText, target, sourceText);
+        continue;
+      }
+      const translated = await translateWithFallbacks(sourceText, sourceLang || 'auto', target);
+      if (translated) {
+        await persistBioTranslation(modelId, sourceText, target, translated);
+      }
+    }
+  })();
+  bioTranslationJobs.set(jobKey, job);
+  job.finally(() => {
+    bioTranslationJobs.delete(jobKey);
+  });
+};
+
 const app = express();
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
@@ -107,20 +181,13 @@ app.post('/api/translate', async (req, res) => {
     return res.json({ ok: true, translatedText: cached, detectedLanguage: null, cached: true });
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 6500);
   try {
-    const translated = await translateWithProvider(TRANSLATE_API_BASE, safeText, 'auto', target, controller.signal);
-    clearTimeout(timeout);
+    const translated = await translateWithFallbacks(safeText, 'auto', target);
     if (translated) {
-      if (translationCache.size >= TRANSLATION_CACHE_MAX) {
-        translationCache.clear();
-      }
-      translationCache.set(cacheKey, translated);
       return res.json({ ok: true, translatedText: translated, detectedLanguage: null });
     }
   } catch (err) {
-    clearTimeout(timeout);
+    // ignore translate errors
   }
 
   return res.json({ ok: true, translatedText: '', detectedLanguage: null });
@@ -586,6 +653,7 @@ app.post('/api/models', async (req, res) => {
   }
 
   const bioTranslations = normalizeBioTranslations(payload.bioTranslations);
+  const bioLanguage = typeof payload.bioLanguage === 'string' ? payload.bioLanguage.trim().toLowerCase() : '';
 
   const existingBilling = existingModel?.billing ?? null;
   const existingPayments = existingModel?.payments ?? [];
@@ -599,6 +667,7 @@ app.post('/api/models', async (req, res) => {
     identity: normalizedIdentity,
     bio: payload.bio ?? '',
     bioTranslations,
+    bioLanguage: bioLanguage || null,
     services: Array.isArray(payload.services) ? payload.services : [],
     prices: Array.isArray(payload.prices) ? payload.prices : [],
     attributes: normalizedAttributes,
@@ -627,6 +696,8 @@ app.post('/api/models', async (req, res) => {
     createdAt: existingModel?.createdAt ?? nowIso,
     updatedAt: nowIso,
   });
+
+  scheduleBioTranslations(savedModel.id, savedModel.bio, savedModel.bioLanguage);
 
   res.json({ ok: true, model: sanitizeModelPublic(savedModel) });
 });
@@ -685,6 +756,12 @@ app.patch('/api/models/:id', async (req, res) => {
   } else if (Object.keys(incomingBioTranslations).length) {
     nextBioTranslations = { ...nextBioTranslations, ...incomingBioTranslations };
   }
+  const nextBioLanguage =
+    payload.bioLanguage === null
+      ? null
+      : typeof payload.bioLanguage === 'string'
+      ? payload.bioLanguage.trim().toLowerCase()
+      : model.bioLanguage ?? null;
 
   const updates = {
     name: typeof payload.name === 'string' ? payload.name.trim() : model.name,
@@ -693,6 +770,7 @@ app.patch('/api/models/:id', async (req, res) => {
     identity: normalizedIdentity,
     bio: nextBio,
     bioTranslations: nextBioTranslations,
+    bioLanguage: nextBioLanguage,
     services: Array.isArray(payload.services) ? payload.services : model.services ?? [],
     prices: Array.isArray(payload.prices) ? payload.prices : model.prices ?? [],
     attributes: payload.attributes ?? model.attributes ?? {},
@@ -716,6 +794,10 @@ app.patch('/api/models/:id', async (req, res) => {
 
   const updatedModel = { ...model, ...updates, updatedAt: new Date().toISOString() };
   const savedModel = await updateModel(model.id, updatedModel);
+
+  if (bioChanged || payload.bioTranslations === null) {
+    scheduleBioTranslations(savedModel.id, savedModel.bio, savedModel.bioLanguage);
+  }
 
   res.json({ ok: true, model: sanitizeModelPublic(savedModel) });
 });
