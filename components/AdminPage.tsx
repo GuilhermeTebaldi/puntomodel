@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch } from '../services/api';
 import Logo from './Logo';
 import { useI18n } from '../translations/i18n';
@@ -68,6 +68,8 @@ const getBioTranslationEntry = (
   return { text: '', status: 'pending', updatedAt: null, attempts: 0, error: null };
 };
 
+const AUTO_REFRESH_MS = 8000;
+
 const AdminPage: React.FC = () => {
   const { t, translateError, locale, languageOptions } = useI18n();
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -81,6 +83,9 @@ const AdminPage: React.FC = () => {
   const [selectedTranslationModel, setSelectedTranslationModel] = useState<AdminModel | null>(null);
   const [refreshingTranslations, setRefreshingTranslations] = useState(false);
   const [translatingModelId, setTranslatingModelId] = useState<string | null>(null);
+  const [logoPulse, setLogoPulse] = useState(false);
+  const logoPulseTimeout = useRef<number | null>(null);
+  const hasLoaded = useRef(false);
   const translationTargets = useMemo(
     () =>
       languageOptions.map((option) => ({
@@ -90,6 +95,24 @@ const AdminPage: React.FC = () => {
       })),
     [languageOptions]
   );
+
+  const syncModelsState = (nextModels: AdminModel[]) => {
+    setModels(nextModels);
+    setSelectedModel((prev) => (prev ? nextModels.find((item) => item.id === prev.id) || null : null));
+    setSelectedTranslationModel((prev) =>
+      prev ? nextModels.find((item) => item.id === prev.id) || null : null
+    );
+  };
+
+  const triggerLogoPulse = () => {
+    setLogoPulse(true);
+    if (logoPulseTimeout.current) {
+      window.clearTimeout(logoPulseTimeout.current);
+    }
+    logoPulseTimeout.current = window.setTimeout(() => {
+      setLogoPulse(false);
+    }, 900);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -108,7 +131,12 @@ const AdminPage: React.FC = () => {
 
         if (!mounted) return;
         setUsers(usersData?.users || []);
-        setModels(modelsData?.models || []);
+        syncModelsState(modelsData?.models || []);
+        if (hasLoaded.current) {
+          triggerLogoPulse();
+        } else {
+          hasLoaded.current = true;
+        }
         setError('');
       } catch (err) {
         if (!mounted) return;
@@ -121,6 +149,49 @@ const AdminPage: React.FC = () => {
       mounted = false;
     };
   }, [t, translateError]);
+
+  useEffect(() => {
+    let active = true;
+    const tick = async () => {
+      if (!active || typeof document !== 'undefined' && document.hidden) return;
+      try {
+        const [usersRes, modelsRes] = await Promise.all([
+          apiFetch('/api/admin/users'),
+          apiFetch('/api/admin/models'),
+        ]);
+        const usersData = await readJsonSafe<{ users?: AdminUser[] }>(usersRes);
+        const modelsData = await readJsonSafe<{ models?: AdminModel[] }>(modelsRes);
+
+        if (!active) return;
+        let didUpdate = false;
+        if (usersRes.ok && usersData?.users) {
+          setUsers(usersData.users);
+          didUpdate = true;
+        }
+        if (modelsRes.ok && modelsData?.models) {
+          syncModelsState(modelsData.models);
+          didUpdate = true;
+        }
+        if (didUpdate) triggerLogoPulse();
+      } catch {
+        // silent refresh
+      }
+    };
+
+    const interval = setInterval(tick, AUTO_REFRESH_MS);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (logoPulseTimeout.current) {
+        window.clearTimeout(logoPulseTimeout.current);
+      }
+    };
+  }, []);
 
   const updateModelInState = (updated: AdminModel) => {
     setModels((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
@@ -260,7 +331,9 @@ const AdminPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100">
         <div className="w-full px-6 h-16 flex items-center justify-between">
-          <Logo />
+          <div className={logoPulse ? 'admin-logo-pulse' : ''}>
+            <Logo />
+          </div>
           <button onClick={handleBackToSite} className="text-sm font-bold text-[#e3262e]">
             {t('common.backToSite')}
           </button>
