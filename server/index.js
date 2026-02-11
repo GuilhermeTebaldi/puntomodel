@@ -62,15 +62,8 @@ const corsOptions = {
   },
 };
 
-const TRANSLATE_MIRRORS = [
-  'https://translate.argosopentech.com',
-  'https://libretranslate.de',
-  'https://translate.api.skitzen.com',
-  'https://translate.mentality.rip',
-  'https://translate.fortytwo-it.com',
-  'https://trans.zillyhuhn.com',
-  'https://translate.cutie.dating',
-];
+const TRANSLATE_API_BASE =
+  process.env.TRANSLATE_API_BASE_URL || 'https://libretranslate.de';
 
 const postTranslateJson = async (url, payload, signal) => {
   const response = await fetch(url, {
@@ -85,19 +78,16 @@ const postTranslateJson = async (url, payload, signal) => {
   return response.json();
 };
 
-const detectLanguage = async (baseUrl, text, signal) => {
-  const data = await postTranslateJson(`${baseUrl}/detect`, { q: text }, signal);
-  if (!Array.isArray(data) || !data.length) return null;
-  const best = data[0];
-  return typeof best?.language === 'string' && best.language ? best.language : null;
-};
-
 const translateWithProvider = async (baseUrl, text, source, target, signal) => {
   const data = await postTranslateJson(`${baseUrl}/translate`, { q: text, source, target }, signal);
   if (!data || typeof data.translatedText !== 'string') return null;
   const trimmed = data.translatedText.trim();
   return trimmed ? trimmed : null;
 };
+
+const translationCache = new Map();
+const TRANSLATION_CACHE_MAX = 300;
+const getTranslateCacheKey = (text, target) => `${target}|${text}`;
 
 const app = express();
 app.use(cors(corsOptions));
@@ -111,25 +101,26 @@ app.post('/api/translate', async (req, res) => {
     return res.status(400).json({ ok: false, error: 'invalid_payload' });
   }
   const safeText = rawText.length > 5000 ? rawText.slice(0, 5000) : rawText;
+  const cacheKey = getTranslateCacheKey(safeText, target);
+  const cached = translationCache.get(cacheKey);
+  if (cached) {
+    return res.json({ ok: true, translatedText: cached, detectedLanguage: null, cached: true });
+  }
 
-  for (const baseUrl of TRANSLATE_MIRRORS) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5500);
-    try {
-      const detected = await detectLanguage(baseUrl, safeText, controller.signal);
-      if (detected && detected === target) {
-        clearTimeout(timeout);
-        return res.json({ ok: true, translatedText: '', detectedLanguage: detected });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 6500);
+  try {
+    const translated = await translateWithProvider(TRANSLATE_API_BASE, safeText, 'auto', target, controller.signal);
+    clearTimeout(timeout);
+    if (translated) {
+      if (translationCache.size >= TRANSLATION_CACHE_MAX) {
+        translationCache.clear();
       }
-      const source = detected || 'auto';
-      const translated = await translateWithProvider(baseUrl, safeText, source, target, controller.signal);
-      clearTimeout(timeout);
-      if (translated) {
-        return res.json({ ok: true, translatedText: translated, detectedLanguage: detected || null });
-      }
-    } catch (err) {
-      clearTimeout(timeout);
+      translationCache.set(cacheKey, translated);
+      return res.json({ ok: true, translatedText: translated, detectedLanguage: null });
     }
+  } catch (err) {
+    clearTimeout(timeout);
   }
 
   return res.json({ ok: true, translatedText: '', detectedLanguage: null });
@@ -240,6 +231,19 @@ const normalizeIdentity = (identity, current = null) => {
     faceUrl: faceUrl || null,
     verifiedAt,
   };
+};
+const normalizeBioTranslations = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const entries = Object.entries(value);
+  const normalized = {};
+  for (const [key, text] of entries) {
+    if (typeof text !== 'string') continue;
+    const lang = key.trim().toLowerCase();
+    const trimmed = text.trim();
+    if (!lang || !trimmed) continue;
+    normalized[lang] = trimmed.length > 5000 ? trimmed.slice(0, 5000) : trimmed;
+  }
+  return normalized;
 };
 const getTodayKey = () => new Date().toISOString().slice(0, 10);
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -581,6 +585,8 @@ app.post('/api/models', async (req, res) => {
     return res.status(400).json({ ok: false, error: 'Campos obrigatórios não preenchidos.' });
   }
 
+  const bioTranslations = normalizeBioTranslations(payload.bioTranslations);
+
   const existingBilling = existingModel?.billing ?? null;
   const existingPayments = existingModel?.payments ?? [];
 
@@ -592,6 +598,7 @@ app.post('/api/models', async (req, res) => {
     phone: normalizedPhone,
     identity: normalizedIdentity,
     bio: payload.bio ?? '',
+    bioTranslations,
     services: Array.isArray(payload.services) ? payload.services : [],
     prices: Array.isArray(payload.prices) ? payload.prices : [],
     attributes: normalizedAttributes,
@@ -669,13 +676,23 @@ app.patch('/api/models/:id', async (req, res) => {
         ? payload.avatarUrl
         : null
       : model.avatarUrl ?? null;
+  const nextBio = typeof payload.bio === 'string' ? payload.bio : model.bio ?? '';
+  const bioChanged = typeof payload.bio === 'string' && payload.bio !== (model.bio ?? '');
+  const incomingBioTranslations = normalizeBioTranslations(payload.bioTranslations);
+  let nextBioTranslations = bioChanged ? {} : model.bioTranslations ?? {};
+  if (payload.bioTranslations === null) {
+    nextBioTranslations = {};
+  } else if (Object.keys(incomingBioTranslations).length) {
+    nextBioTranslations = { ...nextBioTranslations, ...incomingBioTranslations };
+  }
 
   const updates = {
     name: typeof payload.name === 'string' ? payload.name.trim() : model.name,
     age: derivedAge,
     phone: normalizedPhone,
     identity: normalizedIdentity,
-    bio: typeof payload.bio === 'string' ? payload.bio : model.bio ?? '',
+    bio: nextBio,
+    bioTranslations: nextBioTranslations,
     services: Array.isArray(payload.services) ? payload.services : model.services ?? [],
     prices: Array.isArray(payload.prices) ? payload.prices : model.prices ?? [],
     attributes: payload.attributes ?? model.attributes ?? {},

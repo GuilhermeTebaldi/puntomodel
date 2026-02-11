@@ -1,7 +1,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { X, MessageCircle, Phone, MapPin, CheckCircle2, ShieldCheck, Heart, Share2, Info, Star, ChevronLeft, ChevronRight } from 'lucide-react';
-import { fetchModelMetrics, rateModel, trackModelEvent } from '../services/models';
+import { fetchModelMetrics, rateModel, trackModelEvent, updateModelProfile } from '../services/models';
 import { getCurrentUser } from '../services/auth';
 import { isModelSaved, toggleSavedModel } from '../services/savedModels';
 import { useI18n } from '../translations/i18n';
@@ -19,6 +19,7 @@ interface ModelProfileProps {
     phone?: string;
     photos?: string[];
     bio?: string;
+    bioTranslations?: Record<string, string>;
     services?: string[];
     prices?: Array<{ label: string; value: number }>;
     attributes?: {
@@ -94,32 +95,49 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
     };
     return map[language] || 'en';
   }, [language]);
+  const cachedBio = useMemo(() => {
+    const translations = model.bioTranslations;
+    if (!translations) return null;
+    const cached = translations[targetLanguage];
+    if (typeof cached !== 'string') return null;
+    const trimmed = cached.trim();
+    return trimmed ? trimmed : null;
+  }, [model.bioTranslations, targetLanguage]);
 
   useEffect(() => {
     let isActive = true;
-    const controller = new AbortController();
     setTranslatedBio(null);
     if (!rawBio || rawBio.length < 3) {
-    return () => {
-      controller.abort();
-    };
-  }
-    translateText(rawBio, targetLanguage, controller.signal)
+      return () => {
+        isActive = false;
+      };
+    }
+    if (cachedBio) {
+      setTranslatedBio(cachedBio);
+      return () => {
+        isActive = false;
+      };
+    }
+    translateText(rawBio, targetLanguage)
       .then((result) => {
         if (!isActive) return;
+        if (!result) {
+          setTranslatedBio(null);
+          return;
+        }
         setTranslatedBio(result);
+        if (!model.bioTranslations?.[targetLanguage]) {
+          updateModelProfile(model.id, { bioTranslations: { [targetLanguage]: result } }).catch(() => undefined);
+        }
       })
       .catch((err) => {
         if (!isActive) return;
-        if (!(err instanceof DOMException && err.name === 'AbortError')) {
-          setTranslatedBio(null);
-        }
+        setTranslatedBio(null);
       });
     return () => {
       isActive = false;
-      controller.abort();
     };
-  }, [rawBio, targetLanguage]);
+  }, [cachedBio, model.bioTranslations, model.id, rawBio, targetLanguage]);
 
   const goNextPhoto = () => {
     if (!photos.length) return;
@@ -213,6 +231,7 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
     }
   }, [activePhotoIndex]);
 
+  const displayBio = rawBio ? cachedBio || translatedBio || rawBio : t('dashboard.form.bioMissing');
 
   const handleRate = async (value: number) => {
     setRatingSubmitting(true);
@@ -381,7 +400,7 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
                   {t('profile.about')}
                 </h3>
                 <p className="text-gray-600 leading-relaxed">
-                  {rawBio ? translatedBio || rawBio : t('dashboard.form.bioMissing')}
+                  {displayBio}
                 </p>
               </section>
 
