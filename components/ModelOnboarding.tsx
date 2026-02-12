@@ -55,6 +55,7 @@ const DOCUMENT_MAX_DIMENSION = 1600;
 const DOCUMENT_AUTO_CAPTURE_DELAY = 0;
 const DOCUMENT_REQUIRED_STABLE_FRAMES = 1;
 const DOCUMENT_AUTO_CAPTURE_ENABLED = false;
+const DOCUMENT_FLIP_DURATION = 1000;
 
 const readExifOrientation = (buffer: ArrayBuffer) => {
   try {
@@ -124,6 +125,8 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const [documentFrontCapture, setDocumentFrontCapture] = useState<null | { dataUrl: string; file: File }>(null);
   const [documentBackCapture, setDocumentBackCapture] = useState<null | { dataUrl: string; file: File }>(null);
   const [documentCaptureSide, setDocumentCaptureSide] = useState<'front' | 'back'>('front');
+  const [documentFlipActive, setDocumentFlipActive] = useState(false);
+  const [documentFlipDataUrl, setDocumentFlipDataUrl] = useState('');
   const [faceCameraActive, setFaceCameraActive] = useState(false);
   const [faceCameraLoading, setFaceCameraLoading] = useState(false);
   const [faceCameraError, setFaceCameraError] = useState('');
@@ -198,6 +201,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const documentFocusTimerRef = useRef<number | null>(null);
   const documentVideoTrackRef = useRef<MediaStreamTrack | null>(null);
   const documentFocusPeakRef = useRef(0);
+  const documentFlipTimerRef = useRef<number | null>(null);
   const hasSelectedLocation = Boolean(selectedLocation && selectedLocation.lat && selectedLocation.lon);
 
   const getBrowserCountryCode = () => {
@@ -342,6 +346,25 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     documentFocusPeakRef.current = 0;
   };
 
+  const clearDocumentFlip = () => {
+    if (documentFlipTimerRef.current) {
+      window.clearTimeout(documentFlipTimerRef.current);
+      documentFlipTimerRef.current = null;
+    }
+    setDocumentFlipActive(false);
+    setDocumentFlipDataUrl('');
+  };
+
+  const startDocumentFlip = (dataUrl: string) => {
+    clearDocumentFlip();
+    setDocumentFlipDataUrl(dataUrl);
+    setDocumentFlipActive(true);
+    documentFlipTimerRef.current = window.setTimeout(() => {
+      setDocumentFlipActive(false);
+      documentFlipTimerRef.current = null;
+    }, DOCUMENT_FLIP_DURATION);
+  };
+
   const stopDocumentCameraStream = (options?: { unlock?: boolean }) => {
     if (documentStreamRef.current) {
       documentStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -440,10 +463,12 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       stopFaceCamera();
       setDocumentCameraOpen(false);
       stopDocumentCameraStream();
+      clearDocumentFlip();
     }
     return () => {
       stopFaceCamera();
       stopDocumentCameraStream();
+      clearDocumentFlip();
     };
   }, [isOpen, currentStep]);
 
@@ -720,6 +745,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   };
 
   const resetDocumentCaptures = () => {
+    clearDocumentFlip();
     setDocumentCapturePreview(null);
     setDocumentFrontCapture(null);
     setDocumentBackCapture(null);
@@ -745,6 +771,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   };
 
   const closeDocumentCamera = () => {
+    clearDocumentFlip();
     setDocumentCameraOpen(false);
     setDocumentCapturePreview(null);
     stopDocumentCameraStream();
@@ -1412,6 +1439,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
 
   const handleDocumentPreviewRetake = () => {
     if (!documentCapturePreview) return;
+    clearDocumentFlip();
     const { side } = documentCapturePreview;
     setDocumentCapturePreview(null);
     if (side === 'front') {
@@ -1441,7 +1469,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
 
     if (side === 'front') {
       setDocumentFrontCapture({ dataUrl, file });
-      setDocumentCaptureSide('back');
+      startDocumentFlip(dataUrl);
       openDocumentCamera({ side: 'back', resetCaptures: false });
       return;
     }
@@ -2627,7 +2655,37 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
             </button>
           </div>
           <div className="relative flex-1 overflow-hidden">
-            {documentCapturePreview ? (
+            {documentFlipActive ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black">
+                <div
+                  className="document-flip-perspective w-[64%] max-w-[360px]"
+                  style={{ aspectRatio: `1 / ${DOCUMENT_FRAME_RATIO}` }}
+                >
+                  <div className="document-flip-card">
+                    <div className="document-flip-face document-flip-front bg-black">
+                      <img
+                        src={documentFlipDataUrl}
+                        alt={t('onboarding.step1.documentSideFront')}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="document-flip-face document-flip-back flex items-center justify-center bg-gradient-to-br from-gray-900 via-black to-black border border-white/20">
+                      <div className="text-center px-4">
+                        <p className="text-xs font-black uppercase tracking-[0.3em] text-white">
+                          {t('onboarding.step1.documentSideBack')}
+                        </p>
+                        <p className="text-[10px] text-white/70 mt-2">
+                          {t('onboarding.step1.documentRotate')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <p className="mt-5 text-[11px] text-white/70 font-semibold uppercase tracking-[0.25em]">
+                  {t('onboarding.step1.documentSideBack')}
+                </p>
+              </div>
+            ) : documentCapturePreview ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black">
                 <img
                   src={documentCapturePreview.dataUrl}
@@ -2758,7 +2816,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
               <button
                 type="button"
                 onClick={() => captureDocumentPhoto(false)}
-                disabled={!documentValidation.valid || documentCameraLoading || identityBusy}
+                disabled={!documentValidation.valid || documentCameraLoading || identityBusy || documentFlipActive}
                 className="flex-1 px-4 py-3 rounded-2xl bg-emerald-500 text-white text-xs font-bold uppercase tracking-widest hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {t('onboarding.step1.documentCapture')}
