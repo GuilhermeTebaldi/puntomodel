@@ -716,6 +716,12 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     });
   };
 
+  const triggerDocumentAutoCapture = () => {
+    if (documentCapturePreview || documentCaptureInProgressRef.current) return;
+    documentAutoCaptureLockedRef.current = true;
+    captureDocumentPhoto(true);
+  };
+
   const getDocumentFrameMapping = () => {
     const video = documentVideoRef.current;
     const frame = documentFrameRef.current;
@@ -989,14 +995,8 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       documentStableStartRef.current = Date.now();
     }
     const elapsed = Date.now() - (documentStableStartRef.current || 0);
-    if (
-      elapsed >= DOCUMENT_AUTO_CAPTURE_DELAY &&
-      !documentAutoCaptureLockedRef.current &&
-      !identityBusy
-    ) {
-      documentAutoCaptureLockedRef.current = true;
-      documentCaptureInProgressRef.current = true;
-      captureDocumentPhoto();
+    if (elapsed >= DOCUMENT_AUTO_CAPTURE_DELAY && !documentAutoCaptureLockedRef.current && !identityBusy) {
+      triggerDocumentAutoCapture();
     }
   };
 
@@ -1211,9 +1211,10 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     await Promise.all([scanPromise, uploadPromise]);
   };
 
-  const captureDocumentPhoto = async () => {
-    if (documentCaptureInProgressRef.current) return;
+  const captureDocumentPhoto = async (autoTriggered = false) => {
+    if (documentCaptureInProgressRef.current || documentCapturePreview) return;
     documentCaptureInProgressRef.current = true;
+    let captured = false;
     try {
       const video = documentVideoRef.current;
       if (!video || !video.videoWidth) {
@@ -1263,8 +1264,12 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         reason: 'ready',
         messageKey: 'onboarding.step1.documentReady',
       });
+      captured = true;
     } finally {
       documentCaptureInProgressRef.current = false;
+      if (!captured && autoTriggered) {
+        resetDocumentAutoCapture();
+      }
     }
   };
 
@@ -2520,20 +2525,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
               >
                 {t('onboarding.step1.documentCameraRetry')}
               </button>
-            ) : (
-              <button
-                type="button"
-                onClick={captureDocumentPhoto}
-                disabled={!documentValidation.valid || identityBusy || documentCameraLoading}
-                className={`flex-1 px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all ${
-                  documentValidation.valid
-                    ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                    : 'bg-gray-700 text-gray-300 cursor-not-allowed'
-                } ${identityBusy || documentCameraLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
-              >
-                {t('onboarding.step1.documentCapture')}
-              </button>
-            )}
+            ) : null}
             <button
               type="button"
               onClick={closeDocumentCamera}
