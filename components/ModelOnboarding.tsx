@@ -45,14 +45,15 @@ type DocumentDetection = {
 
 const DOCUMENT_FRAME_RATIO = 1.586;
 const DOCUMENT_ANALYSIS_WIDTH = 320;
-const DOCUMENT_ANALYSIS_INTERVAL = 350;
-const DOCUMENT_MIN_COVERAGE = 0.45;
-const DOCUMENT_MAX_COVERAGE = 0.98;
-const DOCUMENT_CENTER_TOLERANCE = 0.2;
-const DOCUMENT_TILT_LIMIT = 12;
-const DOCUMENT_FOCUS_MIN = 45;
+const DOCUMENT_ANALYSIS_INTERVAL = 280;
+const DOCUMENT_MIN_COVERAGE = 0.55;
+const DOCUMENT_MAX_COVERAGE = 0.94;
+const DOCUMENT_CENTER_TOLERANCE = 0.14;
+const DOCUMENT_TILT_LIMIT = 9;
+const DOCUMENT_FOCUS_MIN = 60;
 const DOCUMENT_MAX_DIMENSION = 1600;
-const DOCUMENT_AUTO_CAPTURE_DELAY = 500;
+const DOCUMENT_AUTO_CAPTURE_DELAY = 750;
+const DOCUMENT_REQUIRED_STABLE_FRAMES = 3;
 
 const readExifOrientation = (buffer: ArrayBuffer) => {
   try {
@@ -187,8 +188,11 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const documentDetectionRef = useRef<DocumentDetection | null>(null);
   const documentScanTimerRef = useRef<number | null>(null);
   const documentStableStartRef = useRef<number | null>(null);
+  const documentStableFrameCountRef = useRef(0);
   const documentAutoCaptureLockedRef = useRef(false);
   const documentCaptureInProgressRef = useRef(false);
+  const documentFocusTimerRef = useRef<number | null>(null);
+  const documentVideoTrackRef = useRef<MediaStreamTrack | null>(null);
   const hasSelectedLocation = Boolean(selectedLocation && selectedLocation.lat && selectedLocation.lon);
 
   const getBrowserCountryCode = () => {
@@ -328,6 +332,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
 
   const resetDocumentAutoCapture = () => {
     documentStableStartRef.current = null;
+    documentStableFrameCountRef.current = 0;
     documentAutoCaptureLockedRef.current = false;
   };
 
@@ -335,6 +340,13 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     if (documentStreamRef.current) {
       documentStreamRef.current.getTracks().forEach((track) => track.stop());
       documentStreamRef.current = null;
+    }
+    if (documentVideoTrackRef.current) {
+      documentVideoTrackRef.current = null;
+    }
+    if (documentFocusTimerRef.current) {
+      window.clearInterval(documentFocusTimerRef.current);
+      documentFocusTimerRef.current = null;
     }
     if (documentVideoRef.current) {
       documentVideoRef.current.srcObject = null;
@@ -604,6 +616,53 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     }
   };
 
+  const applyDocumentAutoFocus = async () => {
+    const track = documentVideoTrackRef.current;
+    if (!track || typeof track.applyConstraints !== 'function') return;
+    try {
+      const capabilities = track.getCapabilities ? (track.getCapabilities() as any) : null;
+      const constraints: MediaTrackConstraints = {};
+      const advanced: MediaTrackConstraintSet[] = [];
+
+      if (capabilities?.focusMode) {
+        const modes = Array.isArray(capabilities.focusMode) ? capabilities.focusMode : [];
+        if (modes.includes('continuous')) {
+          (constraints as any).focusMode = 'continuous';
+        } else if (modes.includes('single-shot')) {
+          (constraints as any).focusMode = 'single-shot';
+        }
+      }
+
+      if (capabilities?.focusDistance) {
+        const focusCaps = capabilities.focusDistance as MediaSettingsRange | undefined;
+        if (focusCaps && typeof focusCaps.min === 'number' && typeof focusCaps.max === 'number') {
+          const target = focusCaps.min + (focusCaps.max - focusCaps.min) * 0.15;
+          advanced.push({ focusDistance: target } as MediaTrackConstraintSet);
+        }
+      }
+
+      if (advanced.length) {
+        (constraints as any).advanced = advanced;
+      }
+
+      if (Object.keys(constraints).length) {
+        await track.applyConstraints(constraints);
+      }
+    } catch {
+      // ignore focus failures
+    }
+  };
+
+  const startDocumentFocusLoop = () => {
+    if (documentFocusTimerRef.current) {
+      window.clearInterval(documentFocusTimerRef.current);
+    }
+    applyDocumentAutoFocus();
+    documentFocusTimerRef.current = window.setInterval(() => {
+      applyDocumentAutoFocus();
+    }, 1400);
+  };
+
   const startDocumentCamera = async () => {
     setDocumentCameraError('');
     stopDocumentCameraStream();
@@ -625,6 +684,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         audio: false,
       });
       documentStreamRef.current = stream;
+      documentVideoTrackRef.current = stream.getVideoTracks()[0] ?? null;
       if (documentVideoRef.current) {
         documentVideoRef.current.setAttribute('playsinline', 'true');
         documentVideoRef.current.setAttribute('webkit-playsinline', 'true');
@@ -645,6 +705,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         throw new Error('camera_unavailable');
       }
       setDocumentCameraLoading(false);
+      startDocumentFocusLoop();
     } catch {
       setDocumentCameraError(t('errors.cameraUnavailable'));
       setDocumentCameraLoading(false);
@@ -994,8 +1055,15 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     if (!documentStableStartRef.current) {
       documentStableStartRef.current = Date.now();
     }
+    documentStableFrameCountRef.current += 1;
     const elapsed = Date.now() - (documentStableStartRef.current || 0);
-    if (elapsed >= DOCUMENT_AUTO_CAPTURE_DELAY && !documentAutoCaptureLockedRef.current && !identityBusy) {
+    const hasStableFrames = documentStableFrameCountRef.current >= DOCUMENT_REQUIRED_STABLE_FRAMES;
+    if (
+      hasStableFrames &&
+      elapsed >= DOCUMENT_AUTO_CAPTURE_DELAY &&
+      !documentAutoCaptureLockedRef.current &&
+      !identityBusy
+    ) {
       triggerDocumentAutoCapture();
     }
   };
@@ -2480,7 +2548,10 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                   <p className="mt-4 text-[11px] text-white/90 font-semibold text-center px-6">
                     {t(documentValidation.messageKey)}
                   </p>
-                  <p className="mt-2 text-[10px] text-white/60 text-center px-6">
+                  <p className="mt-3 text-xs sm:text-sm text-white font-semibold text-center px-6 flex items-center justify-center gap-2">
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/90 text-[11px] text-white">
+                      ✓
+                    </span>
                     {t('onboarding.step1.documentAutoCapture')}
                   </p>
                 </div>
