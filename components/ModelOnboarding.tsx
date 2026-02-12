@@ -54,6 +54,7 @@ const DOCUMENT_FOCUS_MIN = 45;
 const DOCUMENT_MAX_DIMENSION = 1600;
 const DOCUMENT_AUTO_CAPTURE_DELAY = 0;
 const DOCUMENT_REQUIRED_STABLE_FRAMES = 1;
+const DOCUMENT_AUTO_CAPTURE_ENABLED = false;
 
 const readExifOrientation = (buffer: ArrayBuffer) => {
   try {
@@ -1091,6 +1092,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     const elapsed = Date.now() - (documentStableStartRef.current || 0);
     const hasStableFrames = documentStableFrameCountRef.current >= DOCUMENT_REQUIRED_STABLE_FRAMES;
     if (
+      DOCUMENT_AUTO_CAPTURE_ENABLED &&
       hasStableFrames &&
       elapsed >= DOCUMENT_AUTO_CAPTURE_DELAY &&
       !documentAutoCaptureLockedRef.current &&
@@ -2752,7 +2754,16 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
               >
                 {t('onboarding.step1.documentCameraRetry')}
               </button>
-            ) : null}
+            ) : (
+              <button
+                type="button"
+                onClick={() => captureDocumentPhoto(false)}
+                disabled={!documentValidation.valid || documentCameraLoading || identityBusy}
+                className="flex-1 px-4 py-3 rounded-2xl bg-emerald-500 text-white text-xs font-bold uppercase tracking-widest hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {t('onboarding.step1.documentCapture')}
+              </button>
+            )}
             <button
               type="button"
               onClick={cancelDocumentCapture}
