@@ -46,13 +46,13 @@ type DocumentDetection = {
 const DOCUMENT_FRAME_RATIO = 1.586;
 const DOCUMENT_ANALYSIS_WIDTH = 320;
 const DOCUMENT_ANALYSIS_INTERVAL = 350;
-const DOCUMENT_MIN_COVERAGE = 0.6;
-const DOCUMENT_MAX_COVERAGE = 0.95;
-const DOCUMENT_CENTER_TOLERANCE = 0.12;
-const DOCUMENT_TILT_LIMIT = 7;
-const DOCUMENT_FOCUS_MIN = 120;
+const DOCUMENT_MIN_COVERAGE = 0.5;
+const DOCUMENT_MAX_COVERAGE = 0.98;
+const DOCUMENT_CENTER_TOLERANCE = 0.18;
+const DOCUMENT_TILT_LIMIT = 10;
+const DOCUMENT_FOCUS_MIN = 60;
 const DOCUMENT_MAX_DIMENSION = 1600;
-const DOCUMENT_AUTO_CAPTURE_DELAY = 900;
+const DOCUMENT_AUTO_CAPTURE_DELAY = 0;
 
 const readExifOrientation = (buffer: ArrayBuffer) => {
   try {
@@ -869,7 +869,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     const offsetY = Math.abs(centerY - analysisHeight / 2) / (analysisHeight / 2);
     const centered = offsetX <= DOCUMENT_CENTER_TOLERANCE && offsetY <= DOCUMENT_CENTER_TOLERANCE;
     const ratio = bboxHeight / bboxWidth;
-    const isPortrait = ratio >= 1.1;
+    const isPortrait = ratio >= 1.0;
 
     const meanX = sumX / sampleCount;
     const meanY = sumY / sampleCount;
