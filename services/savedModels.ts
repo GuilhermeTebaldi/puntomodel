@@ -1,3 +1,5 @@
+import { AuthUser, getCurrentUser } from './auth';
+
 export type SavedModelEntry = {
   id: string;
   savedAt: string;
@@ -6,6 +8,21 @@ export type SavedModelEntry = {
 const STORAGE_KEY = 'punto_saved_models';
 
 const isBrowser = () => typeof window !== 'undefined';
+
+const resolveUser = (user?: AuthUser | null) => {
+  if (user === undefined) return getCurrentUser();
+  return user;
+};
+
+const getStorageKey = (user?: AuthUser | null) => {
+  const activeUser = resolveUser(user);
+  return activeUser?.id ? `${STORAGE_KEY}:${activeUser.id}` : STORAGE_KEY;
+};
+
+export const isSavedModelsStorageKey = (key: string | null) => {
+  if (!key) return false;
+  return key === STORAGE_KEY || key.startsWith(`${STORAGE_KEY}:`);
+};
 
 const sanitizeEntries = (value: unknown): SavedModelEntry[] => {
   if (!Array.isArray(value)) return [];
@@ -32,38 +49,67 @@ const sanitizeEntries = (value: unknown): SavedModelEntry[] => {
   return entries;
 };
 
-const readEntries = (): SavedModelEntry[] => {
+const readEntries = (user?: AuthUser | null): SavedModelEntry[] => {
   if (!isBrowser()) return [];
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return [];
-  try {
-    return sanitizeEntries(JSON.parse(raw));
-  } catch {
-    return [];
+  const activeUser = resolveUser(user);
+  const key = getStorageKey(activeUser);
+  const raw = window.localStorage.getItem(key);
+  if (raw) {
+    try {
+      return sanitizeEntries(JSON.parse(raw));
+    } catch {
+      return [];
+    }
   }
+  if (activeUser?.id) {
+    const legacyRaw = window.localStorage.getItem(STORAGE_KEY);
+    if (!legacyRaw) return [];
+    try {
+      const legacyEntries = sanitizeEntries(JSON.parse(legacyRaw));
+      if (legacyEntries.length) {
+        window.localStorage.setItem(key, JSON.stringify(legacyEntries));
+        return legacyEntries;
+      }
+    } catch {
+      return [];
+    }
+  }
+  return [];
 };
 
-const writeEntries = (entries: SavedModelEntry[]) => {
+const writeEntries = (entries: SavedModelEntry[], user?: AuthUser | null) => {
   if (!isBrowser()) return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  const key = getStorageKey(user);
+  window.localStorage.setItem(key, JSON.stringify(entries));
   window.dispatchEvent(new Event('punto_saved_models'));
 };
 
-export const getSavedModels = () => readEntries();
+export const getSavedModels = (user?: AuthUser | null) => readEntries(user);
 
-export const getSavedModelIds = () => readEntries().map((entry) => entry.id);
+export const getSavedModelIds = (user?: AuthUser | null) => readEntries(user).map((entry) => entry.id);
 
-export const isModelSaved = (id: string) => readEntries().some((entry) => entry.id === id);
+export const isModelSaved = (id: string, user?: AuthUser | null) => readEntries(user).some((entry) => entry.id === id);
 
-export const toggleSavedModel = (id: string) => {
-  const entries = readEntries();
+export const toggleSavedModel = (id: string, user?: AuthUser | null) => {
+  const entries = readEntries(user);
   const index = entries.findIndex((entry) => entry.id === id);
   if (index >= 0) {
     entries.splice(index, 1);
-    writeEntries(entries);
+    writeEntries(entries, user);
     return { saved: false, entries };
   }
   const next = [{ id, savedAt: new Date().toISOString() }, ...entries];
-  writeEntries(next);
+  writeEntries(next, user);
   return { saved: true, entries: next };
+};
+
+export const pruneSavedModels = (validIds: string[], user?: AuthUser | null) => {
+  const entries = readEntries(user);
+  if (!entries.length) return entries;
+  const validSet = new Set(validIds);
+  const next = entries.filter((entry) => validSet.has(entry.id));
+  if (next.length !== entries.length) {
+    writeEntries(next, user);
+  }
+  return next;
 };

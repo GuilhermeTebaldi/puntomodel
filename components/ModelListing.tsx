@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, Heart, Search, SlidersHorizontal } from 'lucide-react';
 import { ModelProfileData, isBillingActive } from '../services/models';
-import { getSavedModelIds, toggleSavedModel } from '../services/savedModels';
+import { getSavedModelIds, isSavedModelsStorageKey, toggleSavedModel } from '../services/savedModels';
 import { useI18n } from '../translations/i18n';
 import { getIdentityLabel } from '../translations';
 import ModelCard from './ModelCard';
@@ -34,7 +34,7 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
   useEffect(() => {
     const refresh = () => setSavedIds(getSavedModelIds());
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === 'punto_saved_models') refresh();
+      if (isSavedModelsStorageKey(event.key)) refresh();
     };
     window.addEventListener('punto_saved_models', refresh);
     window.addEventListener('storage', handleStorage);

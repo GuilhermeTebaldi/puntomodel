@@ -12,7 +12,7 @@ import MapView from './components/MapView';
 import ModelProfile from './components/ModelProfile';
 import { AuthUser, clearCurrentUser, getCurrentUser, getPendingModelProfile, PendingModelProfile } from './services/auth';
 import { fetchModelByEmail, fetchModelById, fetchModelsAll, ModelProfileData } from './services/models';
-import { getSavedModelIds } from './services/savedModels';
+import { getSavedModelIds, isSavedModelsStorageKey, pruneSavedModels } from './services/savedModels';
 import AdminPage from './components/AdminPage';
 import ModelDashboard from './components/ModelDashboard';
 import ModelListing from './components/ModelListing';
@@ -91,7 +91,7 @@ const App: React.FC = () => {
     if (typeof window === 'undefined') return;
     const refresh = () => setSavedModelIds(getSavedModelIds());
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === 'punto_saved_models') {
+      if (isSavedModelsStorageKey(event.key)) {
         refresh();
       }
     };
@@ -102,6 +102,19 @@ const App: React.FC = () => {
       window.removeEventListener('storage', handleStorage);
     };
   }, []);
+
+  useEffect(() => {
+    setSavedModelIds(getSavedModelIds());
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!featuredModels.length) return;
+    const ids = featuredModels.map((model) => model.id);
+    pruneSavedModels(ids);
+    if (currentUser) {
+      pruneSavedModels(ids, null);
+    }
+  }, [currentUser, featuredModels]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

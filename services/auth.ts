@@ -71,9 +71,11 @@ export const setCurrentUser = (user: AuthUser | null) => {
   if (!isBrowser()) return;
   if (!user) {
     window.localStorage.removeItem(CURRENT_USER_KEY);
+    window.dispatchEvent(new Event('punto_saved_models'));
     return;
   }
   window.localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+  window.dispatchEvent(new Event('punto_saved_models'));
 };
 
 export const getCurrentUser = (): AuthUser | null => {
@@ -92,6 +94,7 @@ export const getCurrentUser = (): AuthUser | null => {
 export const clearCurrentUser = () => {
   if (!isBrowser()) return;
   window.localStorage.removeItem(CURRENT_USER_KEY);
+  window.dispatchEvent(new Event('punto_saved_models'));
 };
 
 export type RememberedCredentials = {

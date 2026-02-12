@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { X, MessageCircle, Phone, MapPin, CheckCircle2, ShieldCheck, Heart, Share2, Info, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fetchModelMetrics, rateModel, trackModelEvent } from '../services/models';
 import { getCurrentUser } from '../services/auth';
-import { isModelSaved, toggleSavedModel } from '../services/savedModels';
+import { isModelSaved, isSavedModelsStorageKey, toggleSavedModel } from '../services/savedModels';
 import { useI18n } from '../translations/i18n';
 import { getIdentityLabel } from '../translations';
 import { getTranslationTarget } from '../services/translate';
@@ -167,6 +167,19 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
 
   useEffect(() => {
     setIsSaved(isModelSaved(model.id));
+  }, [model.id]);
+
+  useEffect(() => {
+    const refresh = () => setIsSaved(isModelSaved(model.id));
+    const handleStorage = (event: StorageEvent) => {
+      if (isSavedModelsStorageKey(event.key)) refresh();
+    };
+    window.addEventListener('punto_saved_models', refresh);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('punto_saved_models', refresh);
+      window.removeEventListener('storage', handleStorage);
+    };
   }, [model.id]);
 
   useEffect(() => {
