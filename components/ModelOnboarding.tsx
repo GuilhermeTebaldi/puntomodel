@@ -46,14 +46,14 @@ type DocumentDetection = {
 const DOCUMENT_FRAME_RATIO = 1.586;
 const DOCUMENT_ANALYSIS_WIDTH = 320;
 const DOCUMENT_ANALYSIS_INTERVAL = 280;
-const DOCUMENT_MIN_COVERAGE = 0.5;
-const DOCUMENT_MAX_COVERAGE = 0.96;
-const DOCUMENT_CENTER_TOLERANCE = 0.18;
-const DOCUMENT_TILT_LIMIT = 12;
-const DOCUMENT_FOCUS_MIN = 60;
+const DOCUMENT_MIN_COVERAGE = 0.45;
+const DOCUMENT_MAX_COVERAGE = 0.98;
+const DOCUMENT_CENTER_TOLERANCE = 0.22;
+const DOCUMENT_TILT_LIMIT = 15;
+const DOCUMENT_FOCUS_MIN = 45;
 const DOCUMENT_MAX_DIMENSION = 1600;
-const DOCUMENT_AUTO_CAPTURE_DELAY = 750;
-const DOCUMENT_REQUIRED_STABLE_FRAMES = 3;
+const DOCUMENT_AUTO_CAPTURE_DELAY = 0;
+const DOCUMENT_REQUIRED_STABLE_FRAMES = 1;
 
 const readExifOrientation = (buffer: ArrayBuffer) => {
   try {
@@ -904,7 +904,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     }
 
     const magAvg = magSum / Math.max(1, (analysisWidth - 2) * (analysisHeight - 2));
-    const threshold = Math.max(30, magAvg * 2.0);
+    const threshold = Math.max(25, magAvg * 1.8);
     let edgeCount = 0;
     let minX = analysisWidth;
     let minY = analysisHeight;
@@ -938,7 +938,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       }
     }
 
-    const minEdges = Math.max(90, Math.round(pixelCount * 0.0015));
+    const minEdges = Math.max(70, Math.round(pixelCount * 0.0012));
     if (edgeCount < minEdges || sampleCount < 20) {
       updateDocumentValidation({
         valid: false,
@@ -959,7 +959,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     const offsetY = Math.abs(centerY - analysisHeight / 2) / (analysisHeight / 2);
     const centered = offsetX <= DOCUMENT_CENTER_TOLERANCE && offsetY <= DOCUMENT_CENTER_TOLERANCE;
     const ratio = bboxHeight / bboxWidth;
-    const isPortrait = ratio >= 1.0;
+    const isPortrait = ratio >= 0.92;
 
     const meanX = sumX / sampleCount;
     const meanY = sumY / sampleCount;
@@ -1048,11 +1048,11 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       return;
     }
 
-    const focusFloor = 35;
+    const focusFloor = 25;
     const focusThreshold =
       nextPeak >= DOCUMENT_FOCUS_MIN
-        ? Math.max(DOCUMENT_FOCUS_MIN, nextPeak * 0.85)
-        : Math.max(focusFloor, nextPeak * 0.9);
+        ? Math.max(DOCUMENT_FOCUS_MIN, nextPeak * 0.8)
+        : Math.max(focusFloor, nextPeak * 0.85);
 
     if (focusScore < focusThreshold) {
       updateDocumentValidation({
