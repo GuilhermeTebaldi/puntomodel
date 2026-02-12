@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import Logo from './Logo';
 import { useI18n } from '../translations/i18n';
+import { fetchModelNotifications, markModelNotificationsRead } from '../services/models';
 
 interface HeaderProps {
   onLoginClick: () => void;
@@ -32,19 +33,38 @@ interface HeaderProps {
   hasProfile?: boolean;
   onOpenDashboard?: () => void;
   savedOnlineModels?: Array<{ id: string; name: string }>;
+  currentModelId?: string;
 }
 
-const Header: React.FC<HeaderProps> = ({ onLoginClick, onRegisterClick, currentUser, onLogout, onOpenProfile, hasProfile, onOpenDashboard, savedOnlineModels }) => {
-  const { language, setLanguage, t, languageOptions } = useI18n();
+const Header: React.FC<HeaderProps> = ({
+  onLoginClick,
+  onRegisterClick,
+  currentUser,
+  onLogout,
+  onOpenProfile,
+  hasProfile,
+  onOpenDashboard,
+  savedOnlineModels,
+  currentModelId,
+}) => {
+  const { language, setLanguage, t, languageOptions, locale } = useI18n();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isLangOpen, setIsLangOpen] = useState(false);
+  const [modelNotifications, setModelNotifications] = useState<Array<{
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    read: boolean;
+    createdAt: string;
+  }>>([]);
   const notificationRef = useRef<HTMLDivElement>(null);
   const languageRefDesktop = useRef<HTMLDivElement>(null);
   const languageRefMobile = useRef<HTMLDivElement>(null);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-  const toggleNotifications = () => setIsNotificationsOpen(!isNotificationsOpen);
+  const isModelNotificationsEnabled = Boolean(currentUser?.role === 'model' && currentModelId);
   
   const navigateTo = (path: string) => {
     window.history.pushState({}, '', path);
@@ -70,7 +90,29 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onRegisterClick, currentU
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const baseNotifications = currentUser ? [
+  useEffect(() => {
+    if (!isModelNotificationsEnabled || !currentModelId) {
+      setModelNotifications([]);
+      return;
+    }
+    let mounted = true;
+    const load = () => {
+      fetchModelNotifications(currentModelId)
+        .then((data) => {
+          if (!mounted) return;
+          setModelNotifications(data);
+        })
+        .catch(() => undefined);
+    };
+    load();
+    const intervalId = window.setInterval(load, 20000);
+    return () => {
+      mounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, [currentModelId, isModelNotificationsEnabled]);
+
+  const baseNotifications = currentUser && !isModelNotificationsEnabled ? [
     {
       id: 1,
       icon: <MessageCircle className="text-blue-500" size={18} />,
@@ -80,15 +122,55 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onRegisterClick, currentU
     },
   ] : [];
 
-  const savedNotifications = (savedOnlineModels || []).map((model) => ({
+  const guestNotifications = !currentUser && !isModelNotificationsEnabled ? [
+    {
+      id: 'platform',
+      icon: <ShieldCheck className="text-[#e3262e]" size={18} />,
+      title: t('header.notificationPlatformTitle'),
+      desc: t('header.notificationPlatformDesc'),
+      time: t('header.notificationNow'),
+    },
+  ] : [];
+
+  const savedNotifications = !isModelNotificationsEnabled
+    ? (savedOnlineModels || []).map((model) => ({
     id: `saved-${model.id}`,
     icon: <CheckCircle2 className="text-green-500" size={18} />,
     title: t('header.savedOnlineTitle', { name: model.name }),
     desc: t('header.savedOnlineDesc', { name: model.name }),
     time: t('header.notificationNow'),
-  }));
+    }))
+    : [];
 
-  const notifications = [...baseNotifications, ...savedNotifications];
+  const notifications = [...guestNotifications, ...baseNotifications, ...savedNotifications];
+  const visibleModelNotifications = modelNotifications.filter((notification) => notification.type !== 'comment');
+  const unreadCount = visibleModelNotifications.filter((notification) => !notification.read).length;
+  const notificationBadgeCount = isModelNotificationsEnabled ? unreadCount : notifications.length;
+
+  const handleNotificationsToggle = async () => {
+    const next = !isNotificationsOpen;
+    setIsNotificationsOpen(next);
+    if (next && isModelNotificationsEnabled && currentModelId && unreadCount > 0) {
+      try {
+        await markModelNotificationsRead(currentModelId);
+        setModelNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  const handleOpenNotifications = async () => {
+    setIsNotificationsOpen(true);
+    if (isModelNotificationsEnabled && currentModelId && unreadCount > 0) {
+      try {
+        await markModelNotificationsRead(currentModelId);
+        setModelNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      } catch {
+        // ignore
+      }
+    }
+  };
 
   const FlagButton = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div className="relative" ref={isMobile ? languageRefMobile : languageRefDesktop} data-lang-menu>
@@ -211,11 +293,11 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onRegisterClick, currentU
               <FlagButton />
               
               <div className="relative" ref={notificationRef}>
-                <button onClick={toggleNotifications} className="block focus:outline-none">
+                <button onClick={handleNotificationsToggle} className="block focus:outline-none">
                   <Bell size={20} className={`cursor-pointer transition-colors ${isNotificationsOpen ? 'text-[#e3262e]' : 'text-gray-700'}`} />
-                  {notifications.length > 0 && (
+                  {notificationBadgeCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold animate-pulse">
-                      {notifications.length}
+                      {notificationBadgeCount}
                     </span>
                   )}
                 </button>
@@ -228,10 +310,22 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onRegisterClick, currentU
                       <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{t('header.notificationsRecent')}</span>
                     </div>
                     <div className="max-h-96 overflow-y-auto">
-                      {notifications.length === 0 && (
+                      {isModelNotificationsEnabled && visibleModelNotifications.length === 0 && (
                         <div className="p-4 text-sm text-gray-500">{t('header.notificationsEmpty')}</div>
                       )}
-                      {notifications.map((n) => (
+                      {isModelNotificationsEnabled && visibleModelNotifications.map((n) => (
+                        <div key={n.id} className="p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                          <p className="text-sm font-bold text-gray-900">{n.title}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
+                          <p className="text-[10px] text-gray-400 mt-2">
+                            {new Date(n.createdAt).toLocaleString(locale)}
+                          </p>
+                        </div>
+                      ))}
+                      {!isModelNotificationsEnabled && notifications.length === 0 && (
+                        <div className="p-4 text-sm text-gray-500">{t('header.notificationsEmpty')}</div>
+                      )}
+                      {!isModelNotificationsEnabled && notifications.map((n) => (
                         <div key={n.id} className="p-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors flex gap-3">
                           <div className="mt-1">{n.icon}</div>
                           <div className="flex-1">
@@ -242,7 +336,7 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onRegisterClick, currentU
                         </div>
                       ))}
                     </div>
-                    {notifications.length > 0 && (
+                    {!isModelNotificationsEnabled && notifications.length > 0 && (
                       <button className="w-full py-3 text-center text-sm font-bold text-[#e3262e] bg-gray-50 hover:bg-gray-100 transition-colors">
                         {t('header.notificationsSeeAll')}
                       </button>
@@ -277,11 +371,18 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onRegisterClick, currentU
             <div className="flex items-center gap-3">
               <FlagButton isMobile={true} />
               <div className="relative">
-                <button onClick={() => { setIsNotificationsOpen(true); setIsMenuOpen(false); }}>
+                <button
+                  onClick={() => {
+                    handleOpenNotifications();
+                    setIsMenuOpen(false);
+                  }}
+                >
                   <Bell size={22} className="text-gray-700" />
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
-                    {notifications.length}
-                  </span>
+                  {notificationBadgeCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
+                      {notificationBadgeCount}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>

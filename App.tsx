@@ -757,6 +757,7 @@ const App: React.FC = () => {
         hasProfile={Boolean(myModelProfile)}
         onOpenDashboard={() => navigateTo('/dashboard')}
         savedOnlineModels={savedOnlineModels}
+        currentModelId={myModelProfile?.id}
       />
       
       {/* Barra de Busca Fixa (Sticky) - Aparece ao descer a página */}

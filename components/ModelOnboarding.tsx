@@ -52,6 +52,7 @@ const DOCUMENT_CENTER_TOLERANCE = 0.12;
 const DOCUMENT_TILT_LIMIT = 7;
 const DOCUMENT_FOCUS_MIN = 120;
 const DOCUMENT_MAX_DIMENSION = 1600;
+const DOCUMENT_AUTO_CAPTURE_DELAY = 900;
 
 const readExifOrientation = (buffer: ArrayBuffer) => {
   try {
@@ -117,6 +118,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     reason: 'idle',
     messageKey: 'onboarding.step1.documentHint',
   });
+  const [documentCapturePreview, setDocumentCapturePreview] = useState<null | { dataUrl: string; file: File }>(null);
   const [faceCameraActive, setFaceCameraActive] = useState(false);
   const [faceCameraLoading, setFaceCameraLoading] = useState(false);
   const [faceCameraError, setFaceCameraError] = useState('');
@@ -184,6 +186,9 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const documentScanCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const documentDetectionRef = useRef<DocumentDetection | null>(null);
   const documentScanTimerRef = useRef<number | null>(null);
+  const documentStableStartRef = useRef<number | null>(null);
+  const documentAutoCaptureLockedRef = useRef(false);
+  const documentCaptureInProgressRef = useRef(false);
   const hasSelectedLocation = Boolean(selectedLocation && selectedLocation.lat && selectedLocation.lon);
 
   const getBrowserCountryCode = () => {
@@ -321,7 +326,12 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     }
   };
 
-  const stopDocumentCameraStream = () => {
+  const resetDocumentAutoCapture = () => {
+    documentStableStartRef.current = null;
+    documentAutoCaptureLockedRef.current = false;
+  };
+
+  const stopDocumentCameraStream = (options?: { unlock?: boolean }) => {
     if (documentStreamRef.current) {
       documentStreamRef.current.getTracks().forEach((track) => track.stop());
       documentStreamRef.current = null;
@@ -334,8 +344,12 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       documentScanTimerRef.current = null;
     }
     documentDetectionRef.current = null;
+    documentCaptureInProgressRef.current = false;
+    resetDocumentAutoCapture();
     setDocumentCameraLoading(false);
-    unlockPortrait();
+    if (options?.unlock !== false) {
+      unlockPortrait();
+    }
   };
 
   useEffect(() => {
@@ -371,6 +385,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         reason: 'idle',
         messageKey: 'onboarding.step1.documentHint',
       });
+      setDocumentCapturePreview(null);
       stopDocumentCameraStream();
       setScanningIdentity(false);
       setIdentityScanMessage('');
@@ -639,16 +654,19 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
 
   const openDocumentCamera = () => {
     setDocumentCameraOpen(true);
+    setDocumentCapturePreview(null);
     setDocumentValidation({
       valid: false,
       reason: 'idle',
       messageKey: 'onboarding.step1.documentHint',
     });
+    resetDocumentAutoCapture();
     startDocumentCamera();
   };
 
   const closeDocumentCamera = () => {
     setDocumentCameraOpen(false);
+    setDocumentCapturePreview(null);
     stopDocumentCameraStream();
   };
 
@@ -734,7 +752,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   // Lightweight document scan to validate orientation, alignment, and focus inside the frame.
   const analyzeDocumentFrame = () => {
     const video = documentVideoRef.current;
-    if (!video || documentCameraLoading) return;
+    if (!video || documentCameraLoading || documentCapturePreview || documentCaptureInProgressRef.current) return;
     const mapping = getDocumentFrameMapping();
     if (!mapping) {
       updateDocumentValidation({
@@ -743,6 +761,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         messageKey: 'onboarding.step1.documentHint',
       });
       documentDetectionRef.current = null;
+      resetDocumentAutoCapture();
       return;
     }
 
@@ -837,6 +856,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         messageKey: 'onboarding.step1.documentHint',
       });
       documentDetectionRef.current = null;
+      resetDocumentAutoCapture();
       return;
     }
 
@@ -887,6 +907,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         messageKey: 'onboarding.step1.documentRotate',
       });
       documentDetectionRef.current = null;
+      resetDocumentAutoCapture();
       return;
     }
 
@@ -897,6 +918,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         messageKey: 'onboarding.step1.documentMoveCloser',
       });
       documentDetectionRef.current = null;
+      resetDocumentAutoCapture();
       return;
     }
 
@@ -907,6 +929,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         messageKey: 'onboarding.step1.documentMoveAway',
       });
       documentDetectionRef.current = null;
+      resetDocumentAutoCapture();
       return;
     }
 
@@ -917,6 +940,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         messageKey: 'onboarding.step1.documentAlign',
       });
       documentDetectionRef.current = null;
+      resetDocumentAutoCapture();
       return;
     }
 
@@ -927,6 +951,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         messageKey: 'onboarding.step1.documentCenter',
       });
       documentDetectionRef.current = null;
+      resetDocumentAutoCapture();
       return;
     }
 
@@ -937,6 +962,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         messageKey: 'onboarding.step1.documentFocus',
       });
       documentDetectionRef.current = null;
+      resetDocumentAutoCapture();
       return;
     }
 
@@ -958,10 +984,24 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       reason: 'ready',
       messageKey: 'onboarding.step1.documentReady',
     });
+
+    if (!documentStableStartRef.current) {
+      documentStableStartRef.current = Date.now();
+    }
+    const elapsed = Date.now() - (documentStableStartRef.current || 0);
+    if (
+      elapsed >= DOCUMENT_AUTO_CAPTURE_DELAY &&
+      !documentAutoCaptureLockedRef.current &&
+      !identityBusy
+    ) {
+      documentAutoCaptureLockedRef.current = true;
+      documentCaptureInProgressRef.current = true;
+      captureDocumentPhoto();
+    }
   };
 
   useEffect(() => {
-    if (!documentCameraOpen) return undefined;
+    if (!documentCameraOpen || documentCapturePreview) return undefined;
     if (documentScanTimerRef.current) {
       window.clearInterval(documentScanTimerRef.current);
       documentScanTimerRef.current = null;
@@ -976,7 +1016,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         documentScanTimerRef.current = null;
       }
     };
-  }, [documentCameraOpen, documentCameraLoading]);
+  }, [documentCameraOpen, documentCameraLoading, documentCapturePreview]);
 
   const readFileAsDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -1172,48 +1212,60 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   };
 
   const captureDocumentPhoto = async () => {
-    const video = documentVideoRef.current;
-    if (!video || !video.videoWidth) {
-      setDocumentCameraError(t('errors.cameraUnavailable'));
-      return;
-    }
-    const detection = documentDetectionRef.current;
-    const fallback = getDocumentFrameMapping();
-    const crop = detection?.bbox ?? (fallback ? { x: fallback.x, y: fallback.y, width: fallback.width, height: fallback.height } : null);
-    if (!crop) {
-      updateDocumentValidation({
-        valid: false,
-        reason: 'no-edges',
-        messageKey: 'onboarding.step1.documentHint',
+    if (documentCaptureInProgressRef.current) return;
+    documentCaptureInProgressRef.current = true;
+    try {
+      const video = documentVideoRef.current;
+      if (!video || !video.videoWidth) {
+        setDocumentCameraError(t('errors.cameraUnavailable'));
+        return;
+      }
+      const detection = documentDetectionRef.current;
+      const fallback = getDocumentFrameMapping();
+      const crop = detection?.bbox ?? (fallback ? { x: fallback.x, y: fallback.y, width: fallback.width, height: fallback.height } : null);
+      if (!crop) {
+        updateDocumentValidation({
+          valid: false,
+          reason: 'no-edges',
+          messageKey: 'onboarding.step1.documentHint',
+        });
+        return;
+      }
+      const padding = 0.04;
+      const padX = crop.width * padding;
+      const padY = crop.height * padding;
+      const cropX = Math.max(0, crop.x - padX);
+      const cropY = Math.max(0, crop.y - padY);
+      const cropW = Math.min(video.videoWidth - cropX, crop.width + padX * 2);
+      const cropH = Math.min(video.videoHeight - cropY, crop.height + padY * 2);
+      const scale = Math.min(1, DOCUMENT_MAX_DIMENSION / Math.max(cropW, cropH));
+      const outputW = Math.max(1, Math.round(cropW * scale));
+      const outputH = Math.max(1, Math.round(cropH * scale));
+
+      const canvas = document.createElement('canvas');
+      canvas.width = outputW;
+      canvas.height = outputH;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, outputW, outputH);
+
+      const portraitCanvas = rotateCanvasToPortrait(canvas);
+      const dataUrl = portraitCanvas.toDataURL('image/jpeg', 0.9);
+      const blob = await new Promise<Blob>((resolve) =>
+        portraitCanvas.toBlob((created) => resolve(created || new Blob()), 'image/jpeg', 0.9)
+      );
+      const file = new File([blob], `document-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      stopDocumentCameraStream({ unlock: false });
+      setDocumentCapturePreview({ dataUrl, file });
+      setDocumentCameraError('');
+      setDocumentValidation({
+        valid: true,
+        reason: 'ready',
+        messageKey: 'onboarding.step1.documentReady',
       });
-      return;
+    } finally {
+      documentCaptureInProgressRef.current = false;
     }
-    const padding = 0.04;
-    const padX = crop.width * padding;
-    const padY = crop.height * padding;
-    const cropX = Math.max(0, crop.x - padX);
-    const cropY = Math.max(0, crop.y - padY);
-    const cropW = Math.min(video.videoWidth - cropX, crop.width + padX * 2);
-    const cropH = Math.min(video.videoHeight - cropY, crop.height + padY * 2);
-    const scale = Math.min(1, DOCUMENT_MAX_DIMENSION / Math.max(cropW, cropH));
-    const outputW = Math.max(1, Math.round(cropW * scale));
-    const outputH = Math.max(1, Math.round(cropH * scale));
-
-    const canvas = document.createElement('canvas');
-    canvas.width = outputW;
-    canvas.height = outputH;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, outputW, outputH);
-
-    const portraitCanvas = rotateCanvasToPortrait(canvas);
-    const dataUrl = portraitCanvas.toDataURL('image/jpeg', 0.9);
-    const blob = await new Promise<Blob>((resolve) =>
-      portraitCanvas.toBlob((created) => resolve(created || new Blob()), 'image/jpeg', 0.9)
-    );
-    const file = new File([blob], `document-${Date.now()}.jpg`, { type: 'image/jpeg' });
-    closeDocumentCamera();
-    await processIdentityImage(file, dataUrl);
   };
 
   const handleDocumentRetake = () => {
@@ -1221,7 +1273,16 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     setIdentityDocumentPreview('');
     setIdentityScanError('');
     setIdentityScanSuccess(false);
+    setDocumentCapturePreview(null);
     openDocumentCamera();
+  };
+
+  const handleDocumentConfirm = async () => {
+    if (!documentCapturePreview) return;
+    const { file, dataUrl } = documentCapturePreview;
+    setDocumentCapturePreview(null);
+    closeDocumentCamera();
+    await processIdentityImage(file, dataUrl);
   };
 
   const handleIdentityUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -2382,42 +2443,76 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
             </button>
           </div>
           <div className="relative flex-1 overflow-hidden">
-            <video
-              ref={documentVideoRef}
-              className="absolute inset-0 w-full h-full object-cover"
-              playsInline
-              muted
-              autoPlay
-            />
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <div
-                ref={documentFrameRef}
-                className={`relative w-[72%] max-w-[420px] rounded-2xl border-2 shadow-[0_0_0_9999px_rgba(0,0,0,0.55)] ${
-                  documentValidation.valid ? 'border-emerald-400' : 'border-red-400'
-                }`}
-                style={{ aspectRatio: `1 / ${DOCUMENT_FRAME_RATIO}` }}
-              />
-              <p className="mt-4 text-[11px] text-white/90 font-semibold text-center px-6">
-                {t(documentValidation.messageKey)}
-              </p>
-            </div>
-            {documentCameraLoading && (
-              <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-center px-6">
-                <p className="text-sm font-bold uppercase tracking-widest text-white">
-                  {t('onboarding.step1.documentCameraLoading')}
-                </p>
-                <p className="text-xs text-white/70 mt-2">{t('onboarding.step1.documentCameraPermission')}</p>
+            {documentCapturePreview ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black">
+                <img
+                  src={documentCapturePreview.dataUrl}
+                  alt={t('onboarding.step1.identityUploadLabel')}
+                  className="w-full h-full object-contain"
+                />
+                <div className="absolute bottom-6 left-0 right-0 text-center px-6">
+                  <p className="text-sm font-bold text-white">{t('onboarding.step1.documentReviewTitle')}</p>
+                  <p className="text-xs text-white/70 mt-1">{t('onboarding.step1.documentReviewSubtitle')}</p>
+                </div>
               </div>
-            )}
-            {documentCameraError && !documentCameraLoading && (
-              <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center text-center px-6">
-                <p className="text-sm font-semibold text-white">{documentCameraError}</p>
-                <p className="text-xs text-white/70 mt-2">{t('onboarding.step1.documentCameraPermission')}</p>
-              </div>
+            ) : (
+              <>
+                <video
+                  ref={documentVideoRef}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  playsInline
+                  muted
+                  autoPlay
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <div
+                    ref={documentFrameRef}
+                    className={`relative w-[64%] max-w-[360px] rounded-2xl border-2 shadow-[0_0_0_9999px_rgba(0,0,0,0.55)] ${
+                      documentValidation.valid ? 'border-emerald-400' : 'border-red-400'
+                    }`}
+                    style={{ aspectRatio: `1 / ${DOCUMENT_FRAME_RATIO}` }}
+                  />
+                  <p className="mt-4 text-[11px] text-white/90 font-semibold text-center px-6">
+                    {t(documentValidation.messageKey)}
+                  </p>
+                </div>
+                {documentCameraLoading && (
+                  <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-center px-6">
+                    <p className="text-sm font-bold uppercase tracking-widest text-white">
+                      {t('onboarding.step1.documentCameraLoading')}
+                    </p>
+                    <p className="text-xs text-white/70 mt-2">{t('onboarding.step1.documentCameraPermission')}</p>
+                  </div>
+                )}
+                {documentCameraError && !documentCameraLoading && (
+                  <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center text-center px-6">
+                    <p className="text-sm font-semibold text-white">{documentCameraError}</p>
+                    <p className="text-xs text-white/70 mt-2">{t('onboarding.step1.documentCameraPermission')}</p>
+                  </div>
+                )}
+              </>
             )}
           </div>
           <div className="p-4 bg-black/90 border-t border-white/10 flex flex-col sm:flex-row gap-3">
-            {documentCameraError ? (
+            {documentCapturePreview ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleDocumentConfirm}
+                  disabled={identityBusy}
+                  className="flex-1 px-4 py-3 rounded-2xl bg-emerald-500 text-white text-xs font-bold uppercase tracking-widest hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {t('onboarding.step1.documentConfirm')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDocumentRetake}
+                  className="flex-1 px-4 py-3 rounded-2xl bg-white/10 text-white text-xs font-bold uppercase tracking-widest hover:bg-white/20"
+                >
+                  {t('onboarding.step1.documentRepeat')}
+                </button>
+              </>
+            ) : documentCameraError ? (
               <button
                 type="button"
                 onClick={startDocumentCamera}
