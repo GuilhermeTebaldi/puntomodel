@@ -2632,14 +2632,46 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                   alt={t('onboarding.step1.identityUploadLabel')}
                   className="w-full h-full object-contain"
                 />
-                <div className="absolute bottom-6 left-0 right-0 text-center px-6">
-                  <p className="text-sm font-bold text-white">{t('onboarding.step1.documentReviewTitle')}</p>
-                  <p className="text-xs text-white/70 mt-1">{t('onboarding.step1.documentReviewSubtitle')}</p>
-                  <p className="text-[11px] text-white/80 mt-2">
+                <div className="absolute top-16 left-0 right-0 text-center px-6">
+                  <p className="text-2xl sm:text-3xl font-black text-white uppercase tracking-[0.35em]">
                     {documentCapturePreview.side === 'back'
                       ? t('onboarding.step1.documentSideBack')
                       : t('onboarding.step1.documentSideFront')}
                   </p>
+                </div>
+                <div className="absolute bottom-6 left-0 right-0 text-center px-6">
+                  <p className="text-sm font-bold text-white">{t('onboarding.step1.documentReviewTitle')}</p>
+                  <p className="text-xs text-white/70 mt-1">{t('onboarding.step1.documentReviewSubtitle')}</p>
+                  <div className="mt-4 flex items-center justify-center gap-4">
+                    {documentFrontCapture?.dataUrl && (
+                      <div className="flex flex-col items-center gap-1">
+                        <img
+                          src={documentFrontCapture.dataUrl}
+                          alt={t('onboarding.step1.documentSideFront')}
+                          className="w-20 h-14 sm:w-24 sm:h-16 rounded-lg object-cover border border-white/30"
+                        />
+                        <span className="text-[10px] uppercase tracking-[0.2em] text-white/80">
+                          {t('onboarding.step1.documentSideFront')}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex flex-col items-center gap-1">
+                      <img
+                        src={documentCapturePreview.dataUrl}
+                        alt={
+                          documentCapturePreview.side === 'back'
+                            ? t('onboarding.step1.documentSideBack')
+                            : t('onboarding.step1.documentSideFront')
+                        }
+                        className="w-20 h-14 sm:w-24 sm:h-16 rounded-lg object-cover border border-white/50"
+                      />
+                      <span className="text-[10px] uppercase tracking-[0.2em] text-white/90">
+                        {documentCapturePreview.side === 'back'
+                          ? t('onboarding.step1.documentSideBack')
+                          : t('onboarding.step1.documentSideFront')}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -2652,6 +2684,13 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                   autoPlay
                 />
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <div className="absolute top-14 left-0 right-0 text-center px-6">
+                    <p className="text-2xl sm:text-3xl font-black text-white uppercase tracking-[0.35em]">
+                      {documentCaptureSide === 'back'
+                        ? t('onboarding.step1.documentSideBack')
+                        : t('onboarding.step1.documentSideFront')}
+                    </p>
+                  </div>
                   <div
                     ref={documentFrameRef}
                     className={`relative w-[64%] max-w-[360px] rounded-2xl border-2 shadow-[0_0_0_9999px_rgba(0,0,0,0.55)] ${
