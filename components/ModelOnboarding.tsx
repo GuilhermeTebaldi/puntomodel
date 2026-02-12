@@ -46,10 +46,10 @@ type DocumentDetection = {
 const DOCUMENT_FRAME_RATIO = 1.586;
 const DOCUMENT_ANALYSIS_WIDTH = 320;
 const DOCUMENT_ANALYSIS_INTERVAL = 280;
-const DOCUMENT_MIN_COVERAGE = 0.55;
-const DOCUMENT_MAX_COVERAGE = 0.94;
-const DOCUMENT_CENTER_TOLERANCE = 0.14;
-const DOCUMENT_TILT_LIMIT = 9;
+const DOCUMENT_MIN_COVERAGE = 0.5;
+const DOCUMENT_MAX_COVERAGE = 0.96;
+const DOCUMENT_CENTER_TOLERANCE = 0.18;
+const DOCUMENT_TILT_LIMIT = 12;
 const DOCUMENT_FOCUS_MIN = 60;
 const DOCUMENT_MAX_DIMENSION = 1600;
 const DOCUMENT_AUTO_CAPTURE_DELAY = 750;
@@ -119,7 +119,10 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     reason: 'idle',
     messageKey: 'onboarding.step1.documentHint',
   });
-  const [documentCapturePreview, setDocumentCapturePreview] = useState<null | { dataUrl: string; file: File }>(null);
+  const [documentCapturePreview, setDocumentCapturePreview] = useState<null | { dataUrl: string; file: File; side: 'front' | 'back' }>(null);
+  const [documentFrontCapture, setDocumentFrontCapture] = useState<null | { dataUrl: string; file: File }>(null);
+  const [documentBackCapture, setDocumentBackCapture] = useState<null | { dataUrl: string; file: File }>(null);
+  const [documentCaptureSide, setDocumentCaptureSide] = useState<'front' | 'back'>('front');
   const [faceCameraActive, setFaceCameraActive] = useState(false);
   const [faceCameraLoading, setFaceCameraLoading] = useState(false);
   const [faceCameraError, setFaceCameraError] = useState('');
@@ -193,6 +196,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const documentCaptureInProgressRef = useRef(false);
   const documentFocusTimerRef = useRef<number | null>(null);
   const documentVideoTrackRef = useRef<MediaStreamTrack | null>(null);
+  const documentFocusPeakRef = useRef(0);
   const hasSelectedLocation = Boolean(selectedLocation && selectedLocation.lat && selectedLocation.lon);
 
   const getBrowserCountryCode = () => {
@@ -334,6 +338,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     documentStableStartRef.current = null;
     documentStableFrameCountRef.current = 0;
     documentAutoCaptureLockedRef.current = false;
+    documentFocusPeakRef.current = 0;
   };
 
   const stopDocumentCameraStream = (options?: { unlock?: boolean }) => {
@@ -397,7 +402,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         reason: 'idle',
         messageKey: 'onboarding.step1.documentHint',
       });
-      setDocumentCapturePreview(null);
+      resetDocumentCaptures();
       stopDocumentCameraStream();
       setScanningIdentity(false);
       setIdentityScanMessage('');
@@ -713,9 +718,22 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     }
   };
 
-  const openDocumentCamera = () => {
-    setDocumentCameraOpen(true);
+  const resetDocumentCaptures = () => {
     setDocumentCapturePreview(null);
+    setDocumentFrontCapture(null);
+    setDocumentBackCapture(null);
+    setDocumentCaptureSide('front');
+  };
+
+  const openDocumentCamera = (options?: { side?: 'front' | 'back'; resetCaptures?: boolean }) => {
+    const nextSide = options?.side ?? 'front';
+    if (options?.resetCaptures !== false) {
+      resetDocumentCaptures();
+    } else {
+      setDocumentCapturePreview(null);
+    }
+    setDocumentCaptureSide(nextSide);
+    setDocumentCameraOpen(true);
     setDocumentValidation({
       valid: false,
       reason: 'idle',
@@ -729,6 +747,11 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     setDocumentCameraOpen(false);
     setDocumentCapturePreview(null);
     stopDocumentCameraStream();
+  };
+
+  const cancelDocumentCapture = () => {
+    resetDocumentCaptures();
+    closeDocumentCamera();
   };
 
   const captureFacePhoto = async () => {
@@ -966,6 +989,9 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     }
     const lapMean = lapSum / Math.max(1, lapCount);
     const focusScore = lapSumSq / Math.max(1, lapCount) - lapMean * lapMean;
+    const prevPeak = documentFocusPeakRef.current;
+    const nextPeak = Math.max(focusScore, prevPeak * 0.92);
+    documentFocusPeakRef.current = nextPeak;
 
     if (!isPortrait) {
       updateDocumentValidation({
@@ -1022,7 +1048,13 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       return;
     }
 
-    if (focusScore < DOCUMENT_FOCUS_MIN) {
+    const focusFloor = 35;
+    const focusThreshold =
+      nextPeak >= DOCUMENT_FOCUS_MIN
+        ? Math.max(DOCUMENT_FOCUS_MIN, nextPeak * 0.85)
+        : Math.max(focusFloor, nextPeak * 0.9);
+
+    if (focusScore < focusThreshold) {
       updateDocumentValidation({
         valid: false,
         reason: 'focus',
@@ -1201,7 +1233,37 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     return { dataUrl: finalDataUrl, file: normalizedFile };
   };
 
-  const processIdentityImage = async (file: File, presetDataUrl?: string) => {
+  const combineDocumentSides = async (frontDataUrl: string, backDataUrl: string) => {
+    const frontImg = await loadImageFromDataUrl(frontDataUrl);
+    const backImg = await loadImageFromDataUrl(backDataUrl);
+    const maxWidth = Math.max(frontImg.width, backImg.width);
+    const gap = Math.max(24, Math.round(maxWidth * 0.04));
+    const frontScale = maxWidth / frontImg.width;
+    const backScale = maxWidth / backImg.width;
+    const frontHeight = Math.round(frontImg.height * frontScale);
+    const backHeight = Math.round(backImg.height * backScale);
+    const canvas = document.createElement('canvas');
+    canvas.width = maxWidth;
+    canvas.height = frontHeight + gap + backHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('canvas_unavailable');
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(frontImg, 0, 0, maxWidth, frontHeight);
+    ctx.drawImage(backImg, 0, frontHeight + gap, maxWidth, backHeight);
+
+    const finalCanvas = resizeCanvasToMax(canvas, DOCUMENT_MAX_DIMENSION * 2);
+    const dataUrl = finalCanvas.toDataURL('image/jpeg', 0.9);
+    const blob = await new Promise<Blob>((resolve) =>
+      finalCanvas.toBlob((created) => resolve(created || new Blob()), 'image/jpeg', 0.9)
+    );
+    const file = new File([blob], `document-front-back-${Date.now()}.jpg`, { type: 'image/jpeg' });
+    return { dataUrl, file };
+  };
+
+  const processIdentityImage = async (file: File, presetDataUrl?: string, scanDataUrl?: string) => {
     setUploadingIdentity(true);
     setScanningIdentity(true);
     setIdentityScanMessage('');
@@ -1234,13 +1296,14 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     }
 
     const scanPromise = (async () => {
-      if (!workingDataUrl) {
+      const scanSource = scanDataUrl || workingDataUrl;
+      if (!scanSource) {
         setIdentityScanError(t('errors.identityScanFailed'));
         setScanningIdentity(false);
         return;
       }
       try {
-        const result = await scanIdentityDocument(workingDataUrl, (step) => setIdentityScanMessage(step));
+        const result = await scanIdentityDocument(scanSource, (step) => setIdentityScanMessage(step));
         setIdentityDocumentType(result.documentType ?? 'unknown');
         if (result.documentType === 'passport') {
           setIdentityScanError(t('errors.identityPassportNotAllowed'));
@@ -1323,9 +1386,13 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       const blob = await new Promise<Blob>((resolve) =>
         portraitCanvas.toBlob((created) => resolve(created || new Blob()), 'image/jpeg', 0.9)
       );
-      const file = new File([blob], `document-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      const file = new File(
+        [blob],
+        `document-${documentCaptureSide}-${Date.now()}.jpg`,
+        { type: 'image/jpeg' }
+      );
       stopDocumentCameraStream({ unlock: false });
-      setDocumentCapturePreview({ dataUrl, file });
+      setDocumentCapturePreview({ dataUrl, file, side: documentCaptureSide });
       setDocumentCameraError('');
       setDocumentValidation({
         valid: true,
@@ -1341,21 +1408,56 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     }
   };
 
+  const handleDocumentPreviewRetake = () => {
+    if (!documentCapturePreview) return;
+    const { side } = documentCapturePreview;
+    setDocumentCapturePreview(null);
+    if (side === 'front') {
+      setDocumentFrontCapture(null);
+      setDocumentCaptureSide('front');
+      openDocumentCamera({ side: 'front', resetCaptures: false });
+      return;
+    }
+    setDocumentBackCapture(null);
+    setDocumentCaptureSide('back');
+    openDocumentCamera({ side: 'back', resetCaptures: false });
+  };
+
   const handleDocumentRetake = () => {
     setIdentityDocumentUrl('');
     setIdentityDocumentPreview('');
     setIdentityScanError('');
     setIdentityScanSuccess(false);
-    setDocumentCapturePreview(null);
-    openDocumentCamera();
+    resetDocumentCaptures();
+    openDocumentCamera({ side: 'front', resetCaptures: true });
   };
 
   const handleDocumentConfirm = async () => {
     if (!documentCapturePreview) return;
-    const { file, dataUrl } = documentCapturePreview;
+    const { file, dataUrl, side } = documentCapturePreview;
     setDocumentCapturePreview(null);
+
+    if (side === 'front') {
+      setDocumentFrontCapture({ dataUrl, file });
+      setDocumentCaptureSide('back');
+      openDocumentCamera({ side: 'back', resetCaptures: false });
+      return;
+    }
+
+    setDocumentBackCapture({ dataUrl, file });
     closeDocumentCamera();
-    await processIdentityImage(file, dataUrl);
+    try {
+      if (documentFrontCapture?.dataUrl) {
+        const combined = await combineDocumentSides(documentFrontCapture.dataUrl, dataUrl);
+        await processIdentityImage(combined.file, combined.dataUrl, documentFrontCapture.dataUrl);
+      } else {
+        await processIdentityImage(file, dataUrl);
+      }
+    } finally {
+      setDocumentFrontCapture(null);
+      setDocumentBackCapture(null);
+      setDocumentCaptureSide('front');
+    }
   };
 
   const handleIdentityUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -2510,8 +2612,15 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       {documentCameraOpen && (
         <div className="fixed inset-0 z-[400] bg-black flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 text-white">
-            <p className="text-xs font-black uppercase tracking-widest">{t('onboarding.step1.identityUploadLabel')}</p>
-            <button onClick={closeDocumentCamera} className="p-2 rounded-full hover:bg-white/10">
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest">{t('onboarding.step1.identityUploadLabel')}</p>
+              <p className="text-[10px] text-white/70 mt-1">
+                {documentCapturePreview?.side === 'back' || documentCaptureSide === 'back'
+                  ? t('onboarding.step1.documentSideBack')
+                  : t('onboarding.step1.documentSideFront')}
+              </p>
+            </div>
+            <button onClick={cancelDocumentCapture} className="p-2 rounded-full hover:bg-white/10">
               <X size={20} />
             </button>
           </div>
@@ -2526,6 +2635,11 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                 <div className="absolute bottom-6 left-0 right-0 text-center px-6">
                   <p className="text-sm font-bold text-white">{t('onboarding.step1.documentReviewTitle')}</p>
                   <p className="text-xs text-white/70 mt-1">{t('onboarding.step1.documentReviewSubtitle')}</p>
+                  <p className="text-[11px] text-white/80 mt-2">
+                    {documentCapturePreview.side === 'back'
+                      ? t('onboarding.step1.documentSideBack')
+                      : t('onboarding.step1.documentSideFront')}
+                  </p>
                 </div>
               </div>
             ) : (
@@ -2585,7 +2699,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
                 </button>
                 <button
                   type="button"
-                  onClick={handleDocumentRetake}
+                  onClick={handleDocumentPreviewRetake}
                   className="flex-1 px-4 py-3 rounded-2xl bg-white/10 text-white text-xs font-bold uppercase tracking-widest hover:bg-white/20"
                 >
                   {t('onboarding.step1.documentRepeat')}
@@ -2602,7 +2716,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
             ) : null}
             <button
               type="button"
-              onClick={closeDocumentCamera}
+              onClick={cancelDocumentCapture}
               className="flex-1 px-4 py-3 rounded-2xl bg-white/10 text-white text-xs font-bold uppercase tracking-widest hover:bg-white/20"
             >
               {t('common.cancel')}
