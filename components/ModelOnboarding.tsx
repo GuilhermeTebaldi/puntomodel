@@ -127,6 +127,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const [documentCaptureSide, setDocumentCaptureSide] = useState<'front' | 'back'>('front');
   const [documentFlipActive, setDocumentFlipActive] = useState(false);
   const [documentFlipDataUrl, setDocumentFlipDataUrl] = useState('');
+  const [documentCaptureFlash, setDocumentCaptureFlash] = useState(false);
   const [faceCameraActive, setFaceCameraActive] = useState(false);
   const [faceCameraLoading, setFaceCameraLoading] = useState(false);
   const [faceCameraError, setFaceCameraError] = useState('');
@@ -202,6 +203,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const documentVideoTrackRef = useRef<MediaStreamTrack | null>(null);
   const documentFocusPeakRef = useRef(0);
   const documentFlipTimerRef = useRef<number | null>(null);
+  const documentFlashTimerRef = useRef<number | null>(null);
   const hasSelectedLocation = Boolean(selectedLocation && selectedLocation.lat && selectedLocation.lon);
 
   const getBrowserCountryCode = () => {
@@ -355,6 +357,17 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     setDocumentFlipDataUrl('');
   };
 
+  const triggerDocumentFlash = () => {
+    if (documentFlashTimerRef.current) {
+      window.clearTimeout(documentFlashTimerRef.current);
+    }
+    setDocumentCaptureFlash(true);
+    documentFlashTimerRef.current = window.setTimeout(() => {
+      setDocumentCaptureFlash(false);
+      documentFlashTimerRef.current = null;
+    }, 180);
+  };
+
   const startDocumentFlip = (dataUrl: string) => {
     clearDocumentFlip();
     setDocumentFlipDataUrl(dataUrl);
@@ -388,6 +401,11 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     documentCaptureInProgressRef.current = false;
     resetDocumentAutoCapture();
     setDocumentCameraLoading(false);
+    setDocumentCaptureFlash(false);
+    if (documentFlashTimerRef.current) {
+      window.clearTimeout(documentFlashTimerRef.current);
+      documentFlashTimerRef.current = null;
+    }
     if (options?.unlock !== false) {
       unlockPortrait();
     }
@@ -602,6 +620,18 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     setPhoneValue(formatPhone(nationalDigits, countryCode));
   };
 
+  const waitForVideoReady = async (video: HTMLVideoElement | null, timeoutMs = 1400) => {
+    if (!video) return false;
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        return true;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 60));
+    }
+    return false;
+  };
+
   const startFaceCamera = async () => {
     setFaceCameraError('');
     stopFaceCamera();
@@ -636,7 +666,8 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
           // ignore autoplay errors
         }
       }
-      if (!faceVideoRef.current?.videoWidth) {
+      const faceReady = await waitForVideoReady(faceVideoRef.current);
+      if (!faceReady) {
         throw new Error('camera_unavailable');
       }
       setFaceCameraLoading(false);
@@ -715,6 +746,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
 
   const startDocumentCamera = async () => {
     setDocumentCameraError('');
+    if (documentCameraLoading) return;
     setDocumentCameraLoading(true);
     if (!navigator?.mediaDevices?.getUserMedia) {
       setDocumentCameraError(t('errors.cameraUnavailable'));
@@ -725,10 +757,18 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     const existingTrack = existingStream?.getVideoTracks().find((track) => track.readyState === 'live');
     if (existingStream && existingTrack) {
       documentVideoTrackRef.current = existingTrack;
-      attachDocumentStream(existingStream);
-      setDocumentCameraLoading(false);
-      startDocumentFocusLoop();
-      return;
+      try {
+        await attachDocumentStream(existingStream);
+        const ready = await waitForVideoReady(documentVideoRef.current);
+        if (!ready) throw new Error('camera_unavailable');
+        setDocumentCameraLoading(false);
+        startDocumentFocusLoop();
+        return;
+      } catch {
+        setDocumentCameraError(t('errors.cameraUnavailable'));
+        setDocumentCameraLoading(false);
+        return;
+      }
     }
     stopDocumentCameraStream();
     try {
@@ -744,8 +784,9 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       });
       documentStreamRef.current = stream;
       documentVideoTrackRef.current = stream.getVideoTracks()[0] ?? null;
-      attachDocumentStream(stream);
-      if (!documentVideoRef.current?.videoWidth) {
+      await attachDocumentStream(stream);
+      const ready = await waitForVideoReady(documentVideoRef.current);
+      if (!ready) {
         throw new Error('camera_unavailable');
       }
       setDocumentCameraLoading(false);
@@ -1397,6 +1438,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     if (documentCaptureInProgressRef.current || documentCapturePreview) return;
     documentCaptureInProgressRef.current = true;
     let captured = false;
+    triggerDocumentFlash();
     try {
       const video = documentVideoRef.current;
       if (!video || !video.videoWidth) {
@@ -2676,6 +2718,9 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
             </button>
           </div>
           <div className="relative flex-1 overflow-hidden">
+            {documentCaptureFlash && (
+              <div className="absolute inset-0 z-[5] bg-white/90 animate-pulse" />
+            )}
             {documentFlipActive ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black">
                 <div
