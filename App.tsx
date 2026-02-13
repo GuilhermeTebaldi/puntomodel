@@ -10,6 +10,7 @@ import RegisterModal from './components/RegisterModal';
 import ModelOnboarding from './components/ModelOnboarding';
 import MapView from './components/MapView';
 import ModelProfile from './components/ModelProfile';
+import BlogSection from './components/BlogSection';
 import { AuthUser, clearCurrentUser, getCurrentUser, getPendingModelProfile, PendingModelProfile } from './services/auth';
 import { fetchModelByEmail, fetchModelById, fetchModelsAll, ModelProfileData } from './services/models';
 import { getSavedModelIds, isSavedModelsStorageKey, pruneSavedModels } from './services/savedModels';
@@ -86,6 +87,11 @@ const App: React.FC = () => {
     window.addEventListener('popstate', handleRoute);
     return () => window.removeEventListener('popstate', handleRoute);
   }, [t, translateError]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -541,7 +547,7 @@ const App: React.FC = () => {
     .map((model) => ({ id: model.id, name: model.name }));
 
   useEffect(() => {
-    if (pathname === '/admin' || pathname === '/dashboard') return;
+    if (pathname === '/admin' || pathname === '/dashboard' || pathname === '/blog') return;
     if (pathname.startsWith('/modelo/')) return;
     if (pathname === '/cadastro') return;
     lastBasePathRef.current = pathname;
@@ -552,6 +558,14 @@ const App: React.FC = () => {
 
     const cleanPath = pathname.replace(/^\/+/, '');
     if (!cleanPath) {
+      setIsListingOpen(false);
+      setIsSearching(false);
+      setSelectedProfileModel(null);
+      document.body.style.overflow = 'auto';
+      return;
+    }
+
+    if (cleanPath === 'blog') {
       setIsListingOpen(false);
       setIsSearching(false);
       setSelectedProfileModel(null);
@@ -618,6 +632,182 @@ const App: React.FC = () => {
       return;
     }
   }, [pathname, pendingModelProfile]);
+
+  const locationPrompt =
+    showLocationPrompt && languageSource !== 'manual' ? (
+      <div className="fixed bottom-4 left-0 right-0 z-[1001] px-4">
+        <div className="max-w-3xl mx-auto bg-white/95 backdrop-blur border border-gray-200 rounded-2xl shadow-lg p-4 md:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <p className="text-sm font-bold text-gray-900">{t('locationPermission.title')}</p>
+            <p className="text-xs text-gray-500 mt-1">{t('locationPermission.body')}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleLocationDeny}
+              className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-600 hover:text-gray-900"
+            >
+              {t('locationPermission.deny')}
+            </button>
+            <button
+              onClick={handleLocationAllow}
+              className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest"
+            >
+              {t('locationPermission.allow')}
+            </button>
+          </div>
+        </div>
+      </div>
+    ) : null;
+
+  const footer = (
+    <footer className="bg-gray-900 text-gray-400 py-12 px-4">
+      <div className="max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-4 gap-12 mb-12">
+          <div className="col-span-1 md:col-span-2">
+            <h3 className="text-white font-bold text-xl mb-6">
+              Punto<span className="text-gray-500">escort</span>
+            </h3>
+            <p className="max-w-sm mb-6 leading-relaxed">{t('footer.description')}</p>
+            <div className="flex gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="w-10 h-10 bg-gray-800 rounded-full hover:bg-[#e3262e] transition-colors cursor-pointer flex items-center justify-center"
+                >
+                  <div className="w-5 h-5 border border-white/20 rounded-sm"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-white font-bold mb-6">{t('footer.institutional')}</h4>
+            <ul className="space-y-4 text-sm">
+              <li>
+                <button
+                  onClick={() =>
+                    setStaticPage({
+                      key: 'about',
+                    })
+                  }
+                  className="hover:text-white"
+                >
+                  {t('footer.aboutUs')}
+                </button>
+              </li>
+              <li>
+                <button onClick={() => navigateTo('/blog')} className="hover:text-white">
+                  {t('footer.blog')}
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() =>
+                    setStaticPage({
+                      key: 'help',
+                    })
+                  }
+                  className="hover:text-white"
+                >
+                  {t('footer.help')}
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() =>
+                    setStaticPage({
+                      key: 'ethics',
+                    })
+                  }
+                  className="hover:text-white"
+                >
+                  {t('footer.ethics')}
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-white font-bold mb-6">{t('footer.legal')}</h4>
+            <ul className="space-y-4 text-sm">
+              <li>
+                <button
+                  onClick={() =>
+                    setStaticPage({
+                      key: 'terms',
+                    })
+                  }
+                  className="hover:text-white"
+                >
+                  {t('footer.terms')}
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() =>
+                    setStaticPage({
+                      key: 'privacy',
+                    })
+                  }
+                  className="hover:text-white"
+                >
+                  {t('footer.privacy')}
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() =>
+                    setStaticPage({
+                      key: 'cookies',
+                    })
+                  }
+                  className="hover:text-white"
+                >
+                  {t('footer.cookies')}
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() =>
+                    setStaticPage({
+                      key: 'report',
+                    })
+                  }
+                  className="hover:text-white"
+                >
+                  {t('footer.report')}
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-6 text-center md:text-left">
+          {[
+            { value: '+3', label: 'de usuários' },
+            { value: '+3', label: 'acompanhantes' },
+            { value: '+12', label: 'de imagens' },
+            { value: '+0', label: 'avaliações' },
+          ].map((stat) => (
+            <div key={stat.label} className="flex flex-col items-center md:items-start">
+              <span className="text-lg md:text-xl font-bold text-white">{stat.value}</span>
+              <span className="text-xs md:text-sm text-gray-400 font-medium whitespace-nowrap">
+                {translateStatLabel(stat.label)}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="border-t border-gray-800 pt-8 text-xs text-center md:text-left flex flex-col md:row justify-between gap-4">
+          <p>{t('footer.rights')}</p>
+          <p className="flex gap-4 justify-center md:justify-end">
+            <span>{t('footer.cnpj')}</span>
+            <span>{t('footer.country')}</span>
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
 
   return (
     <div className="min-h-screen bg-white text-[#111827]">
@@ -733,45 +923,43 @@ const App: React.FC = () => {
             </main>
           </div>
         )
+      ) : pathname === '/blog' ? (
+        <>
+          {locationPrompt}
+          <Header
+            onLoginClick={openLogin}
+            onRegisterClick={openRegister}
+            currentUser={currentUser}
+            onLogout={handleLogout}
+            onOpenProfile={() => {
+              if (myModelProfile) openProfile(myModelProfile);
+            }}
+            hasProfile={Boolean(myModelProfile)}
+            onOpenDashboard={() => navigateTo('/dashboard')}
+            savedOnlineModels={savedOnlineModels}
+            currentModelId={myModelProfile?.id}
+          />
+          <main className="min-h-screen bg-white">
+            <BlogSection />
+          </main>
+          {footer}
+        </>
       ) : (
         <>
-          {showLocationPrompt && languageSource !== 'manual' && (
-            <div className="fixed bottom-4 left-0 right-0 z-[1001] px-4">
-              <div className="max-w-3xl mx-auto bg-white/95 backdrop-blur border border-gray-200 rounded-2xl shadow-lg p-4 md:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <p className="text-sm font-bold text-gray-900">{t('locationPermission.title')}</p>
-                  <p className="text-xs text-gray-500 mt-1">{t('locationPermission.body')}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleLocationDeny}
-                    className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-600 hover:text-gray-900"
-                  >
-                    {t('locationPermission.deny')}
-                  </button>
-                  <button
-                    onClick={handleLocationAllow}
-                    className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest"
-                  >
-                    {t('locationPermission.allow')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-      <Header
-        onLoginClick={openLogin}
-        onRegisterClick={openRegister}
-        currentUser={currentUser}
-        onLogout={handleLogout}
-        onOpenProfile={() => {
-          if (myModelProfile) openProfile(myModelProfile);
-        }}
-        hasProfile={Boolean(myModelProfile)}
-        onOpenDashboard={() => navigateTo('/dashboard')}
-        savedOnlineModels={savedOnlineModels}
-        currentModelId={myModelProfile?.id}
-      />
+          {locationPrompt}
+          <Header
+            onLoginClick={openLogin}
+            onRegisterClick={openRegister}
+            currentUser={currentUser}
+            onLogout={handleLogout}
+            onOpenProfile={() => {
+              if (myModelProfile) openProfile(myModelProfile);
+            }}
+            hasProfile={Boolean(myModelProfile)}
+            onOpenDashboard={() => navigateTo('/dashboard')}
+            savedOnlineModels={savedOnlineModels}
+            currentModelId={myModelProfile?.id}
+          />
       
       {/* Barra de Busca Fixa (Sticky) - Aparece ao descer a página */}
       <div className={`fixed top-16 md:top-20 left-0 right-0 z-40 transition-all duration-500 ease-in-out transform ${
@@ -863,145 +1051,11 @@ const App: React.FC = () => {
             )}
           </div>
         </section>
-        
+
         <QuickLinks />
       </main>
 
-      <footer className="bg-gray-900 text-gray-400 py-12 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-12 mb-12">
-            <div className="col-span-1 md:col-span-2">
-              <h3 className="text-white font-bold text-xl mb-6">Punto<span className="text-gray-500">escort</span></h3>
-              <p className="max-w-sm mb-6 leading-relaxed">
-                {t('footer.description')}
-              </p>
-              <div className="flex gap-4">
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="w-10 h-10 bg-gray-800 rounded-full hover:bg-[#e3262e] transition-colors cursor-pointer flex items-center justify-center">
-                    <div className="w-5 h-5 border border-white/20 rounded-sm"></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="text-white font-bold mb-6">{t('footer.institutional')}</h4>
-              <ul className="space-y-4 text-sm">
-                <li>
-                  <button
-                    onClick={() => setStaticPage({
-                      key: 'about',
-                    })}
-                    className="hover:text-white"
-                  >
-                    {t('footer.aboutUs')}
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => setStaticPage({
-                      key: 'blog',
-                    })}
-                    className="hover:text-white"
-                  >
-                    {t('footer.blog')}
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => setStaticPage({
-                      key: 'help',
-                    })}
-                    className="hover:text-white"
-                  >
-                    {t('footer.help')}
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => setStaticPage({
-                      key: 'ethics',
-                    })}
-                    className="hover:text-white"
-                  >
-                    {t('footer.ethics')}
-                  </button>
-                </li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="text-white font-bold mb-6">{t('footer.legal')}</h4>
-              <ul className="space-y-4 text-sm">
-                <li>
-                  <button
-                    onClick={() => setStaticPage({
-                      key: 'terms',
-                    })}
-                    className="hover:text-white"
-                  >
-                    {t('footer.terms')}
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => setStaticPage({
-                      key: 'privacy',
-                    })}
-                    className="hover:text-white"
-                  >
-                    {t('footer.privacy')}
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => setStaticPage({
-                      key: 'cookies',
-                    })}
-                    className="hover:text-white"
-                  >
-                    {t('footer.cookies')}
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => setStaticPage({
-                      key: 'report',
-                    })}
-                    className="hover:text-white"
-                  >
-                    {t('footer.report')}
-                  </button>
-                </li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-6 text-center md:text-left">
-            {[
-              { value: '+3', label: 'de usuários' },
-              { value: '+3', label: 'acompanhantes' },
-              { value: '+12', label: 'de imagens' },
-              { value: '+0', label: 'avaliações' },
-            ].map((stat) => (
-              <div key={stat.label} className="flex flex-col items-center md:items-start">
-                <span className="text-lg md:text-xl font-bold text-white">{stat.value}</span>
-                <span className="text-xs md:text-sm text-gray-400 font-medium whitespace-nowrap">
-                  {translateStatLabel(stat.label)}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t border-gray-800 pt-8 text-xs text-center md:text-left flex flex-col md:row justify-between gap-4">
-             <p>{t('footer.rights')}</p>
-             <p className="flex gap-4 justify-center md:justify-end">
-               <span>{t('footer.cnpj')}</span>
-               <span>{t('footer.country')}</span>
-             </p>
-          </div>
-        </div>
-      </footer>
+      {footer}
 
         </>
       )}

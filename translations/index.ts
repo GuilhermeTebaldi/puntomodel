@@ -375,6 +375,87 @@ export const translations = {
       noneAvailable: 'Nenhum destaque disponível no momento.',
       savedEmpty: 'Nenhum perfil salvo.',
     },
+    blog: {
+      eyebrow: 'Blog',
+      title: 'Puntoescort Lifestyle',
+      subtitle: 'Dicas, guias e novidades do universo lifestyle com curadoria elegante.',
+      categories: {
+        all: 'Tudo',
+        cities: 'Cidades',
+        lifestyle: 'Estilo de Vida',
+        models: 'Modelos',
+        safety: 'Segurança',
+      },
+      readMore: 'Ler mais',
+      backToBlog: 'Voltar para o Blog',
+      author: 'Curadoria Puntoescort',
+      editorLabel: 'Editor Puntoescort',
+      articleOutro1:
+        'A Puntoescort se orgulha de oferecer não apenas uma plataforma, mas uma curadoria completa de conteúdo para elevar o nível da sua experiência social e pessoal.',
+      articleOutro2:
+        'Continue acompanhando nosso blog para mais novidades exclusivas, guias de viagem e as tendências mais quentes do mercado de luxo no Brasil.',
+      curatedLabel: 'Curadoria',
+      curatedBody:
+        'Conteúdo selecionado com foco em sofisticação, discrição e boas práticas para uma experiência premium.',
+      posts: {
+        citiesSaoPaulo: {
+          title: 'São Paulo premium: roteiro discreto e eficiente',
+          excerpt: 'Como organizar deslocamentos, horários e locais com elegância em um dia na capital.',
+          content:
+            'São Paulo é intensa, e o segredo está no planejamento. Prefira regiões com boa infraestrutura, combine horários com antecedência e mantenha a comunicação clara para evitar imprevistos. Um roteiro bem definido ajuda a manter a experiência confortável, segura e sofisticada.',
+          date: '10 de Fevereiro, 2026',
+        },
+        citiesRio: {
+          title: 'Rio de Janeiro com discrição: boas práticas',
+          excerpt: 'Equilibre lazer, segurança e privacidade em encontros na cidade maravilhosa.',
+          content:
+            'No Rio, escolha locais com acesso fácil e considere a movimentação do bairro. Evite exposições desnecessárias e priorize ambientes que ofereçam privacidade e conforto. A discrição é parte do luxo e valoriza a experiência para todas as partes.',
+          date: '08 de Fevereiro, 2026',
+        },
+        lifestyleEtiquette: {
+          title: 'Etiqueta em encontros premium: o essencial',
+          excerpt: 'Pontualidade, respeito e comunicação clara elevam a experiência.',
+          content:
+            'Elegância está nos detalhes. Confirme horários, respeite limites combinados e mantenha a cordialidade do início ao fim. Uma abordagem respeitosa cria confiança e transforma qualquer encontro em uma experiência memorável.',
+          date: '06 de Fevereiro, 2026',
+        },
+        lifestylePlanning: {
+          title: 'Planejamento com conforto: como organizar melhor',
+          excerpt: 'Ambiente, vestimenta e logística alinhados para uma experiência sem ruídos.',
+          content:
+            'Um bom planejamento começa com a escolha do local e o cuidado com a apresentação. Prefira ambientes tranquilos, mantenha uma comunicação objetiva e alinhe expectativas. Simplicidade bem executada é sempre sofisticada.',
+          date: '05 de Fevereiro, 2026',
+        },
+        modelsProfile: {
+          title: 'Perfil que inspira confiança: o que não pode faltar',
+          excerpt: 'Bio objetiva, fotos de qualidade e informações claras fazem diferença.',
+          content:
+            'Um perfil bem construído transmite profissionalismo. Use fotos nítidas, mantenha uma descrição objetiva e destaque diferenciais com honestidade. Transparência e consistência geram confiança e aumentam a qualidade dos contatos.',
+          date: '04 de Fevereiro, 2026',
+        },
+        modelsPhotos: {
+          title: 'Checklist de fotos: luz, postura e privacidade',
+          excerpt: 'Como valorizar sua imagem preservando sua segurança.',
+          content:
+            'Fotos com boa iluminação e enquadramento profissional elevam a percepção de qualidade. Evite elementos que revelem dados pessoais e mantenha consistência visual. A imagem certa comunica elegância e cuidado.',
+          date: '03 de Fevereiro, 2026',
+        },
+        safetyAlerts: {
+          title: 'Sinais de alerta: como identificar riscos',
+          excerpt: 'Evite pressa, respeite limites e priorize a segurança.',
+          content:
+            'Desconfie de pedidos apressados, informações confusas ou falta de clareza. Prefira combinar detalhes com calma e, sempre que possível, escolha ambientes seguros. Segurança vem antes de qualquer negociação.',
+          date: '01 de Fevereiro, 2026',
+        },
+        safetyPrivacy: {
+          title: 'Privacidade digital: boas práticas essenciais',
+          excerpt: 'Proteja seus dados e mantenha sua identidade segura.',
+          content:
+            'Evite compartilhar informações pessoais desnecessárias e mantenha seus canais organizados. Use fotos que não revelem detalhes íntimos do seu dia a dia. Privacidade é parte do cuidado.',
+          date: '31 de Janeiro, 2026',
+        },
+      },
+    },
     listing: {
       title: 'Galeria Punto',
       count: '{{count}} modelos encontradas',
@@ -1119,6 +1200,87 @@ export const translations = {
       noneAvailable: 'No featured profiles available at the moment.',
       savedEmpty: 'No saved profiles.',
     },
+    blog: {
+      eyebrow: 'Blog',
+      title: 'Puntoescort Lifestyle',
+      subtitle: 'Tips, guides, and updates from the lifestyle universe with elegant curation.',
+      categories: {
+        all: 'All',
+        cities: 'Cities',
+        lifestyle: 'Lifestyle',
+        models: 'Models',
+        safety: 'Safety',
+      },
+      readMore: 'Read more',
+      backToBlog: 'Back to Blog',
+      author: 'Puntoescort Curation',
+      editorLabel: 'Puntoescort Editor',
+      articleOutro1:
+        'Puntoescort is proud to offer not just a platform, but a complete content curation to elevate your social and personal experience.',
+      articleOutro2:
+        'Keep following our blog for exclusive updates, travel guides, and the hottest trends in Brazil’s luxury market.',
+      curatedLabel: 'Curation',
+      curatedBody:
+        'Selected content focused on sophistication, discretion, and best practices for a premium experience.',
+      posts: {
+        citiesSaoPaulo: {
+          title: 'São Paulo premium: a discreet, efficient itinerary',
+          excerpt: 'How to organize travel, timing, and locations with elegance in a day in the capital.',
+          content:
+            'São Paulo is intense, and the secret is planning. Choose areas with good infrastructure, agree on times in advance, and keep communication clear to avoid surprises. A well-defined itinerary keeps the experience comfortable, safe, and sophisticated.',
+          date: 'February 10, 2026',
+        },
+        citiesRio: {
+          title: 'Rio de Janeiro with discretion: best practices',
+          excerpt: 'Balance leisure, safety, and privacy in encounters in the Marvelous City.',
+          content:
+            'In Rio, choose locations with easy access and consider the neighborhood’s flow. Avoid unnecessary exposure and prioritize places that offer privacy and comfort. Discretion is part of luxury and improves the experience for everyone.',
+          date: 'February 8, 2026',
+        },
+        lifestyleEtiquette: {
+          title: 'Premium etiquette: the essentials',
+          excerpt: 'Punctuality, respect, and clear communication elevate the experience.',
+          content:
+            'Elegance is in the details. Confirm times, respect agreed boundaries, and keep courtesy from start to finish. A respectful approach builds trust and turns any meeting into a memorable experience.',
+          date: 'February 6, 2026',
+        },
+        lifestylePlanning: {
+          title: 'Comfortable planning: how to organize better',
+          excerpt: 'Venue, attire, and logistics aligned for a smooth experience.',
+          content:
+            'Good planning starts with the place and care with presentation. Choose calm environments, keep communication objective, and align expectations. Simplicity, well executed, is always sophisticated.',
+          date: 'February 5, 2026',
+        },
+        modelsProfile: {
+          title: 'A profile that builds trust: the essentials',
+          excerpt: 'Clear bio, quality photos, and straightforward info make the difference.',
+          content:
+            'A well-built profile signals professionalism. Use sharp photos, keep descriptions objective, and highlight differentiators honestly. Transparency and consistency create trust and improve the quality of contacts.',
+          date: 'February 4, 2026',
+        },
+        modelsPhotos: {
+          title: 'Photo checklist: light, posture, and privacy',
+          excerpt: 'How to elevate your image while preserving safety.',
+          content:
+            'Photos with good lighting and professional framing elevate perceived quality. Avoid elements that reveal personal data and keep visual consistency. The right image communicates elegance and care.',
+          date: 'February 3, 2026',
+        },
+        safetyAlerts: {
+          title: 'Red flags: how to spot risks',
+          excerpt: 'Avoid rush, respect limits, and prioritize safety.',
+          content:
+            'Be cautious with rushed requests, confusing information, or lack of clarity. Prefer to align details calmly and, whenever possible, choose safe environments. Safety comes before any negotiation.',
+          date: 'February 1, 2026',
+        },
+        safetyPrivacy: {
+          title: 'Digital privacy: essential best practices',
+          excerpt: 'Protect your data and keep your identity safe.',
+          content:
+            'Avoid sharing unnecessary personal information and keep your channels organized. Use photos that do not reveal intimate details of your day-to-day. Privacy is part of care.',
+          date: 'January 31, 2026',
+        },
+      },
+    },
     listing: {
       title: 'Punto Gallery',
       count: '{{count}} models found',
@@ -1861,6 +2023,87 @@ export const translations = {
       locationMissing: 'Standort nicht angegeben',
       noneAvailable: 'Momentan keine hervorgehobenen Profile verfügbar.',
       savedEmpty: 'Keine gespeicherten Profile.',
+    },
+    blog: {
+      eyebrow: 'Blog',
+      title: 'Puntoescort Lifestyle',
+      subtitle: 'Tipps, Guides und Neuigkeiten aus der Lifestyle-Welt mit eleganter Kuratierung.',
+      categories: {
+        all: 'Alle',
+        cities: 'Städte',
+        lifestyle: 'Lifestyle',
+        models: 'Models',
+        safety: 'Sicherheit',
+      },
+      readMore: 'Mehr lesen',
+      backToBlog: 'Zurück zum Blog',
+      author: 'Puntoescort Redaktion',
+      editorLabel: 'Puntoescort Redaktion',
+      articleOutro1:
+        'Puntoescort ist stolz, nicht nur eine Plattform zu bieten, sondern eine vollständige Inhaltskuratierung, um dein soziales und persönliches Erlebnis zu erhöhen.',
+      articleOutro2:
+        'Folge unserem Blog für exklusive Updates, Reiseguides und die heißesten Trends im brasilianischen Luxusmarkt.',
+      curatedLabel: 'Kuratierung',
+      curatedBody:
+        'Ausgewählte Inhalte mit Fokus auf Raffinesse, Diskretion und bewährte Praktiken für ein Premium-Erlebnis.',
+      posts: {
+        citiesSaoPaulo: {
+          title: 'São Paulo premium: diskreter, effizienter Ablauf',
+          excerpt: 'So organisierst du Wege, Zeiten und Orte elegant an einem Tag in der Hauptstadt.',
+          content:
+            'São Paulo ist intensiv, und der Schlüssel liegt in der Planung. Wähle Gegenden mit guter Infrastruktur, stimme Zeiten im Voraus ab und halte die Kommunikation klar, um Überraschungen zu vermeiden. Ein klarer Ablauf sorgt für ein komfortables, sicheres und anspruchsvolles Erlebnis.',
+          date: '10. Februar 2026',
+        },
+        citiesRio: {
+          title: 'Rio de Janeiro mit Diskretion: Best Practices',
+          excerpt: 'Freizeit, Sicherheit und Privatsphäre in der Cidade Maravilhosa ausbalancieren.',
+          content:
+            'In Rio wählst du Orte mit guter Erreichbarkeit und berücksichtigst die Dynamik des Viertels. Vermeide unnötige Exposition und bevorzuge Umgebungen mit Privatsphäre und Komfort. Diskretion ist Teil von Luxus und verbessert die Erfahrung für alle.',
+          date: '8. Februar 2026',
+        },
+        lifestyleEtiquette: {
+          title: 'Premium-Etikette: das Wesentliche',
+          excerpt: 'Pünktlichkeit, Respekt und klare Kommunikation heben das Erlebnis.',
+          content:
+            'Eleganz steckt in den Details. Bestätige Zeiten, respektiere vereinbarte Grenzen und bleibe von Anfang bis Ende höflich. Ein respektvoller Ansatz schafft Vertrauen und macht jedes Treffen unvergesslich.',
+          date: '6. Februar 2026',
+        },
+        lifestylePlanning: {
+          title: 'Komfortable Planung: besser organisieren',
+          excerpt: 'Ort, Auftreten und Logistik im Einklang für ein reibungsloses Erlebnis.',
+          content:
+            'Gute Planung beginnt mit der Wahl des Ortes und der Sorgfalt beim Auftreten. Bevorzuge ruhige Umgebungen, kommuniziere klar und stimme Erwartungen ab. Gut umgesetzte Einfachheit ist immer stilvoll.',
+          date: '5. Februar 2026',
+        },
+        modelsProfile: {
+          title: 'Profil, das Vertrauen schafft: das Wichtigste',
+          excerpt: 'Klarer Text, hochwertige Fotos und transparente Infos machen den Unterschied.',
+          content:
+            'Ein gut gestaltetes Profil wirkt professionell. Nutze scharfe Fotos, halte die Beschreibung klar und hebe deine Stärken ehrlich hervor. Transparenz und Konsistenz schaffen Vertrauen und verbessern die Qualität der Kontakte.',
+          date: '4. Februar 2026',
+        },
+        modelsPhotos: {
+          title: 'Foto-Checkliste: Licht, Haltung und Privatsphäre',
+          excerpt: 'So wertest du dein Bild auf und schützt deine Sicherheit.',
+          content:
+            'Fotos mit gutem Licht und professionellem Bildausschnitt steigern die Qualitätswahrnehmung. Vermeide Elemente, die persönliche Daten verraten, und halte die Optik konsistent. Das richtige Bild vermittelt Eleganz und Sorgfalt.',
+          date: '3. Februar 2026',
+        },
+        safetyAlerts: {
+          title: 'Warnsignale: Risiken früh erkennen',
+          excerpt: 'Hektik vermeiden, Grenzen respektieren, Sicherheit priorisieren.',
+          content:
+            'Sei vorsichtig bei hastigen Anfragen, unklaren Informationen oder fehlender Transparenz. Stimme Details lieber in Ruhe ab und wähle nach Möglichkeit sichere Orte. Sicherheit geht vor jeder Verhandlung.',
+          date: '1. Februar 2026',
+        },
+        safetyPrivacy: {
+          title: 'Digitale Privatsphäre: essenzielle Best Practices',
+          excerpt: 'Schütze deine Daten und halte deine Identität sicher.',
+          content:
+            'Teile keine unnötigen persönlichen Informationen und halte deine Kanäle organisiert. Verwende Fotos, die keine intimen Details deines Alltags verraten. Privatsphäre ist Teil der Fürsorge.',
+          date: '31. Januar 2026',
+        },
+      },
     },
     listing: {
       title: 'Punto Galerie',
@@ -2605,6 +2848,87 @@ export const translations = {
       noneAvailable: 'No hay destacados disponibles en este momento.',
       savedEmpty: 'No hay perfiles guardados.',
     },
+    blog: {
+      eyebrow: 'Blog',
+      title: 'Puntoescort Lifestyle',
+      subtitle: 'Consejos, guías y novedades del universo lifestyle con curaduría elegante.',
+      categories: {
+        all: 'Todo',
+        cities: 'Ciudades',
+        lifestyle: 'Estilo de Vida',
+        models: 'Modelos',
+        safety: 'Seguridad',
+      },
+      readMore: 'Leer más',
+      backToBlog: 'Volver al Blog',
+      author: 'Curaduría Puntoescort',
+      editorLabel: 'Editor Puntoescort',
+      articleOutro1:
+        'Puntoescort se enorgullece de ofrecer no solo una plataforma, sino una curaduría completa de contenido para elevar tu experiencia social y personal.',
+      articleOutro2:
+        'Sigue nuestro blog para más novedades exclusivas, guías de viaje y las tendencias más fuertes del mercado de lujo en Brasil.',
+      curatedLabel: 'Curaduría',
+      curatedBody:
+        'Contenido seleccionado con foco en sofisticación, discreción y buenas prácticas para una experiencia premium.',
+      posts: {
+        citiesSaoPaulo: {
+          title: 'São Paulo premium: itinerario discreto y eficiente',
+          excerpt: 'Cómo organizar traslados, horarios y lugares con elegancia en un día en la capital.',
+          content:
+            'São Paulo es intensa, y el secreto está en la planificación. Prefiere zonas con buena infraestructura, acuerda horarios con antelación y mantén una comunicación clara para evitar imprevistos. Un itinerario bien definido ayuda a mantener la experiencia cómoda, segura y sofisticada.',
+          date: '10 de febrero de 2026',
+        },
+        citiesRio: {
+          title: 'Río de Janeiro con discreción: buenas prácticas',
+          excerpt: 'Equilibra ocio, seguridad y privacidad en encuentros en la ciudad maravillosa.',
+          content:
+            'En Río, elige lugares con acceso fácil y considera el movimiento del barrio. Evita exposiciones innecesarias y prioriza ambientes que ofrezcan privacidad y comodidad. La discreción es parte del lujo y valora la experiencia para todos.',
+          date: '8 de febrero de 2026',
+        },
+        lifestyleEtiquette: {
+          title: 'Etiqueta premium: lo esencial',
+          excerpt: 'Puntualidad, respeto y comunicación clara elevan la experiencia.',
+          content:
+            'La elegancia está en los detalles. Confirma horarios, respeta los límites acordados y mantén la cordialidad de principio a fin. Un enfoque respetuoso crea confianza y convierte cualquier encuentro en una experiencia memorable.',
+          date: '6 de febrero de 2026',
+        },
+        lifestylePlanning: {
+          title: 'Planificación con comodidad: cómo organizar mejor',
+          excerpt: 'Ambiente, vestimenta y logística alineados para una experiencia sin ruido.',
+          content:
+            'Una buena planificación empieza con la elección del lugar y el cuidado con la presentación. Prefiere ambientes tranquilos, mantén una comunicación objetiva y alinea expectativas. La simplicidad bien ejecutada siempre es sofisticada.',
+          date: '5 de febrero de 2026',
+        },
+        modelsProfile: {
+          title: 'Perfil que inspira confianza: lo imprescindible',
+          excerpt: 'Bio objetiva, fotos de calidad e información clara marcan la diferencia.',
+          content:
+            'Un perfil bien construido transmite profesionalismo. Usa fotos nítidas, mantén una descripción objetiva y destaca diferenciales con honestidad. Transparencia y consistencia generan confianza y mejoran la calidad de los contactos.',
+          date: '4 de febrero de 2026',
+        },
+        modelsPhotos: {
+          title: 'Checklist de fotos: luz, postura y privacidad',
+          excerpt: 'Cómo valorizar tu imagen preservando tu seguridad.',
+          content:
+            'Fotos con buena iluminación y encuadre profesional elevan la percepción de calidad. Evita elementos que revelen datos personales y mantén consistencia visual. La imagen correcta comunica elegancia y cuidado.',
+          date: '3 de febrero de 2026',
+        },
+        safetyAlerts: {
+          title: 'Señales de alerta: cómo identificar riesgos',
+          excerpt: 'Evita la prisa, respeta límites y prioriza la seguridad.',
+          content:
+            'Desconfía de pedidos apresurados, información confusa o falta de claridad. Prefiere acordar detalles con calma y, siempre que sea posible, elige ambientes seguros. La seguridad viene antes que cualquier negociación.',
+          date: '1 de febrero de 2026',
+        },
+        safetyPrivacy: {
+          title: 'Privacidad digital: buenas prácticas esenciales',
+          excerpt: 'Protege tus datos y mantén tu identidad segura.',
+          content:
+            'Evita compartir información personal innecesaria y mantén tus canales organizados. Usa fotos que no revelen detalles íntimos de tu día a día. La privacidad es parte del cuidado.',
+          date: '31 de enero de 2026',
+        },
+      },
+    },
     listing: {
       title: 'Galería Punto',
       count: '{{count}} modelos encontradas',
@@ -3348,6 +3672,87 @@ export const translations = {
       noneAvailable: 'Nessun profilo in evidenza al momento.',
       savedEmpty: 'Nessun profilo salvato.',
     },
+    blog: {
+      eyebrow: 'Blog',
+      title: 'Puntoescort Lifestyle',
+      subtitle: 'Consigli, guide e novità dal mondo lifestyle con curatela elegante.',
+      categories: {
+        all: 'Tutto',
+        cities: 'Città',
+        lifestyle: 'Stile di Vita',
+        models: 'Modelle',
+        safety: 'Sicurezza',
+      },
+      readMore: 'Leggi di più',
+      backToBlog: 'Torna al Blog',
+      author: 'Curatela Puntoescort',
+      editorLabel: 'Redazione Puntoescort',
+      articleOutro1:
+        'Puntoescort è orgogliosa di offrire non solo una piattaforma, ma una curatela completa di contenuti per elevare la tua esperienza sociale e personale.',
+      articleOutro2:
+        'Continua a seguire il nostro blog per novità esclusive, guide di viaggio e le tendenze più forti del mercato del lusso in Brasile.',
+      curatedLabel: 'Curatela',
+      curatedBody:
+        'Contenuti selezionati con focus su raffinatezza, discrezione e buone pratiche per un’esperienza premium.',
+      posts: {
+        citiesSaoPaulo: {
+          title: 'São Paulo premium: itinerario discreto ed efficiente',
+          excerpt: 'Come organizzare spostamenti, orari e location con eleganza in una giornata in capitale.',
+          content:
+            'São Paulo è intensa e il segreto è la pianificazione. Preferisci aree con buona infrastruttura, concorda gli orari in anticipo e mantieni una comunicazione chiara per evitare imprevisti. Un itinerario ben definito aiuta a mantenere l’esperienza confortevole, sicura e sofisticata.',
+          date: '10 febbraio 2026',
+        },
+        citiesRio: {
+          title: 'Rio de Janeiro con discrezione: buone pratiche',
+          excerpt: 'Equilibra svago, sicurezza e privacy negli incontri nella città meravigliosa.',
+          content:
+            'A Rio, scegli luoghi con facile accesso e considera il movimento del quartiere. Evita esposizioni inutili e privilegia ambienti che offrano privacy e comfort. La discrezione è parte del lusso e valorizza l’esperienza per tutti.',
+          date: '8 febbraio 2026',
+        },
+        lifestyleEtiquette: {
+          title: 'Etichetta premium: l’essenziale',
+          excerpt: 'Puntualità, rispetto e comunicazione chiara elevano l’esperienza.',
+          content:
+            'L’eleganza è nei dettagli. Conferma gli orari, rispetta i limiti concordati e mantieni la cordialità dall’inizio alla fine. Un approccio rispettoso crea fiducia e trasforma qualsiasi incontro in un’esperienza memorabile.',
+          date: '6 febbraio 2026',
+        },
+        lifestylePlanning: {
+          title: 'Pianificazione con comfort: come organizzarsi meglio',
+          excerpt: 'Ambiente, abbigliamento e logistica allineati per un’esperienza senza intoppi.',
+          content:
+            'Una buona pianificazione inizia dalla scelta del luogo e dalla cura della presentazione. Preferisci ambienti tranquilli, mantieni una comunicazione oggettiva e allinea le aspettative. La semplicità ben eseguita è sempre sofisticata.',
+          date: '5 febbraio 2026',
+        },
+        modelsProfile: {
+          title: 'Profilo che ispira fiducia: ciò che non può mancare',
+          excerpt: 'Bio chiara, foto di qualità e informazioni trasparenti fanno la differenza.',
+          content:
+            'Un profilo ben costruito trasmette professionalità. Usa foto nitide, mantieni una descrizione oggettiva e metti in evidenza i punti di forza con onestà. Trasparenza e coerenza generano fiducia e migliorano la qualità dei contatti.',
+          date: '4 febbraio 2026',
+        },
+        modelsPhotos: {
+          title: 'Checklist foto: luce, postura e privacy',
+          excerpt: 'Come valorizzare la tua immagine preservando la sicurezza.',
+          content:
+            'Foto con buona illuminazione e inquadratura professionale elevano la percezione di qualità. Evita elementi che rivelino dati personali e mantieni coerenza visiva. L’immagine giusta comunica eleganza e cura.',
+          date: '3 febbraio 2026',
+        },
+        safetyAlerts: {
+          title: 'Segnali d’allarme: come riconoscere i rischi',
+          excerpt: 'Evita la fretta, rispetta i limiti e dai priorità alla sicurezza.',
+          content:
+            'Diffida di richieste affrettate, informazioni confuse o mancanza di chiarezza. Preferisci concordare i dettagli con calma e, quando possibile, scegli ambienti sicuri. La sicurezza viene prima di qualsiasi trattativa.',
+          date: '1 febbraio 2026',
+        },
+        safetyPrivacy: {
+          title: 'Privacy digitale: buone pratiche essenziali',
+          excerpt: 'Proteggi i tuoi dati e mantieni la tua identità al sicuro.',
+          content:
+            'Evita di condividere informazioni personali non necessarie e mantieni i tuoi canali organizzati. Usa foto che non rivelino dettagli intimi della tua quotidianità. La privacy è parte della cura.',
+          date: '31 gennaio 2026',
+        },
+      },
+    },
     listing: {
       title: 'Galleria Punto',
       count: '{{count}} modelle trovate',
@@ -4090,6 +4495,87 @@ export const translations = {
       locationMissing: 'Localisation non renseignée',
       noneAvailable: 'Aucun profil en vedette pour le moment.',
       savedEmpty: 'Aucun profil enregistré.',
+    },
+    blog: {
+      eyebrow: 'Blog',
+      title: 'Puntoescort Lifestyle',
+      subtitle: 'Conseils, guides et nouveautés de l’univers lifestyle avec une curation élégante.',
+      categories: {
+        all: 'Tout',
+        cities: 'Villes',
+        lifestyle: 'Style de Vie',
+        models: 'Modèles',
+        safety: 'Sécurité',
+      },
+      readMore: 'Lire la suite',
+      backToBlog: 'Retour au Blog',
+      author: 'Rédaction Puntoescort',
+      editorLabel: 'Rédaction Puntoescort',
+      articleOutro1:
+        'Puntoescort est fière d’offrir non seulement une plateforme, mais une curation complète de contenu pour élever votre expérience sociale et personnelle.',
+      articleOutro2:
+        'Continuez à suivre notre blog pour des nouveautés exclusives, des guides de voyage et les tendances les plus fortes du marché du luxe au Brésil.',
+      curatedLabel: 'Curation',
+      curatedBody:
+        'Contenu sélectionné avec un focus sur la sophistication, la discrétion et les bonnes pratiques pour une expérience premium.',
+      posts: {
+        citiesSaoPaulo: {
+          title: 'São Paulo premium : itinéraire discret et efficace',
+          excerpt: 'Comment organiser déplacements, horaires et lieux avec élégance en une journée dans la capitale.',
+          content:
+            'São Paulo est intense, et le secret réside dans la planification. Privilégiez les zones bien équipées, convenez des horaires à l’avance et gardez une communication claire pour éviter les imprévus. Un itinéraire bien défini garantit une expérience confortable, sûre et sophistiquée.',
+          date: '10 février 2026',
+        },
+        citiesRio: {
+          title: 'Rio de Janeiro avec discrétion : bonnes pratiques',
+          excerpt: 'Équilibrez loisirs, sécurité et confidentialité dans la ville merveilleuse.',
+          content:
+            'À Rio, choisissez des lieux faciles d’accès et tenez compte du mouvement du quartier. Évitez les expositions inutiles et privilégiez des environnements offrant confidentialité et confort. La discrétion fait partie du luxe et valorise l’expérience pour tous.',
+          date: '8 février 2026',
+        },
+        lifestyleEtiquette: {
+          title: 'Étiquette premium : l’essentiel',
+          excerpt: 'Ponctualité, respect et communication claire élèvent l’expérience.',
+          content:
+            'L’élégance est dans les détails. Confirmez les horaires, respectez les limites convenues et restez courtois du début à la fin. Une approche respectueuse crée la confiance et transforme toute rencontre en expérience mémorable.',
+          date: '6 février 2026',
+        },
+        lifestylePlanning: {
+          title: 'Planification avec confort : mieux s’organiser',
+          excerpt: 'Lieu, tenue et logistique alignés pour une expérience fluide.',
+          content:
+            'Une bonne planification commence par le choix du lieu et le soin apporté à la présentation. Privilégiez des environnements calmes, gardez une communication objective et alignez les attentes. La simplicité bien exécutée est toujours sophistiquée.',
+          date: '5 février 2026',
+        },
+        modelsProfile: {
+          title: 'Profil qui inspire confiance : l’indispensable',
+          excerpt: 'Bio claire, photos de qualité et informations transparentes font la différence.',
+          content:
+            'Un profil bien construit transmet du professionnalisme. Utilisez des photos nettes, gardez une description objective et mettez en avant vos atouts avec honnêteté. Transparence et cohérence créent la confiance et améliorent la qualité des contacts.',
+          date: '4 février 2026',
+        },
+        modelsPhotos: {
+          title: 'Checklist photos : lumière, posture et confidentialité',
+          excerpt: 'Comment valoriser votre image tout en préservant votre sécurité.',
+          content:
+            'Des photos avec une bonne lumière et un cadrage professionnel augmentent la perception de qualité. Évitez les éléments qui révèlent des données personnelles et gardez une cohérence visuelle. La bonne image communique élégance et soin.',
+          date: '3 février 2026',
+        },
+        safetyAlerts: {
+          title: 'Signaux d’alerte : identifier les risques',
+          excerpt: 'Évitez la précipitation, respectez les limites et priorisez la sécurité.',
+          content:
+            'Méfiez-vous des demandes précipitées, d’informations confuses ou d’un manque de clarté. Préférez aligner les détails calmement et, si possible, choisissez des environnements sûrs. La sécurité passe avant toute négociation.',
+          date: '1 février 2026',
+        },
+        safetyPrivacy: {
+          title: 'Confidentialité numérique : bonnes pratiques essentielles',
+          excerpt: 'Protégez vos données et gardez votre identité en sécurité.',
+          content:
+            'Évitez de partager des informations personnelles inutiles et gardez vos canaux organisés. Utilisez des photos qui ne révèlent pas des détails intimes de votre quotidien. La confidentialité fait partie du soin.',
+          date: '31 janvier 2026',
+        },
+      },
     },
     listing: {
       title: 'Galerie Punto',

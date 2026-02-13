@@ -71,6 +71,11 @@ const Header: React.FC<HeaderProps> = ({
     window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
+  const goHome = () => {
+    navigateTo('/');
+    setIsMenuOpen(false);
+  };
+
   const toggleFlag = () => {
     setIsLangOpen((prev) => !prev);
   };
@@ -231,7 +236,14 @@ const Header: React.FC<HeaderProps> = ({
           </button>
 
           <div className="flex-1 md:flex-initial flex justify-center md:justify-start">
-            <Logo />
+            <button
+              type="button"
+              onClick={goHome}
+              className="focus:outline-none"
+              aria-label={t('common.backToSite')}
+            >
+              <Logo />
+            </button>
           </div>
           
           <div className="flex items-center gap-2 md:gap-8">
@@ -290,6 +302,12 @@ const Header: React.FC<HeaderProps> = ({
             )}
 
             <div className="flex items-center gap-3 sm:gap-4 border-l md:pl-4 border-gray-200 relative">
+              <button
+                onClick={() => navigateTo('/blog')}
+                className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.25em] text-gray-500 hover:text-[#e3262e] transition-colors"
+              >
+                {t('footer.blog')}
+              </button>
               <FlagButton />
               
               <div className="relative" ref={notificationRef}>
@@ -367,7 +385,14 @@ const Header: React.FC<HeaderProps> = ({
             <button onClick={toggleMenu} className="text-gray-700">
               <X size={24} />
             </button>
-            <Logo />
+            <button
+              type="button"
+              onClick={goHome}
+              className="focus:outline-none"
+              aria-label={t('common.backToSite')}
+            >
+              <Logo />
+            </button>
             <div className="flex items-center gap-3">
               <FlagButton isMobile={true} />
               <div className="relative">

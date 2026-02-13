@@ -684,6 +684,25 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     }
   };
 
+  const attachDocumentStream = async (stream: MediaStream) => {
+    const video = documentVideoRef.current;
+    if (!video) return;
+    video.setAttribute('playsinline', 'true');
+    video.setAttribute('webkit-playsinline', 'true');
+    video.muted = true;
+    video.autoplay = true;
+    video.srcObject = stream;
+    await new Promise<void>((resolve) => {
+      if (video.readyState >= 1) return resolve();
+      video.onloadedmetadata = () => resolve();
+    });
+    try {
+      await video.play();
+    } catch {
+      // ignore autoplay errors
+    }
+  };
+
   const startDocumentFocusLoop = () => {
     if (documentFocusTimerRef.current) {
       window.clearInterval(documentFocusTimerRef.current);
@@ -696,13 +715,22 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
 
   const startDocumentCamera = async () => {
     setDocumentCameraError('');
-    stopDocumentCameraStream();
     setDocumentCameraLoading(true);
     if (!navigator?.mediaDevices?.getUserMedia) {
       setDocumentCameraError(t('errors.cameraUnavailable'));
       setDocumentCameraLoading(false);
       return;
     }
+    const existingStream = documentStreamRef.current;
+    const existingTrack = existingStream?.getVideoTracks().find((track) => track.readyState === 'live');
+    if (existingStream && existingTrack) {
+      documentVideoTrackRef.current = existingTrack;
+      attachDocumentStream(existingStream);
+      setDocumentCameraLoading(false);
+      startDocumentFocusLoop();
+      return;
+    }
+    stopDocumentCameraStream();
     try {
       await lockPortrait();
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -716,22 +744,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       });
       documentStreamRef.current = stream;
       documentVideoTrackRef.current = stream.getVideoTracks()[0] ?? null;
-      if (documentVideoRef.current) {
-        documentVideoRef.current.setAttribute('playsinline', 'true');
-        documentVideoRef.current.setAttribute('webkit-playsinline', 'true');
-        documentVideoRef.current.muted = true;
-        documentVideoRef.current.autoplay = true;
-        documentVideoRef.current.srcObject = stream;
-        await new Promise<void>((resolve) => {
-          if (!documentVideoRef.current) return resolve();
-          documentVideoRef.current.onloadedmetadata = () => resolve();
-        });
-        try {
-          await documentVideoRef.current.play();
-        } catch {
-          // ignore autoplay errors
-        }
-      }
+      attachDocumentStream(stream);
       if (!documentVideoRef.current?.videoWidth) {
         throw new Error('camera_unavailable');
       }
@@ -767,6 +780,15 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       messageKey: 'onboarding.step1.documentHint',
     });
     resetDocumentAutoCapture();
+    const activeStream = documentStreamRef.current;
+    const activeTrack = activeStream?.getVideoTracks().find((track) => track.readyState === 'live');
+    if (activeStream && activeTrack) {
+      documentVideoTrackRef.current = activeTrack;
+      attachDocumentStream(activeStream);
+      setDocumentCameraLoading(false);
+      startDocumentFocusLoop();
+      return;
+    }
     startDocumentCamera();
   };
 
@@ -1420,7 +1442,6 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
         `document-${documentCaptureSide}-${Date.now()}.jpg`,
         { type: 'image/jpeg' }
       );
-      stopDocumentCameraStream({ unlock: false });
       setDocumentCapturePreview({ dataUrl, file, side: documentCaptureSide });
       setDocumentCameraError('');
       setDocumentValidation({
@@ -2816,7 +2837,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
               <button
                 type="button"
                 onClick={() => captureDocumentPhoto(false)}
-                disabled={!documentValidation.valid || documentCameraLoading || identityBusy || documentFlipActive}
+                disabled={documentCameraLoading || identityBusy || documentFlipActive}
                 className="flex-1 px-4 py-3 rounded-2xl bg-emerald-500 text-white text-xs font-bold uppercase tracking-widest hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {t('onboarding.step1.documentCapture')}
