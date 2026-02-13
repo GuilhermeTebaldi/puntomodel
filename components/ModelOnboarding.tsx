@@ -204,6 +204,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const documentFocusPeakRef = useRef(0);
   const documentFlipTimerRef = useRef<number | null>(null);
   const documentFlashTimerRef = useRef<number | null>(null);
+  const documentPendingAttachRef = useRef(false);
   const hasSelectedLocation = Boolean(selectedLocation && selectedLocation.lat && selectedLocation.lon);
 
   const getBrowserCountryCode = () => {
@@ -399,6 +400,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     }
     documentDetectionRef.current = null;
     documentCaptureInProgressRef.current = false;
+    documentPendingAttachRef.current = false;
     resetDocumentAutoCapture();
     setDocumentCameraLoading(false);
     setDocumentCaptureFlash(false);
@@ -734,6 +736,26 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     }
   };
 
+  const attachExistingDocumentStream = async () => {
+    const stream = documentStreamRef.current;
+    const track = stream?.getVideoTracks().find((item) => item.readyState === 'live');
+    if (!stream || !track) {
+      setDocumentCameraLoading(false);
+      return false;
+    }
+    documentVideoTrackRef.current = track;
+    await attachDocumentStream(stream);
+    const ready = await waitForVideoReady(documentVideoRef.current);
+    if (!ready) {
+      setDocumentCameraError(t('errors.cameraUnavailable'));
+      setDocumentCameraLoading(false);
+      return false;
+    }
+    setDocumentCameraLoading(false);
+    startDocumentFocusLoop();
+    return true;
+  };
+
   const startDocumentFocusLoop = () => {
     if (documentFocusTimerRef.current) {
       window.clearInterval(documentFocusTimerRef.current);
@@ -756,17 +778,15 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     const existingStream = documentStreamRef.current;
     const existingTrack = existingStream?.getVideoTracks().find((track) => track.readyState === 'live');
     if (existingStream && existingTrack) {
-      documentVideoTrackRef.current = existingTrack;
-      try {
-        await attachDocumentStream(existingStream);
-        const ready = await waitForVideoReady(documentVideoRef.current);
-        if (!ready) throw new Error('camera_unavailable');
-        setDocumentCameraLoading(false);
-        startDocumentFocusLoop();
-        return;
-      } catch {
-        setDocumentCameraError(t('errors.cameraUnavailable'));
-        setDocumentCameraLoading(false);
+      if (documentVideoRef.current) {
+        try {
+          const attached = await attachExistingDocumentStream();
+          if (attached) return;
+        } catch {
+          // fallthrough to restart stream
+        }
+      } else {
+        documentPendingAttachRef.current = true;
         return;
       }
     }
@@ -815,6 +835,7 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     }
     setDocumentCaptureSide(nextSide);
     setDocumentCameraOpen(true);
+    setDocumentCameraLoading(true);
     setDocumentValidation({
       valid: false,
       reason: 'idle',
@@ -824,10 +845,11 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
     const activeStream = documentStreamRef.current;
     const activeTrack = activeStream?.getVideoTracks().find((track) => track.readyState === 'live');
     if (activeStream && activeTrack) {
-      documentVideoTrackRef.current = activeTrack;
-      attachDocumentStream(activeStream);
-      setDocumentCameraLoading(false);
-      startDocumentFocusLoop();
+      if (documentVideoRef.current) {
+        void attachExistingDocumentStream();
+      } else {
+        documentPendingAttachRef.current = true;
+      }
       return;
     }
     startDocumentCamera();
@@ -1209,6 +1231,14 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       }
     };
   }, [documentCameraOpen, documentCameraLoading, documentCapturePreview]);
+
+  useEffect(() => {
+    if (!documentCameraOpen || documentCapturePreview || documentFlipActive) return;
+    if (!documentPendingAttachRef.current) return;
+    if (!documentVideoRef.current) return;
+    documentPendingAttachRef.current = false;
+    void attachExistingDocumentStream();
+  }, [documentCameraOpen, documentCapturePreview, documentFlipActive]);
 
   const readFileAsDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
