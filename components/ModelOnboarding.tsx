@@ -6,6 +6,7 @@ import { AuthUser, clearPendingModelProfile, getPendingModelProfile, PendingMode
 import { uploadImage, uploadImageWithProgress } from '../services/cloudinary';
 import { fetchCountries } from '../services/countries';
 import { scanIdentityDocument } from '../services/identityOcr';
+import { trackRegistrationComplete, trackRegistrationStart } from '../services/registrationLeads';
 import { createModelProfile } from '../services/models';
 import { getTranslationTarget } from '../services/translate';
 import { hairOptions, eyeOptions, serviceOptions, identityOptions } from '../translations';
@@ -189,6 +190,8 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
   const manualCountryRef = useRef(false);
   const faceVideoRef = useRef<HTMLVideoElement | null>(null);
   const faceStreamRef = useRef<MediaStream | null>(null);
+  const registrationLeadRef = useRef<{ phone: string; name: string } | null>(null);
+  const registrationLeadTimerRef = useRef<number | null>(null);
   const documentVideoRef = useRef<HTMLVideoElement | null>(null);
   const documentStreamRef = useRef<MediaStream | null>(null);
   const documentFrameRef = useRef<HTMLDivElement | null>(null);
@@ -526,6 +529,36 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
       isActive = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const pending = registration ?? getPendingModelProfile();
+    const leadName = (registeredName || pending?.name || '').trim();
+    const rawPhone = (phoneRawValue || phoneValue).trim();
+    const digits = rawPhone.replace(/\D/g, '');
+    if (!leadName || digits.length < 8) return;
+    const dial = countriesWithDial.find((country) => country.cca2 === selectedCountry)?.dial ?? '';
+    const normalized = normalizePhoneE164(rawPhone, phoneValue, dial);
+    if (!normalized) return;
+    const lastLead = registrationLeadRef.current;
+    if (lastLead && lastLead.phone === normalized && lastLead.name === leadName) return;
+
+    if (registrationLeadTimerRef.current) {
+      window.clearTimeout(registrationLeadTimerRef.current);
+    }
+
+    registrationLeadTimerRef.current = window.setTimeout(() => {
+      trackRegistrationStart({ name: leadName, phone: rawPhone, phoneCountryDial: dial });
+      registrationLeadRef.current = { phone: normalized, name: leadName };
+    }, 650);
+
+    return () => {
+      if (registrationLeadTimerRef.current) {
+        window.clearTimeout(registrationLeadTimerRef.current);
+        registrationLeadTimerRef.current = null;
+      }
+    };
+  }, [isOpen, phoneValue, phoneRawValue, registeredName, registration, selectedCountry, countriesWithDial]);
 
   const formatPhone = (digits: string, countryCode: string) => {
     const trimmed = digits.replace(/\D/g, '');
@@ -1938,6 +1971,11 @@ const ModelOnboarding: React.FC<ModelOnboardingProps> = ({ isOpen, onClose, regi
           : null,
         photos: uploadedPhotos,
         featured: true,
+      });
+      void trackRegistrationComplete({
+        name: displayName,
+        phone: normalizedPhone,
+        phoneCountryDial: selectedDial,
       });
       clearPendingModelProfile();
       onProfilePublished?.(registrationResult.user);

@@ -41,6 +41,17 @@ const rowToModel = (row) => {
   };
 };
 
+const rowToRegistrationLead = (row) => ({
+  id: row.id,
+  name: row.name,
+  phone: row.phone,
+  phoneNormalized: row.phone_normalized,
+  status: row.status,
+  createdAt: toIso(row.created_at),
+  updatedAt: toIso(row.updated_at),
+  completedAt: toIso(row.completed_at),
+});
+
 const parseDateToMs = (value) => {
   if (!value) return null;
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
@@ -239,6 +250,44 @@ export const markNotificationsRead = async (modelId) => {
     `UPDATE notifications SET read_at = COALESCE(read_at, $2) WHERE model_id = $1`,
     [modelId, readAt]
   );
+};
+
+export const upsertRegistrationLead = async ({ name, phone, phoneNormalized }) => {
+  const id = nanoid();
+  const now = new Date().toISOString();
+  const { rows } = await query(
+    `INSERT INTO registration_leads (id, name, phone, phone_normalized, status, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, 'started', $5, $5)
+     ON CONFLICT (phone_normalized)
+     DO UPDATE SET name = EXCLUDED.name, phone = EXCLUDED.phone, updated_at = EXCLUDED.updated_at
+     RETURNING *`,
+    [id, name, phone, phoneNormalized, now]
+  );
+  return rows[0] ? rowToRegistrationLead(rows[0]) : null;
+};
+
+export const completeRegistrationLead = async ({ name, phone, phoneNormalized }) => {
+  const id = nanoid();
+  const now = new Date().toISOString();
+  const { rows } = await query(
+    `INSERT INTO registration_leads (id, name, phone, phone_normalized, status, created_at, updated_at, completed_at)
+     VALUES ($1, $2, $3, $4, 'completed', $5, $5, $5)
+     ON CONFLICT (phone_normalized)
+     DO UPDATE SET
+       status = 'completed',
+       completed_at = COALESCE(registration_leads.completed_at, EXCLUDED.completed_at),
+       updated_at = EXCLUDED.updated_at,
+       name = COALESCE(registration_leads.name, EXCLUDED.name),
+       phone = COALESCE(registration_leads.phone, EXCLUDED.phone)
+     RETURNING *`,
+    [id, name || '', phone || phoneNormalized, phoneNormalized, now]
+  );
+  return rows[0] ? rowToRegistrationLead(rows[0]) : null;
+};
+
+export const listRegistrationLeads = async () => {
+  const { rows } = await query('SELECT * FROM registration_leads ORDER BY updated_at DESC');
+  return rows.map(rowToRegistrationLead);
 };
 
 export const resetDatabase = async () => {

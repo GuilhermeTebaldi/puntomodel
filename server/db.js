@@ -72,10 +72,25 @@ export const ensureSchema = async () => {
     );
   `);
 
+  await query(`
+    CREATE TABLE IF NOT EXISTS registration_leads (
+      id text PRIMARY KEY,
+      name text NOT NULL,
+      phone text NOT NULL,
+      phone_normalized text UNIQUE NOT NULL,
+      status text NOT NULL DEFAULT 'started',
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      completed_at timestamptz NULL
+    );
+  `);
+
   await query(`CREATE INDEX IF NOT EXISTS payments_model_id_idx ON payments(model_id);`);
   await query(`CREATE INDEX IF NOT EXISTS events_model_id_idx ON events(model_id);`);
   await query(`CREATE INDEX IF NOT EXISTS comments_model_id_idx ON comments(model_id);`);
   await query(`CREATE INDEX IF NOT EXISTS notifications_model_id_idx ON notifications(model_id);`);
+  await query(`CREATE INDEX IF NOT EXISTS registration_leads_status_idx ON registration_leads(status);`);
+  await query(`CREATE INDEX IF NOT EXISTS registration_leads_updated_idx ON registration_leads(updated_at DESC);`);
 };
 
 export const checkDb = async () => {

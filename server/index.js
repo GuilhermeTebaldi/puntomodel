@@ -16,10 +16,13 @@ import {
   getModelByEmail,
   getModelById as getModelByIdRepo,
   listModels,
+  listRegistrationLeads,
   listUsers,
   markNotificationsRead,
   rate as rateEvent,
   resetDatabase,
+  upsertRegistrationLead,
+  completeRegistrationLead,
   updateModel,
   upsertModel,
   deleteModel,
@@ -813,6 +816,12 @@ app.get('/api/admin/models', async (_req, res) => {
   res.json({ ok: true, models });
 });
 
+app.get('/api/admin/registrations', async (_req, res) => {
+  await ensureDb();
+  const leads = await listRegistrationLeads();
+  res.json({ ok: true, leads });
+});
+
 app.post('/api/admin/models/:id/translate', async (req, res) => {
   await ensureDb();
   const model = await getModelByIdRepo(req.params.id);
@@ -838,6 +847,40 @@ app.delete('/api/admin/models/:id', async (req, res) => {
   }
   await deleteModel(model.id);
   res.json({ ok: true });
+});
+
+app.post('/api/registrations/start', async (req, res) => {
+  await ensureDb();
+  const payload = req.body || {};
+  const name = typeof payload.name === 'string' ? payload.name.trim() : '';
+  const phone = typeof payload.phone === 'string' ? payload.phone.trim() : '';
+  const dial = typeof payload.phoneCountryDial === 'string' ? payload.phoneCountryDial : '';
+  if (!name || !phone) {
+    return res.status(400).json({ ok: false, error: 'Nome e telefone são obrigatórios.' });
+  }
+  const normalizedPhone = normalizePhoneE164(phone, dial);
+  if (!normalizedPhone) {
+    return res.status(400).json({ ok: false, error: 'Número de WhatsApp inválido.' });
+  }
+  const lead = await upsertRegistrationLead({ name, phone, phoneNormalized: normalizedPhone });
+  res.json({ ok: true, lead });
+});
+
+app.post('/api/registrations/complete', async (req, res) => {
+  await ensureDb();
+  const payload = req.body || {};
+  const name = typeof payload.name === 'string' ? payload.name.trim() : '';
+  const phone = typeof payload.phone === 'string' ? payload.phone.trim() : '';
+  const dial = typeof payload.phoneCountryDial === 'string' ? payload.phoneCountryDial : '';
+  if (!phone) {
+    return res.status(400).json({ ok: false, error: 'Telefone é obrigatório.' });
+  }
+  const normalizedPhone = normalizePhoneE164(phone, dial);
+  if (!normalizedPhone) {
+    return res.status(400).json({ ok: false, error: 'Número de WhatsApp inválido.' });
+  }
+  const lead = await completeRegistrationLead({ name, phone, phoneNormalized: normalizedPhone });
+  res.json({ ok: true, lead });
 });
 
 app.post('/api/models', async (req, res) => {

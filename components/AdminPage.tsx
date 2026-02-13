@@ -36,6 +36,16 @@ interface AdminModel {
   updatedAt?: string;
 }
 
+interface AdminRegistrationLead {
+  id: string;
+  name: string;
+  phone: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  completedAt?: string | null;
+}
+
 const readJsonSafe = async <T,>(response: Response): Promise<T | null> => {
   const text = await response.text();
   if (!text) return null;
@@ -74,7 +84,8 @@ const AdminPage: React.FC = () => {
   const { t, translateError, locale, languageOptions } = useI18n();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [models, setModels] = useState<AdminModel[]>([]);
-  const [tab, setTab] = useState<'users' | 'models' | 'translations'>('users');
+  const [registrationLeads, setRegistrationLeads] = useState<AdminRegistrationLead[]>([]);
+  const [tab, setTab] = useState<'users' | 'models' | 'translations' | 'registrations'>('users');
   const [error, setError] = useState('');
   const [resetting, setResetting] = useState(false);
   const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
@@ -118,6 +129,7 @@ const AdminPage: React.FC = () => {
     let mounted = true;
 
     const load = async () => {
+      let coreLoaded = false;
       try {
         const [usersRes, modelsRes] = await Promise.all([
           apiFetch('/api/admin/users'),
@@ -138,9 +150,24 @@ const AdminPage: React.FC = () => {
           hasLoaded.current = true;
         }
         setError('');
+        coreLoaded = true;
       } catch (err) {
         if (!mounted) return;
         setError(err instanceof Error ? translateError(err.message) : t('errors.loadData'));
+      }
+
+      if (!coreLoaded || !mounted) return;
+      try {
+        const registrationsRes = await apiFetch('/api/admin/registrations');
+        const registrationsData = await readJsonSafe<{ leads?: AdminRegistrationLead[]; error?: string }>(
+          registrationsRes
+        );
+        if (!mounted) return;
+        if (registrationsRes.ok) {
+          setRegistrationLeads(registrationsData?.leads || []);
+        }
+      } catch {
+        // ignore registrations load failures so core admin data keeps working
       }
     };
 
@@ -175,6 +202,19 @@ const AdminPage: React.FC = () => {
         if (didUpdate) triggerLogoPulse();
       } catch {
         // silent refresh
+      }
+
+      if (!active) return;
+      try {
+        const registrationsRes = await apiFetch('/api/admin/registrations');
+        const registrationsData = await readJsonSafe<{ leads?: AdminRegistrationLead[] }>(registrationsRes);
+        if (!active) return;
+        if (registrationsRes.ok && registrationsData?.leads) {
+          setRegistrationLeads(registrationsData.leads);
+          triggerLogoPulse();
+        }
+      } catch {
+        // ignore registrations refresh failures
       }
     };
 
@@ -368,6 +408,14 @@ const AdminPage: React.FC = () => {
               {t('adminPage.modelsTab')}
             </button>
             <button
+              onClick={() => setTab('registrations')}
+              className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${
+                tab === 'registrations' ? 'bg-[#e3262e] text-white' : 'bg-white text-gray-500 border border-gray-200'
+              }`}
+            >
+              {t('adminPage.registrationsTab')}
+            </button>
+            <button
               onClick={() => setTab('translations')}
               className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${
                 tab === 'translations' ? 'bg-[#e3262e] text-white' : 'bg-white text-gray-500 border border-gray-200'
@@ -493,6 +541,57 @@ const AdminPage: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        ) : tab === 'registrations' ? (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-black text-gray-900">{t('adminPage.registrationsTitle')}</h2>
+              <p className="text-xs text-gray-500">{t('adminPage.registrationsHint')}</p>
+            </div>
+            <div className="bg-white border border-gray-100 rounded-2xl overflow-x-auto">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead className="bg-gray-50 text-gray-500">
+                  <tr>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.name')}</th>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.phone')}</th>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.status')}</th>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.createdAt')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {registrationLeads.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-6 text-gray-400 text-center">
+                        {t('adminPage.registrationsEmpty')}
+                      </td>
+                    </tr>
+                  )}
+                  {registrationLeads.map((lead) => {
+                    const isCompleted = Boolean(lead.completedAt) || lead.status === 'completed';
+                    return (
+                      <tr key={lead.id} className="border-t border-gray-100">
+                        <td className="px-4 py-3 font-semibold text-gray-800">{lead.name}</td>
+                        <td className="px-4 py-3 text-gray-600">{lead.phone}</td>
+                        <td className="px-4 py-3">
+                          {isCompleted ? (
+                            <span className="inline-flex items-center gap-2 text-emerald-600 text-xs font-bold uppercase tracking-widest">
+                              ✓ {t('adminPage.statusComplete')}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-2 text-red-500 text-xs font-bold uppercase tracking-widest">
+                              ✕ {t('adminPage.statusPending')}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 text-xs">
+                          {lead.createdAt ? new Date(lead.createdAt).toLocaleString(locale) : '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
