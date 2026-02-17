@@ -765,6 +765,12 @@ const sanitizeModelPublic = (model) => {
   return rest;
 };
 
+const setNoCacheHeaders = (res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+};
+
 app.get('/api/health', async (_req, res) => {
   const dbOk = await checkDb();
   res.json({ ok: true, db: dbOk });
@@ -1078,6 +1084,7 @@ app.get('/api/admin/password-resets', async (_req, res) => {
   try {
     await ensureDb();
     const requests = await listPasswordResetRequests();
+    setNoCacheHeaders(res);
     res.json({ ok: true, requests });
   } catch (error) {
     console.error('[password-reset:list-admin]', error);

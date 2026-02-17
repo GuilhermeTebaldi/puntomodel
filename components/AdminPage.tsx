@@ -190,7 +190,7 @@ const AdminPage: React.FC = () => {
 
   const loadPasswordResets = useCallback(async () => {
     try {
-      const response = await apiFetch('/api/admin/password-resets');
+      const response = await apiFetch(`/api/admin/password-resets?ts=${Date.now()}`, { cache: 'no-store' });
       const data = await readJsonSafe<{ requests?: AdminPasswordResetRequest[]; error?: string }>(response);
       if (!response.ok) {
         setPasswordResetLoadError(translateError(data?.error || t('errors.loadData')));
