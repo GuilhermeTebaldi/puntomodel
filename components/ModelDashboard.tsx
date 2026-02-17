@@ -63,6 +63,7 @@ interface ModelDashboardModel {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   photos?: string[];
   avatarUrl?: string | null;
   bio?: string;
@@ -433,6 +434,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   const [editingPhotos, setEditingPhotos] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [editingName, setEditingName] = useState(false);
+  const [editingPhone, setEditingPhone] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [showOnlinePicker, setShowOnlinePicker] = useState(false);
@@ -525,6 +527,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     : t('onboarding.step4.locationNotDefined');
 
   const [nameInput, setNameInput] = useState(model.name);
+  const [phoneInput, setPhoneInput] = useState(model.phone || '');
   const [bioInput, setBioInput] = useState(model.bio || '');
   const [servicesInput, setServicesInput] = useState<string[]>(model.services || []);
   const [serviceDraft, setServiceDraft] = useState('');
@@ -587,6 +590,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   useEffect(() => {
     setIsOnline(Boolean(model.isOnline ?? true));
     setNameInput(model.name);
+    setPhoneInput(model.phone || '');
     setBioInput(model.bio || '');
     setServicesInput(model.services || []);
     setEditingAudience(false);
@@ -614,6 +618,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
 
   const resetEdits = () => {
     setNameInput(model.name);
+    setPhoneInput(model.phone || '');
     setBioInput(model.bio || '');
     setServicesInput(model.services || []);
     setEditingAudience(false);
@@ -648,6 +653,13 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSavePhone = async () => {
+    await handleSave(
+      { phone: phoneInput.trim() },
+      () => setEditingPhone(false)
+    );
   };
 
   const handleSaveBio = async () => {
@@ -1369,6 +1381,52 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                       )}
                     </div>
 
+                    <div>
+                      <div className="flex justify-between items-center mb-3">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('onboarding.step1.labelWhatsapp')}</label>
+                        <button
+                          onClick={() => {
+                            setEditingPhone(!editingPhone);
+                            if (editingPhone) resetEdits();
+                          }}
+                          className="text-gray-300 hover:text-[#e3262e]"
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                      </div>
+                      {editingPhone ? (
+                        <div className="space-y-3">
+                          <input
+                            type="tel"
+                            value={phoneInput}
+                            onChange={(event) => setPhoneInput(event.target.value)}
+                            placeholder="+5511999999999"
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              disabled={saving}
+                              onClick={handleSavePhone}
+                              className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
+                            >
+                              {saving ? t('common.saving') : t('common.save')}
+                            </button>
+                            <button
+                              onClick={() => {
+                                resetEdits();
+                                setEditingPhone(false);
+                              }}
+                              className="px-4 py-2 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest"
+                            >
+                              {t('common.cancel')}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm font-semibold text-gray-700">{model.phone || t('profile.notInformed')}</p>
+                      )}
+                    </div>
+
                     <div className="group relative">
                       <label className="text-[10px] font-black text-gray-400 uppercase mb-2 block tracking-widest">{t('dashboard.form.aboutMe')}</label>
                       {editingBio ? (
@@ -2072,6 +2130,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                   <div className="border border-gray-100 rounded-[24px] sm:rounded-3xl p-5 sm:p-6">
                     <p className="text-xs font-black text-gray-400 uppercase mb-2">{t('dashboard.settings.account')}</p>
                     <p className="text-sm text-gray-600">{t('dashboard.settings.registeredEmail', { email: model.email || t('profile.notInformed') })}</p>
+                    <p className="text-sm text-gray-600 mt-1">{t('adminPage.table.phone')}: {model.phone || t('profile.notInformed')}</p>
                   </div>
 
                   <div className="md:hidden space-y-2">
