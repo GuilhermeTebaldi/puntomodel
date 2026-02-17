@@ -90,6 +90,12 @@ const AdminPage: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [editingPasswordUser, setEditingPasswordUser] = useState<AdminUser | null>(null);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordConfirmInput, setPasswordConfirmInput] = useState('');
+  const [updatingPasswordUserId, setUpdatingPasswordUserId] = useState<string | null>(null);
+  const [passwordEditError, setPasswordEditError] = useState('');
+  const [passwordEditSuccess, setPasswordEditSuccess] = useState('');
   const [selectedModel, setSelectedModel] = useState<AdminModel | null>(null);
   const [selectedTranslationModel, setSelectedTranslationModel] = useState<AdminModel | null>(null);
   const [refreshingTranslations, setRefreshingTranslations] = useState(false);
@@ -326,6 +332,66 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const openPasswordEditor = (user: AdminUser) => {
+    setEditingPasswordUser(user);
+    setPasswordInput('');
+    setPasswordConfirmInput('');
+    setPasswordEditError('');
+    setPasswordEditSuccess('');
+  };
+
+  const closePasswordEditor = () => {
+    setEditingPasswordUser(null);
+    setPasswordInput('');
+    setPasswordConfirmInput('');
+    setPasswordEditError('');
+    setPasswordEditSuccess('');
+  };
+
+  const handleUpdateUserPassword = async () => {
+    if (!editingPasswordUser) return;
+    const newPassword = passwordInput.trim();
+    const confirmPassword = passwordConfirmInput.trim();
+
+    if (!newPassword || !confirmPassword) {
+      setPasswordEditError(t('errors.passwordRequired'));
+      setPasswordEditSuccess('');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordEditError(t('errors.passwordTooShort'));
+      setPasswordEditSuccess('');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordEditError(t('errors.passwordMismatch'));
+      setPasswordEditSuccess('');
+      return;
+    }
+
+    setUpdatingPasswordUserId(editingPasswordUser.id);
+    setPasswordEditError('');
+    setPasswordEditSuccess('');
+    try {
+      const response = await apiFetch(`/api/admin/users/${editingPasswordUser.id}/password`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword }),
+      });
+      const data = await readJsonSafe<{ error?: string }>(response);
+      if (!response.ok) throw new Error(data?.error || t('errors.updateFailed'));
+      setPasswordEditSuccess(t('adminPage.passwordUpdated'));
+      setPasswordInput('');
+      setPasswordConfirmInput('');
+    } catch (err) {
+      setPasswordEditError(err instanceof Error ? translateError(err.message) : t('errors.updateFailed'));
+    } finally {
+      setUpdatingPasswordUserId(null);
+    }
+  };
+
   const handleDeleteModel = async (model: AdminModel) => {
     const confirmed = window.confirm(
       `${t('adminPage.confirmDeleteModel')}\n${model.name} (${model.email})`
@@ -467,13 +533,21 @@ const AdminPage: React.FC = () => {
                       {user.createdAt ? new Date(user.createdAt).toLocaleString(locale) : '-'}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => handleDeleteUser(user)}
-                        disabled={deletingUserId === user.id}
-                        className="text-xs font-bold uppercase tracking-widest text-red-600 hover:text-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        {deletingUserId === user.id ? t('adminPage.deleting') : t('adminPage.delete')}
-                      </button>
+                      <div className="flex items-center justify-end gap-3">
+                        <button
+                          onClick={() => openPasswordEditor(user)}
+                          className="text-xs font-bold uppercase tracking-widest text-gray-600 hover:text-gray-800"
+                        >
+                          {t('adminPage.passwordEdit')}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user)}
+                          disabled={deletingUserId === user.id}
+                          className="text-xs font-bold uppercase tracking-widest text-red-600 hover:text-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {deletingUserId === user.id ? t('adminPage.deleting') : t('adminPage.delete')}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -683,6 +757,77 @@ const AdminPage: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+        {editingPasswordUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={closePasswordEditor}
+            />
+            <div className="relative w-full max-w-md bg-white rounded-3xl shadow-xl border border-gray-100">
+              <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400">{t('adminPage.passwordModalTitle')}</p>
+                  <h2 className="text-xl font-black text-gray-900">{editingPasswordUser.name}</h2>
+                  <p className="text-sm text-gray-500">{editingPasswordUser.email}</p>
+                </div>
+                <button
+                  onClick={closePasswordEditor}
+                  className="text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-gray-700"
+                >
+                  {t('common.close')}
+                </button>
+              </div>
+              <div className="px-6 py-6 space-y-4">
+                <p className="text-xs text-gray-500">{t('adminPage.passwordModalHint')}</p>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                    {t('adminPage.newPasswordLabel')}
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordInput}
+                    onChange={(event) => setPasswordInput(event.target.value)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm focus:outline-none"
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                    {t('adminPage.confirmPasswordLabel')}
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordConfirmInput}
+                    onChange={(event) => setPasswordConfirmInput(event.target.value)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm focus:outline-none"
+                    autoComplete="new-password"
+                  />
+                </div>
+                {passwordEditError && (
+                  <p className="text-xs font-semibold text-red-500">{passwordEditError}</p>
+                )}
+                {passwordEditSuccess && (
+                  <p className="text-xs font-semibold text-emerald-600">{passwordEditSuccess}</p>
+                )}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleUpdateUserPassword}
+                    disabled={updatingPasswordUserId === editingPasswordUser.id}
+                    className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
+                  >
+                    {updatingPasswordUserId === editingPasswordUser.id ? t('common.saving') : t('common.save')}
+                  </button>
+                  <button
+                    onClick={closePasswordEditor}
+                    className="px-4 py-2 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest"
+                  >
+                    {t('common.cancel')}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

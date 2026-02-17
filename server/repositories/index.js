@@ -122,9 +122,22 @@ export const findUserByEmail = async (email) => {
   return rows[0] ? rowToUser(rows[0]) : null;
 };
 
+export const findUserById = async (id) => {
+  const { rows } = await query('SELECT * FROM users WHERE id = $1 LIMIT 1', [id]);
+  return rows[0] ? rowToUser(rows[0]) : null;
+};
+
 export const listUsers = async () => {
   const { rows } = await query('SELECT * FROM users ORDER BY created_at DESC');
   return rows.map(rowToUser);
+};
+
+export const updateUserPassword = async (id, password) => {
+  const { rows } = await query(
+    'UPDATE users SET password_hash = $2 WHERE id = $1 RETURNING *',
+    [id, password]
+  );
+  return rows[0] ? rowToUser(rows[0]) : null;
 };
 
 export const deleteUser = async (id) => {

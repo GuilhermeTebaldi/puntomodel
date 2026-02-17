@@ -13,6 +13,7 @@ import {
   addNotification,
   addPayment,
   findUserByEmail,
+  findUserById,
   getModelByEmail,
   getModelById as getModelByIdRepo,
   listModels,
@@ -23,6 +24,7 @@ import {
   resetDatabase,
   upsertRegistrationLead,
   completeRegistrationLead,
+  updateUserPassword,
   updateModel,
   upsertModel,
   deleteModel,
@@ -451,6 +453,8 @@ const ensureDb = async () => {
 };
 
 const normalizeEmail = (email) => (email || '').trim().toLowerCase();
+const normalizePassword = (value) => (typeof value === 'string' ? value.trim() : '');
+const isPasswordValid = (value) => value.length >= 6;
 const normalizePhoneE164 = (rawPhone, phoneCountryDial) => {
   if (rawPhone === null || rawPhone === undefined) return '';
   if (typeof rawPhone !== 'string') return null;
@@ -735,6 +739,64 @@ app.post('/api/auth/login', async (req, res) => {
   }
 
   res.json({ ok: true, user: sanitizeUser(user) });
+});
+
+app.patch('/api/auth/password', async (req, res) => {
+  await ensureDb();
+  const payload = req.body || {};
+  const userId = typeof payload.userId === 'string' ? payload.userId.trim() : '';
+  const email = typeof payload.email === 'string' ? normalizeEmail(payload.email) : '';
+  const currentPassword = normalizePassword(payload.currentPassword);
+  const newPassword = normalizePassword(payload.newPassword);
+
+  if (!currentPassword) {
+    return res.status(400).json({ ok: false, error: 'Senha atual obrigatória.' });
+  }
+
+  if (!isPasswordValid(newPassword)) {
+    return res.status(400).json({ ok: false, error: 'Nova senha inválida.' });
+  }
+
+  if (!userId && !email) {
+    return res.status(400).json({ ok: false, error: 'Usuário não encontrado.' });
+  }
+
+  const userById = userId ? await findUserById(userId) : null;
+  const userByEmail = !userById && email ? await findUserByEmail(email) : null;
+  const user = userById || userByEmail;
+
+  if (!user) {
+    return res.status(404).json({ ok: false, error: 'Usuário não encontrado.' });
+  }
+
+  if (user.password !== currentPassword) {
+    return res.status(401).json({ ok: false, error: 'Senha atual inválida.' });
+  }
+
+  const updated = await updateUserPassword(user.id, newPassword);
+  if (!updated) {
+    return res.status(500).json({ ok: false, error: 'Não foi possível atualizar.' });
+  }
+
+  res.json({ ok: true, user: sanitizeUser(updated) });
+});
+
+app.patch('/api/admin/users/:id/password', async (req, res) => {
+  await ensureDb();
+  const user = await findUserById(req.params.id);
+  if (!user) {
+    return res.status(404).json({ ok: false, error: 'Usuário não encontrado.' });
+  }
+  const payload = req.body || {};
+  const newPassword = normalizePassword(payload.newPassword);
+  if (!isPasswordValid(newPassword)) {
+    return res.status(400).json({ ok: false, error: 'Nova senha inválida.' });
+  }
+  const updated = await updateUserPassword(user.id, newPassword);
+  if (!updated) {
+    return res.status(500).json({ ok: false, error: 'Não foi possível atualizar.' });
+  }
+  res.json({ ok: true, user: sanitizeUser(updated) });
 });
 
 app.get('/api/models', async (req, res) => {

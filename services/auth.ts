@@ -67,6 +67,43 @@ export const loginUser = async (email: string, password: string) => {
   }
 };
 
+type ChangePasswordPayload = {
+  userId?: string;
+  email?: string;
+  currentPassword: string;
+  newPassword: string;
+};
+
+export const changePassword = async (payload: ChangePasswordPayload) => {
+  try {
+    const response = await apiFetch('/api/auth/password', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      return { ok: false, error: data?.error || 'Não foi possível atualizar.' } as const;
+    }
+
+    const nextEmail = (payload.email || '').trim().toLowerCase();
+    if (nextEmail) {
+      const remembered = getRememberedCredentials();
+      if (remembered?.email && remembered.email.trim().toLowerCase() === nextEmail) {
+        saveRememberedCredentials({
+          email: remembered.email,
+          password: payload.newPassword,
+        });
+      }
+    }
+
+    return { ok: true, user: data.user as AuthUser } as const;
+  } catch {
+    return { ok: false, error: 'Servidor indisponível no momento.' } as const;
+  }
+};
+
 export const setCurrentUser = (user: AuthUser | null) => {
   if (!isBrowser()) return;
   if (!user) {

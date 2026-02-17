@@ -38,6 +38,7 @@ import {
 } from '../services/models';
 import { uploadImage } from '../services/cloudinary';
 import { getTranslationTarget } from '../services/translate';
+import { changePassword } from '../services/auth';
 import { useI18n } from '../translations/i18n';
 import { getIdentityLabel, identityOptions, serviceOptions } from '../translations';
 
@@ -437,6 +438,12 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   const [editingPhone, setEditingPhone] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [currentPasswordInput, setCurrentPasswordInput] = useState('');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordFeedback, setPasswordFeedback] = useState('');
+  const [passwordFeedbackType, setPasswordFeedbackType] = useState<'success' | 'error' | null>(null);
   const [showOnlinePicker, setShowOnlinePicker] = useState(false);
   const [onlineDuration, setOnlineDuration] = useState(60);
   const [metrics, setMetrics] = useState({
@@ -660,6 +667,53 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
       { phone: phoneInput.trim() },
       () => setEditingPhone(false)
     );
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordFeedback('');
+    setPasswordFeedbackType(null);
+    const currentPassword = currentPasswordInput.trim();
+    const nextPassword = newPasswordInput.trim();
+    const confirmPassword = confirmPasswordInput.trim();
+
+    if (!currentPassword || !nextPassword || !confirmPassword) {
+      setPasswordFeedback(t('errors.passwordRequired'));
+      setPasswordFeedbackType('error');
+      return;
+    }
+
+    if (nextPassword.length < 6) {
+      setPasswordFeedback(t('errors.passwordTooShort'));
+      setPasswordFeedbackType('error');
+      return;
+    }
+
+    if (nextPassword !== confirmPassword) {
+      setPasswordFeedback(t('errors.passwordMismatch'));
+      setPasswordFeedbackType('error');
+      return;
+    }
+
+    setChangingPassword(true);
+    const result = await changePassword({
+      userId: currentUserId,
+      email: currentUserEmail || model.email,
+      currentPassword,
+      newPassword: nextPassword,
+    });
+    setChangingPassword(false);
+
+    if (!result.ok) {
+      setPasswordFeedback(translateError(result.error));
+      setPasswordFeedbackType('error');
+      return;
+    }
+
+    setCurrentPasswordInput('');
+    setNewPasswordInput('');
+    setConfirmPasswordInput('');
+    setPasswordFeedback(t('dashboard.settings.passwordUpdated'));
+    setPasswordFeedbackType('success');
   };
 
   const handleSaveBio = async () => {
@@ -2131,6 +2185,59 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                     <p className="text-xs font-black text-gray-400 uppercase mb-2">{t('dashboard.settings.account')}</p>
                     <p className="text-sm text-gray-600">{t('dashboard.settings.registeredEmail', { email: model.email || t('profile.notInformed') })}</p>
                     <p className="text-sm text-gray-600 mt-1">{t('adminPage.table.phone')}: {model.phone || t('profile.notInformed')}</p>
+                  </div>
+                  <div className="border border-gray-100 rounded-[24px] sm:rounded-3xl p-5 sm:p-6">
+                    <p className="text-xs font-black text-gray-400 uppercase mb-4">{t('dashboard.settings.passwordTitle')}</p>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                          {t('dashboard.settings.currentPasswordLabel')}
+                        </label>
+                        <input
+                          type="password"
+                          value={currentPasswordInput}
+                          onChange={(event) => setCurrentPasswordInput(event.target.value)}
+                          className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
+                          autoComplete="current-password"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                          {t('dashboard.settings.newPasswordLabel')}
+                        </label>
+                        <input
+                          type="password"
+                          value={newPasswordInput}
+                          onChange={(event) => setNewPasswordInput(event.target.value)}
+                          className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
+                          autoComplete="new-password"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                          {t('dashboard.settings.confirmPasswordLabel')}
+                        </label>
+                        <input
+                          type="password"
+                          value={confirmPasswordInput}
+                          onChange={(event) => setConfirmPasswordInput(event.target.value)}
+                          className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
+                          autoComplete="new-password"
+                        />
+                      </div>
+                      <button
+                        onClick={handleChangePassword}
+                        disabled={changingPassword}
+                        className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
+                      >
+                        {changingPassword ? t('common.saving') : t('dashboard.settings.changePasswordButton')}
+                      </button>
+                      {passwordFeedback && (
+                        <p className={`text-xs font-semibold ${passwordFeedbackType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
+                          {passwordFeedback}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="md:hidden space-y-2">
