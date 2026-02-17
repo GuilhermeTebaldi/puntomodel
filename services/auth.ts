@@ -116,18 +116,43 @@ export const changePassword = async (payload: ChangePasswordPayload) => {
   }
 };
 
-export const requestPasswordReset = async (email: string, token?: string) => {
+export const requestPasswordReset = async (identifier: string, token: string) => {
   try {
     const response = await apiFetch('/api/password-resets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, token }),
+      body: JSON.stringify({ identifier, token }),
     });
     const data = await response.json();
     if (!response.ok) {
       return { ok: false, error: data?.error || 'Não foi possível enviar a solicitação de recuperação.' } as const;
     }
     return { ok: true, request: data.request as PasswordResetRequest } as const;
+  } catch {
+    return { ok: false, error: 'Servidor indisponível no momento.' } as const;
+  }
+};
+
+type ResetPasswordWithTokenPayload = {
+  identifier: string;
+  token: string;
+  newPassword: string;
+};
+
+export const resetPasswordWithToken = async (payload: ResetPasswordWithTokenPayload) => {
+  try {
+    const response = await apiFetch('/api/auth/password/reset-by-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      return { ok: false, error: data?.error || 'Não foi possível atualizar.' } as const;
+    }
+
+    return { ok: true, user: data.user as AuthUser } as const;
   } catch {
     return { ok: false, error: 'Servidor indisponível no momento.' } as const;
   }

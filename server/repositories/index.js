@@ -332,6 +332,27 @@ export const listPasswordResetRequests = async () => {
   return rows.map(rowToPasswordResetRequest);
 };
 
+export const findActivePasswordResetRequestByToken = async ({ token, email, userId }) => {
+  const normalizedToken = typeof token === 'string' ? token.trim() : '';
+  if (!normalizedToken) return null;
+  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  const normalizedUserId = typeof userId === 'string' ? userId.trim() : '';
+
+  const { rows } = await query(
+    `SELECT *
+     FROM password_reset_requests
+     WHERE
+       token = $1
+       AND status <> 'resolved'
+       AND ($2::text IS NULL OR user_id = $2)
+       AND ($3::text IS NULL OR LOWER(email) = $3)
+     ORDER BY updated_at DESC
+     LIMIT 1`,
+    [normalizedToken, normalizedUserId || null, normalizedEmail || null]
+  );
+  return rows[0] ? rowToPasswordResetRequest(rows[0]) : null;
+};
+
 export const resolvePasswordResetRequest = async (id) => {
   const now = new Date().toISOString();
   const { rows } = await query(

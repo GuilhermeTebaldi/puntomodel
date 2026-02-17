@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, KeyRound, Mail } from 'lucide-react';
 import Logo from './Logo';
-import { changePassword, requestPasswordReset } from '../services/auth';
+import { requestPasswordReset, resetPasswordWithToken } from '../services/auth';
 import { useI18n } from '../translations/i18n';
 
 interface PasswordRecoveryPageProps {
@@ -14,22 +14,20 @@ interface PasswordRecoveryPageProps {
 
 const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
   initialEmail,
-  currentUserId,
   currentUserEmail,
   onBackToSite,
   onOpenLogin,
 }) => {
   const { t, translateError } = useI18n();
-  const emailSeed = (currentUserEmail || initialEmail || '').trim();
+  const identifierSeed = (currentUserEmail || initialEmail || '').trim();
   const [requestStep, setRequestStep] = useState<'email' | 'token'>('email');
-  const [requestEmail, setRequestEmail] = useState(emailSeed);
+  const [requestIdentifier, setRequestIdentifier] = useState(identifierSeed);
   const [requestToken, setRequestToken] = useState('');
   const [requesting, setRequesting] = useState(false);
   const [requestMessage, setRequestMessage] = useState('');
   const [requestMessageType, setRequestMessageType] = useState<'success' | 'error' | null>(null);
+  const [validatedReset, setValidatedReset] = useState<{ identifier: string; token: string } | null>(null);
 
-  const [changeEmail, setChangeEmail] = useState(emailSeed);
-  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
@@ -39,8 +37,7 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
   useEffect(() => {
     const nextSeed = (currentUserEmail || initialEmail || '').trim();
     if (!nextSeed) return;
-    setRequestEmail((prev) => prev || nextSeed);
-    setChangeEmail((prev) => prev || nextSeed);
+    setRequestIdentifier((prev) => prev || nextSeed);
   }, [currentUserEmail, initialEmail]);
 
   const isEmailValid = (value: string) => {
@@ -48,15 +45,23 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
     if (!trimmed) return false;
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
   };
+  const isIdentifierValid = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    if (trimmed.includes('@')) {
+      return isEmailValid(trimmed);
+    }
+    return trimmed.replace(/\D/g, '').length >= 8;
+  };
 
   const isTokenValid = (value: string) => /^\d{3}$/.test(value.trim());
 
   const handleMoveToTokenStep = () => {
     setRequestMessage('');
     setRequestMessageType(null);
-    const email = requestEmail.trim();
-    if (!isEmailValid(email)) {
-      setRequestMessage(t('errors.emailRequired'));
+    const identifier = requestIdentifier.trim();
+    if (!isIdentifierValid(identifier)) {
+      setRequestMessage(t('errors.identifierRequired'));
       setRequestMessageType('error');
       return;
     }
@@ -66,10 +71,10 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
   const handleSendRequest = async () => {
     setRequestMessage('');
     setRequestMessageType(null);
-    const email = requestEmail.trim();
+    const identifier = requestIdentifier.trim();
     const token = requestToken.trim();
-    if (!isEmailValid(email)) {
-      setRequestMessage(t('errors.emailRequired'));
+    if (!isIdentifierValid(identifier)) {
+      setRequestMessage(t('errors.identifierRequired'));
       setRequestMessageType('error');
       return;
     }
@@ -80,7 +85,7 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
     }
 
     setRequesting(true);
-    const result = await requestPasswordReset(email, token);
+    const result = await requestPasswordReset(identifier, token);
     setRequesting(false);
 
     if (!result.ok) {
@@ -89,8 +94,11 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
       return;
     }
 
-    const savedToken = result.request?.token || token;
-    setRequestToken('');
+    const savedToken = (result.request?.token || token).trim();
+    setValidatedReset({
+      identifier,
+      token: savedToken,
+    });
     setRequestMessage(t('passwordRecovery.requestSuccessWithToken', { token: savedToken }));
     setRequestMessageType('success');
   };
@@ -98,18 +106,25 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
   const handleChangePassword = async () => {
     setChangeMessage('');
     setChangeMessageType(null);
-    const email = changeEmail.trim();
-    const current = currentPassword.trim();
+    const unlock = validatedReset;
+    const identifier = unlock?.identifier || requestIdentifier.trim();
+    const token = unlock?.token || requestToken.trim();
     const next = newPassword.trim();
     const confirm = confirmPassword.trim();
 
-    if (!isEmailValid(email)) {
-      setChangeMessage(t('errors.emailRequired'));
+    if (!isIdentifierValid(identifier)) {
+      setChangeMessage(t('errors.identifierRequired'));
       setChangeMessageType('error');
       return;
     }
 
-    if (!current || !next || !confirm) {
+    if (!isTokenValid(token)) {
+      setChangeMessage(t('errors.tokenInvalid'));
+      setChangeMessageType('error');
+      return;
+    }
+
+    if (!next || !confirm) {
       setChangeMessage(t('errors.passwordRequired'));
       setChangeMessageType('error');
       return;
@@ -128,10 +143,9 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
     }
 
     setChangingPassword(true);
-    const result = await changePassword({
-      userId: currentUserId,
-      email,
-      currentPassword: current,
+    const result = await resetPasswordWithToken({
+      identifier,
+      token,
       newPassword: next,
     });
     setChangingPassword(false);
@@ -142,7 +156,6 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
       return;
     }
 
-    setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
     setChangeMessage(t('passwordRecovery.changeSuccess'));
@@ -194,11 +207,11 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
             <button
               type="button"
               onClick={() => {
-                if (isEmailValid(requestEmail)) {
+                if (isIdentifierValid(requestIdentifier)) {
                   setRequestStep('token');
                   return;
                 }
-                setRequestMessage(t('errors.emailRequired'));
+                setRequestMessage(t('errors.identifierRequired'));
                 setRequestMessageType('error');
               }}
               className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
@@ -225,9 +238,12 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
                 {t('login.emailLabel')}
               </label>
               <input
-                type="email"
-                value={requestEmail}
-                onChange={(event) => setRequestEmail(event.target.value)}
+                type="text"
+                value={requestIdentifier}
+                onChange={(event) => {
+                  setRequestIdentifier(event.target.value);
+                  if (validatedReset) setValidatedReset(null);
+                }}
                 className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
                 placeholder={t('login.emailPlaceholder')}
               />
@@ -248,9 +264,12 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
                     {t('login.emailLabel')}
                   </label>
                   <input
-                    type="email"
-                    value={requestEmail}
-                    onChange={(event) => setRequestEmail(event.target.value)}
+                    type="text"
+                    value={requestIdentifier}
+                    onChange={(event) => {
+                      setRequestIdentifier(event.target.value);
+                      if (validatedReset) setValidatedReset(null);
+                    }}
                     className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
                     placeholder={t('login.emailPlaceholder')}
                   />
@@ -265,7 +284,10 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
                     pattern="[0-9]*"
                     maxLength={3}
                     value={requestToken}
-                    onChange={(event) => setRequestToken(event.target.value.replace(/\D/g, '').slice(0, 3))}
+                    onChange={(event) => {
+                      setRequestToken(event.target.value.replace(/\D/g, '').slice(0, 3));
+                      if (validatedReset) setValidatedReset(null);
+                    }}
                     className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm tracking-[0.4em]"
                     placeholder={t('passwordRecovery.tokenPlaceholder')}
                   />
@@ -299,83 +321,85 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
           )}
         </section>
 
-        <section className="bg-white border border-gray-100 rounded-3xl p-6 sm:p-8 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <KeyRound size={16} className="text-[#e3262e]" />
-            <h2 className="text-lg font-black text-gray-900">{t('passwordRecovery.changeTitle')}</h2>
-          </div>
-          <p className="text-sm text-gray-500 mb-5">{t('passwordRecovery.changeHint')}</p>
-          <form
-            className="space-y-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              handleChangePassword();
-            }}
-          >
-            <div>
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                {t('login.emailLabel')}
-              </label>
-              <input
-                type="email"
-                value={changeEmail}
-                onChange={(event) => setChangeEmail(event.target.value)}
-                className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
-                placeholder={t('login.emailPlaceholder')}
-              />
+        {validatedReset && (
+          <section className="bg-white border border-gray-100 rounded-3xl p-6 sm:p-8 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <KeyRound size={16} className="text-[#e3262e]" />
+              <h2 className="text-lg font-black text-gray-900">{t('passwordRecovery.changeTitle')}</h2>
             </div>
-            <div>
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                {t('passwordRecovery.currentPasswordLabel')}
-              </label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(event) => setCurrentPassword(event.target.value)}
-                className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
-                autoComplete="current-password"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                {t('passwordRecovery.newPasswordLabel')}
-              </label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-                className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
-                autoComplete="new-password"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                {t('passwordRecovery.confirmPasswordLabel')}
-              </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
-                autoComplete="new-password"
-              />
-            </div>
-            <div className="mt-4">
-              <button
-                type="submit"
-                disabled={changingPassword}
-                className="px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
-              >
-                {changingPassword ? t('common.saving') : t('passwordRecovery.changeButton')}
-              </button>
-            </div>
-          </form>
-          {changeMessage && (
-            <p className={`mt-3 text-xs font-semibold ${changeMessageType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
-              {changeMessage}
-            </p>
-          )}
-        </section>
+            <p className="text-sm text-gray-500 mb-5">{t('passwordRecovery.changeHint')}</p>
+            <form
+              className="space-y-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                handleChangePassword();
+              }}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                    {t('login.emailLabel')}
+                  </label>
+                  <input
+                    type="text"
+                    value={validatedReset.identifier}
+                    readOnly
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm text-gray-600"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                    {t('passwordRecovery.tokenLabel')}
+                  </label>
+                  <input
+                    type="text"
+                    value={validatedReset.token}
+                    readOnly
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm text-gray-600 tracking-[0.4em]"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                  {t('passwordRecovery.newPasswordLabel')}
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
+                  autoComplete="new-password"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                  {t('passwordRecovery.confirmPasswordLabel')}
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className="mt-4">
+                <button
+                  type="submit"
+                  disabled={changingPassword}
+                  className="px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
+                >
+                  {changingPassword ? t('common.saving') : t('passwordRecovery.changeButton')}
+                </button>
+              </div>
+            </form>
+            {changeMessage && (
+              <p className={`mt-3 text-xs font-semibold ${changeMessageType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
+                {changeMessage}
+              </p>
+            )}
+          </section>
+        )}
       </main>
     </div>
   );

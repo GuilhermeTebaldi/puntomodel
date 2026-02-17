@@ -14,6 +14,7 @@ import {
   addPayment,
   findUserByEmail,
   findUserById,
+  findActivePasswordResetRequestByToken,
   createPasswordResetRequest,
   getModelByEmail,
   getModelById as getModelByIdRepo,
@@ -459,6 +460,15 @@ const ensureDb = async () => {
 const normalizeEmail = (email) => (email || '').trim().toLowerCase();
 const normalizePassword = (value) => (typeof value === 'string' ? value.trim() : '');
 const isPasswordValid = (value) => value.length >= 6;
+const normalizeResetIdentifier = (value) => (typeof value === 'string' ? value.trim() : '');
+const normalizePhoneDigits = (value) =>
+  typeof value === 'string' ? value.replace(/\D/g, '') : '';
+const isResetIdentifierValid = (value) => {
+  const trimmed = normalizeResetIdentifier(value);
+  if (!trimmed) return false;
+  if (trimmed.includes('@')) return trimmed.includes('.');
+  return normalizePhoneDigits(trimmed).length >= 8;
+};
 const normalizeResetToken = (value) => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return String(Math.trunc(value)).replace(/\D/g, '');
@@ -469,7 +479,35 @@ const normalizeResetToken = (value) => {
   return '';
 };
 const isResetTokenValid = (value) => /^\d{3}$/.test(value);
-const generateResetToken = () => String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+const phonesMatch = (left, right) => {
+  const a = normalizePhoneDigits(left);
+  const b = normalizePhoneDigits(right);
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (a.length >= 8 && b.endsWith(a)) return true;
+  if (b.length >= 8 && a.endsWith(b)) return true;
+  return false;
+};
+const resolveResetIdentity = async (rawIdentifier) => {
+  const identifier = normalizeResetIdentifier(rawIdentifier);
+  if (!identifier) {
+    return { identifier: '', email: '', user: null, model: null };
+  }
+  const normalizedEmail = normalizeEmail(identifier);
+  if (normalizedEmail.includes('@')) {
+    const user = await findUserByEmail(normalizedEmail);
+    return { identifier, email: normalizedEmail, user, model: null };
+  }
+
+  const models = await listModels();
+  const matchedModel = models.find((model) => phonesMatch(identifier, model.phone || ''));
+  if (!matchedModel?.email) {
+    return { identifier, email: '', user: null, model: null };
+  }
+  const email = normalizeEmail(matchedModel.email);
+  const user = await findUserByEmail(email);
+  return { identifier, email, user, model: matchedModel };
+};
 const normalizePhoneE164 = (rawPhone, phoneCountryDial) => {
   if (rawPhone === null || rawPhone === undefined) return '';
   if (typeof rawPhone !== 'string') return null;
@@ -817,17 +855,22 @@ app.patch('/api/admin/users/:id/password', async (req, res) => {
 app.post('/api/password-resets', async (req, res) => {
   await ensureDb();
   const payload = req.body || {};
-  const email = normalizeEmail(payload.email);
-  if (!email || !email.includes('@')) {
-    return res.status(400).json({ ok: false, error: 'Informe um e-mail válido.' });
+  const rawIdentifier = payload.identifier ?? payload.email;
+  const identifier = normalizeResetIdentifier(rawIdentifier);
+  if (!isResetIdentifierValid(identifier)) {
+    return res.status(400).json({ ok: false, error: 'Informe e-mail ou celular válido.' });
   }
-  const hasTokenInput = payload.token !== undefined && payload.token !== null && String(payload.token).trim() !== '';
   const tokenInput = normalizeResetToken(payload.token);
-  if (hasTokenInput && !isResetTokenValid(tokenInput)) {
+  if (!isResetTokenValid(tokenInput)) {
     return res.status(400).json({ ok: false, error: 'Token inválido. Use 3 números.' });
   }
-  const token = isResetTokenValid(tokenInput) ? tokenInput : generateResetToken();
-  const user = await findUserByEmail(email);
+  const identity = await resolveResetIdentity(identifier);
+  const email = identity.email || (identifier.includes('@') ? normalizeEmail(identifier) : '');
+  if (!email || !email.includes('@')) {
+    return res.status(404).json({ ok: false, error: 'Usuário não encontrado.' });
+  }
+  const token = tokenInput;
+  const user = identity.user || await findUserByEmail(email);
   const created = await createPasswordResetRequest({
     email,
     userId: user?.id || null,
@@ -837,6 +880,58 @@ app.post('/api/password-resets', async (req, res) => {
     return res.status(500).json({ ok: false, error: 'Não foi possível enviar a solicitação de recuperação.' });
   }
   res.json({ ok: true, request: created });
+});
+
+app.post('/api/auth/password/reset-by-token', async (req, res) => {
+  await ensureDb();
+  const payload = req.body || {};
+  const rawIdentifier = payload.identifier ?? payload.email;
+  const identifier = normalizeResetIdentifier(rawIdentifier);
+  const token = normalizeResetToken(payload.token);
+  const newPassword = normalizePassword(payload.newPassword);
+
+  if (!isResetIdentifierValid(identifier)) {
+    return res.status(400).json({ ok: false, error: 'Informe e-mail ou celular válido.' });
+  }
+  if (!isResetTokenValid(token)) {
+    return res.status(400).json({ ok: false, error: 'Token inválido. Use 3 números.' });
+  }
+  if (!isPasswordValid(newPassword)) {
+    return res.status(400).json({ ok: false, error: 'Nova senha inválida.' });
+  }
+
+  const identity = await resolveResetIdentity(identifier);
+  const email = identity.email || (identifier.includes('@') ? normalizeEmail(identifier) : '');
+  if (!email || !email.includes('@')) {
+    return res.status(404).json({ ok: false, error: 'Usuário não encontrado.' });
+  }
+
+  let request = await findActivePasswordResetRequestByToken({ token, email, userId: null });
+  if (!request && identity.user?.id) {
+    request = await findActivePasswordResetRequestByToken({ token, email: '', userId: identity.user.id });
+  }
+  if (!request) {
+    return res.status(401).json({ ok: false, error: 'Token inválido.' });
+  }
+
+  let user = identity.user;
+  if (!user && request.userId) {
+    user = await findUserById(request.userId);
+  }
+  if (!user) {
+    user = await findUserByEmail(request.email || email);
+  }
+  if (!user) {
+    return res.status(404).json({ ok: false, error: 'Usuário não encontrado.' });
+  }
+
+  const updated = await updateUserPassword(user.id, newPassword);
+  if (!updated) {
+    return res.status(500).json({ ok: false, error: 'Não foi possível atualizar.' });
+  }
+
+  await resolvePasswordResetRequest(request.id);
+  res.json({ ok: true, user: sanitizeUser(updated) });
 });
 
 app.get('/api/models', async (req, res) => {
