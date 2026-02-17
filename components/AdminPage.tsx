@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { apiFetch } from '../services/api';
+import { apiFetch, buildApiUrl } from '../services/api';
 import Logo from './Logo';
 import { useI18n } from '../translations/i18n';
 import { getTranslationTarget } from '../services/translate';
@@ -91,6 +91,7 @@ const getBioTranslationEntry = (
 };
 
 const AUTO_REFRESH_MS = 8000;
+const PASSWORD_RESETS_FAST_REFRESH_MS = 2000;
 
 const toTimeMs = (value?: string | null) => {
   if (!value) return 0;
@@ -126,6 +127,7 @@ const AdminPage: React.FC = () => {
   const [tab, setTab] = useState<'users' | 'models' | 'translations' | 'registrations' | 'passwordResets'>('users');
   const [error, setError] = useState('');
   const [passwordResetLoadError, setPasswordResetLoadError] = useState('');
+  const [passwordResetLiveAlert, setPasswordResetLiveAlert] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
@@ -147,8 +149,11 @@ const AdminPage: React.FC = () => {
   const [logoPulse, setLogoPulse] = useState(false);
   const logoPulseTimeout = useRef<number | null>(null);
   const copiedTimeoutRef = useRef<number | null>(null);
+  const liveAlertTimeoutRef = useRef<number | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const hasLoaded = useRef(false);
+  const hasPasswordResetBaseline = useRef(false);
+  const knownPasswordResetIdsRef = useRef<Set<string>>(new Set());
   const translationTargets = useMemo(
     () =>
       languageOptions.map((option) => ({
@@ -190,7 +195,29 @@ const AdminPage: React.FC = () => {
     }, 900);
   };
 
-  const loadPasswordResets = useCallback(async () => {
+  const showPasswordResetLiveAlert = useCallback((message: string) => {
+    const text = message.trim();
+    if (!text) return;
+    setPasswordResetLiveAlert(text);
+    if (liveAlertTimeoutRef.current) {
+      window.clearTimeout(liveAlertTimeoutRef.current);
+    }
+    liveAlertTimeoutRef.current = window.setTimeout(() => {
+      setPasswordResetLiveAlert('');
+    }, 7000);
+  }, []);
+
+  const upsertPasswordResetRequest = useCallback((incoming: AdminPasswordResetRequest) => {
+    if (!incoming?.id) return;
+    setPasswordResetRequests((prev) =>
+      sortPasswordResetRequests([incoming, ...prev.filter((item) => item.id !== incoming.id)])
+    );
+    knownPasswordResetIdsRef.current.add(incoming.id);
+    hasPasswordResetBaseline.current = true;
+  }, []);
+
+  const loadPasswordResets = useCallback(async (options: { showAlertOnNew?: boolean } = {}) => {
+    const showAlertOnNew = options.showAlertOnNew === true;
     try {
       const response = await apiFetch(`/api/admin/password-resets?ts=${Date.now()}`, { cache: 'no-store' });
       const data = await readJsonSafe<{ requests?: AdminPasswordResetRequest[]; error?: string }>(response);
@@ -198,14 +225,31 @@ const AdminPage: React.FC = () => {
         setPasswordResetLoadError(translateError(data?.error || t('errors.loadData')));
         return false;
       }
-      setPasswordResetRequests(sortPasswordResetRequests(data?.requests || []));
+      const nextRequests = sortPasswordResetRequests(data?.requests || []);
+      const previousIds = knownPasswordResetIdsRef.current;
+      const newRequests =
+        showAlertOnNew && hasPasswordResetBaseline.current
+          ? nextRequests.filter((item) => !previousIds.has(item.id))
+          : [];
+
+      setPasswordResetRequests(nextRequests);
+      knownPasswordResetIdsRef.current = new Set(nextRequests.map((item) => item.id));
+      hasPasswordResetBaseline.current = true;
+
+      if (showAlertOnNew && newRequests.length > 0) {
+        const email = (newRequests[0]?.email || '').trim();
+        const message = email
+          ? t('adminPage.passwordResetsRealtimeNew', { email })
+          : t('adminPage.passwordResetsRealtimeNewGeneric');
+        showPasswordResetLiveAlert(message);
+      }
       setPasswordResetLoadError('');
       return true;
     } catch {
       setPasswordResetLoadError(t('errors.loadData'));
       return false;
     }
-  }, [t, translateError]);
+  }, [showPasswordResetLiveAlert, t, translateError]);
 
   const refreshPasswordResetsNow = useCallback(async () => {
     setRefreshingPasswordResets(true);
@@ -227,6 +271,8 @@ const AdminPage: React.FC = () => {
       const data = await readJsonSafe<{ error?: string }>(response);
       if (!response.ok) throw new Error(data?.error || t('errors.passwordResetClearFailed'));
       setPasswordResetRequests([]);
+      knownPasswordResetIdsRef.current = new Set();
+      hasPasswordResetBaseline.current = true;
       setPasswordResetLoadError('');
       triggerLogoPulse();
     } catch (err) {
@@ -341,12 +387,77 @@ const AdminPage: React.FC = () => {
   }, [loadPasswordResets]);
 
   useEffect(() => {
+    if (typeof window === 'undefined' || typeof EventSource === 'undefined') return;
+    const streamUrl = buildApiUrl(`/api/admin/password-resets/stream?ts=${Date.now()}`);
+    const stream = new EventSource(streamUrl);
+
+    const handleStreamEvent = async (rawEvent: Event) => {
+      const event = rawEvent as MessageEvent<string>;
+      let payload: { type?: string; email?: string; request?: AdminPasswordResetRequest | null } | null = null;
+      try {
+        payload = event.data
+          ? (JSON.parse(event.data) as { type?: string; email?: string; request?: AdminPasswordResetRequest | null })
+          : null;
+      } catch {
+        payload = null;
+      }
+      if (!payload?.type || payload.type === 'ready') return;
+
+      if (payload.request?.id) {
+        upsertPasswordResetRequest(payload.request);
+      }
+      const loaded = await loadPasswordResets();
+      if (loaded) {
+        triggerLogoPulse();
+      }
+
+      if (payload.type === 'created') {
+        const email = typeof payload.email === 'string' ? payload.email.trim() : (payload.request?.email || '').trim();
+        const message = email
+          ? t('adminPage.passwordResetsRealtimeNew', { email })
+          : t('adminPage.passwordResetsRealtimeNewGeneric');
+        showPasswordResetLiveAlert(message);
+      } else if (payload.type === 'cleared') {
+        showPasswordResetLiveAlert(t('adminPage.passwordResetsRealtimeCleared'));
+      }
+    };
+
+    stream.addEventListener('password-reset', handleStreamEvent as EventListener);
+
+    return () => {
+      stream.removeEventListener('password-reset', handleStreamEvent as EventListener);
+      stream.close();
+    };
+  }, [loadPasswordResets, showPasswordResetLiveAlert, t, upsertPasswordResetRequest]);
+
+  useEffect(() => {
+    if (tab !== 'passwordResets') return;
+    let active = true;
+
+    const tick = async () => {
+      if (!active) return;
+      if (typeof document !== 'undefined' && document.hidden) return;
+      await loadPasswordResets({ showAlertOnNew: true });
+    };
+
+    tick();
+    const interval = window.setInterval(tick, PASSWORD_RESETS_FAST_REFRESH_MS);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [loadPasswordResets, tab]);
+
+  useEffect(() => {
     return () => {
       if (logoPulseTimeout.current) {
         window.clearTimeout(logoPulseTimeout.current);
       }
       if (copiedTimeoutRef.current) {
         window.clearTimeout(copiedTimeoutRef.current);
+      }
+      if (liveAlertTimeoutRef.current) {
+        window.clearTimeout(liveAlertTimeoutRef.current);
       }
     };
   }, []);
@@ -724,6 +835,11 @@ const AdminPage: React.FC = () => {
         {error && (
           <div className="bg-white border border-red-100 text-red-500 text-sm font-semibold px-4 py-3 rounded-xl mb-6">
             {error}
+          </div>
+        )}
+        {passwordResetLiveAlert && (
+          <div className="bg-white border border-amber-200 text-amber-700 text-sm font-semibold px-4 py-3 rounded-xl mb-6">
+            {passwordResetLiveAlert}
           </div>
         )}
 

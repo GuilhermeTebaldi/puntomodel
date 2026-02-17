@@ -752,6 +752,52 @@ const setNoCacheHeaders = (res) => {
   res.set('Expires', '0');
 };
 
+const passwordResetStreamClients = new Set();
+
+const broadcastPasswordResetEvent = (type, payload = {}) => {
+  if (passwordResetStreamClients.size === 0) return;
+  const message = JSON.stringify({
+    type,
+    ...payload,
+    sentAt: new Date().toISOString(),
+  });
+  for (const client of passwordResetStreamClients) {
+    try {
+      client.res.write(`event: password-reset\ndata: ${message}\n\n`);
+    } catch {
+      passwordResetStreamClients.delete(client);
+    }
+  }
+};
+
+const registerPasswordResetStream = (req, res) => {
+  setNoCacheHeaders(res);
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  if (typeof res.flushHeaders === 'function') {
+    res.flushHeaders();
+  }
+
+  const client = { id: nanoid(), res };
+  passwordResetStreamClients.add(client);
+  res.write(`event: password-reset\ndata: ${JSON.stringify({ type: 'ready' })}\n\n`);
+
+  const keepAlive = setInterval(() => {
+    try {
+      res.write(': ping\n\n');
+    } catch {
+      clearInterval(keepAlive);
+      passwordResetStreamClients.delete(client);
+    }
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    passwordResetStreamClients.delete(client);
+  });
+};
+
 app.get('/api/health', async (_req, res) => {
   const dbOk = await checkDb();
   res.json({ ok: true, db: dbOk });
@@ -910,6 +956,12 @@ app.post('/api/password-resets', async (req, res) => {
     if (!created) {
       return res.status(500).json({ ok: false, error: 'Não foi possível enviar a solicitação de recuperação.' });
     }
+    broadcastPasswordResetEvent('created', {
+      requestId: created.id,
+      email: created.email,
+      status: created.status,
+      request: created,
+    });
     res.json({
       ok: true,
       request: {
@@ -1017,7 +1069,15 @@ app.post('/api/auth/password/reset-by-token', async (req, res) => {
       return res.status(500).json({ ok: false, error: 'Não foi possível atualizar.' });
     }
 
-    await resolvePasswordResetRequest(request.id);
+    const resolvedRequest = await resolvePasswordResetRequest(request.id);
+    if (resolvedRequest) {
+      broadcastPasswordResetEvent('resolved', {
+        requestId: resolvedRequest.id,
+        email: resolvedRequest.email,
+        status: resolvedRequest.status,
+        request: resolvedRequest,
+      });
+    }
     res.json({ ok: true, user: sanitizeUser(updated) });
   } catch (error) {
     console.error('[password-reset:finish]', error);
@@ -1110,6 +1170,10 @@ app.get('/api/admin/registrations', async (_req, res) => {
   res.json({ ok: true, leads });
 });
 
+app.get('/api/admin/password-resets/stream', (req, res) => {
+  registerPasswordResetStream(req, res);
+});
+
 app.get('/api/admin/password-resets', async (_req, res) => {
   try {
     await ensureDb();
@@ -1129,6 +1193,12 @@ app.patch('/api/admin/password-resets/:id/resolve', async (req, res) => {
     if (!resolved) {
       return res.status(404).json({ ok: false, error: 'Solicitação de recuperação não encontrada.' });
     }
+    broadcastPasswordResetEvent('resolved', {
+      requestId: resolved.id,
+      email: resolved.email,
+      status: resolved.status,
+      request: resolved,
+    });
     res.json({ ok: true, request: resolved });
   } catch (error) {
     console.error('[password-reset:resolve-admin]', error);
@@ -1143,6 +1213,12 @@ app.patch('/api/admin/password-resets/:id/token-sent', async (req, res) => {
     if (!updated) {
       return res.status(404).json({ ok: false, error: 'Solicitação de recuperação não encontrada.' });
     }
+    broadcastPasswordResetEvent('token_sent', {
+      requestId: updated.id,
+      email: updated.email,
+      status: updated.status,
+      request: updated,
+    });
     res.json({ ok: true, request: updated });
   } catch (error) {
     console.error('[password-reset:token-sent-admin]', error);
@@ -1154,6 +1230,7 @@ app.delete('/api/admin/password-resets', async (_req, res) => {
   try {
     await ensureDb();
     await clearPasswordResetRequests();
+    broadcastPasswordResetEvent('cleared');
     res.json({ ok: true });
   } catch (error) {
     console.error('[password-reset:clear-admin]', error);
