@@ -341,21 +341,21 @@ export const listPasswordResetRequests = async () => {
   return rows.map(rowToPasswordResetRequest);
 };
 
-export const listPasswordResetTokensByEmail = async (email) => {
+export const getLatestPasswordResetTokenByEmail = async (email) => {
   const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
-  if (!normalizedEmail) return [];
+  if (!normalizedEmail) return '';
   const { rows } = await query(
     `SELECT token
      FROM password_reset_requests
-     WHERE LOWER(email) = $1 AND token IS NOT NULL`,
+     WHERE LOWER(email) = $1
+       AND token IS NOT NULL
+       AND BTRIM(token) <> ''
+     ORDER BY created_at DESC, updated_at DESC
+     LIMIT 1`,
     [normalizedEmail]
   );
-  const unique = new Set(
-    rows
-      .map((row) => (typeof row.token === 'string' ? row.token.trim() : ''))
-      .filter(Boolean)
-  );
-  return Array.from(unique);
+  const token = rows[0]?.token;
+  return typeof token === 'string' ? token.trim() : '';
 };
 
 export const findActivePasswordResetRequestByToken = async ({ token, email, userId }) => {

@@ -16,7 +16,7 @@ import {
   findUserById,
   findActivePasswordResetRequestByToken,
   createPasswordResetRequest,
-  listPasswordResetTokensByEmail,
+  getLatestPasswordResetTokenByEmail,
   getModelByEmail,
   getModelById as getModelByIdRepo,
   listModels,
@@ -877,10 +877,10 @@ app.post('/api/password-resets', async (req, res) => {
   if (!email || !email.includes('@')) {
     return res.status(404).json({ ok: false, error: 'Usuário não encontrado.' });
   }
-  const usedTokens = await listPasswordResetTokensByEmail(email);
-  const excludedTokens = new Set(usedTokens);
-  const token = excludedTokens.has(tokenInput)
-    ? generateResetToken(excludedTokens)
+  // Avoid repeating the same token on consecutive requests for the same account.
+  const previousToken = await getLatestPasswordResetTokenByEmail(email);
+  const token = previousToken && tokenInput === previousToken
+    ? generateResetToken(new Set([previousToken]))
     : tokenInput;
   if (!token) {
     return res.status(500).json({ ok: false, error: 'Não foi possível gerar token.' });
