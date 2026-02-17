@@ -64,6 +64,13 @@ const rowToPasswordResetRequest = (row) => ({
   resolvedAt: toIso(row.resolved_at),
 });
 
+const normalizeResetToken = (value) => {
+  if (typeof value !== 'string') return '';
+  return value.trim().replace(/\D/g, '');
+};
+
+const isResetTokenValid = (value) => /^\d{3}$/.test(value);
+
 const parseDateToMs = (value) => {
   if (!value) return null;
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
@@ -318,25 +325,43 @@ export const listRegistrationLeads = async () => {
 export const createPasswordResetRequest = async ({ email, userId, token }) => {
   const id = nanoid();
   const now = new Date().toISOString();
+  const normalizedToken = normalizeResetToken(token);
+  const safeToken = isResetTokenValid(normalizedToken) ? normalizedToken : null;
   const { rows } = await query(
     `INSERT INTO password_reset_requests (id, email, user_id, token, status, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, 'pending', $5, $5)
+     VALUES ($1, $2, $3, COALESCE($4, LPAD((FLOOR(RANDOM() * 1000)::int)::text, 3, '0')), 'pending', $5, $5)
      RETURNING *`,
-    [id, email, userId || null, token || null, now]
+    [id, email, userId || null, safeToken, now]
   );
   return rows[0] ? rowToPasswordResetRequest(rows[0]) : null;
 };
 
 export const listPasswordResetRequests = async () => {
   const { rows } = await query(
-    `SELECT * FROM password_reset_requests
+    `WITH normalized AS (
+       SELECT
+         id,
+         BTRIM(email) AS email,
+         user_id,
+         CASE
+           WHEN token IS NULL OR BTRIM(token) = '' THEN NULL
+           ELSE LPAD(RIGHT(BTRIM(token), 3), 3, '0')
+         END AS token,
+         COALESCE(NULLIF(BTRIM(status), ''), 'pending') AS status,
+         created_at,
+         updated_at,
+         token_sent_at,
+         resolved_at
+       FROM password_reset_requests
+     )
+     SELECT * FROM normalized
      ORDER BY
        CASE WHEN status = 'resolved' THEN 1 ELSE 0 END ASC,
        CASE
-         WHEN status = 'resolved' THEN COALESCE(resolved_at, updated_at, created_at)
-         ELSE created_at
+         WHEN status = 'resolved' THEN COALESCE(resolved_at, updated_at, created_at, now())
+         ELSE COALESCE(created_at, updated_at, now())
        END DESC,
-       updated_at DESC`
+       COALESCE(updated_at, created_at, now()) DESC`
   );
   return rows.map(rowToPasswordResetRequest);
 };

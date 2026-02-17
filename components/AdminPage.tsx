@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch } from '../services/api';
 import Logo from './Logo';
 import { useI18n } from '../translations/i18n';
@@ -188,11 +188,27 @@ const AdminPage: React.FC = () => {
     }, 900);
   };
 
+  const loadPasswordResets = useCallback(async () => {
+    try {
+      const response = await apiFetch('/api/admin/password-resets');
+      const data = await readJsonSafe<{ requests?: AdminPasswordResetRequest[]; error?: string }>(response);
+      if (!response.ok) {
+        setPasswordResetLoadError(translateError(data?.error || t('errors.loadData')));
+        return false;
+      }
+      setPasswordResetRequests(sortPasswordResetRequests(data?.requests || []));
+      setPasswordResetLoadError('');
+      return true;
+    } catch {
+      setPasswordResetLoadError(t('errors.loadData'));
+      return false;
+    }
+  }, [t, translateError]);
+
   useEffect(() => {
     let mounted = true;
 
     const load = async () => {
-      let coreLoaded = false;
       try {
         const [usersRes, modelsRes] = await Promise.all([
           apiFetch('/api/admin/users'),
@@ -213,7 +229,6 @@ const AdminPage: React.FC = () => {
           hasLoaded.current = true;
         }
         setError('');
-        coreLoaded = true;
       } catch (err) {
         if (!mounted) return;
         setError(err instanceof Error ? translateError(err.message) : t('errors.loadData'));
@@ -221,27 +236,16 @@ const AdminPage: React.FC = () => {
 
       if (!mounted) return;
       try {
-        const [registrationsRes, passwordResetsRes] = await Promise.all([
-          apiFetch('/api/admin/registrations'),
-          apiFetch('/api/admin/password-resets'),
-        ]);
+        const registrationsRes = await apiFetch('/api/admin/registrations');
         const registrationsData = await readJsonSafe<{ leads?: AdminRegistrationLead[]; error?: string }>(registrationsRes);
-        const passwordResetsData = await readJsonSafe<{ requests?: AdminPasswordResetRequest[]; error?: string }>(
-          passwordResetsRes
-        );
         if (!mounted) return;
         if (registrationsRes.ok) {
           setRegistrationLeads(registrationsData?.leads || []);
         }
-        if (passwordResetsRes.ok) {
-          setPasswordResetRequests(sortPasswordResetRequests(passwordResetsData?.requests || []));
-          setPasswordResetLoadError('');
-        } else {
-          setPasswordResetLoadError(translateError(passwordResetsData?.error || t('errors.loadData')));
-        }
+        await loadPasswordResets();
       } catch {
         if (!mounted) return;
-        setPasswordResetLoadError(t('errors.loadData'));
+        await loadPasswordResets();
       }
     };
 
@@ -249,7 +253,7 @@ const AdminPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [t, translateError]);
+  }, [loadPasswordResets, t, translateError]);
 
   useEffect(() => {
     let active = true;
@@ -280,27 +284,21 @@ const AdminPage: React.FC = () => {
 
       if (!active) return;
       try {
-        const [registrationsRes, passwordResetsRes] = await Promise.all([
-          apiFetch('/api/admin/registrations'),
-          apiFetch('/api/admin/password-resets'),
-        ]);
+        const registrationsRes = await apiFetch('/api/admin/registrations');
         const registrationsData = await readJsonSafe<{ leads?: AdminRegistrationLead[] }>(registrationsRes);
-        const passwordResetsData = await readJsonSafe<{ requests?: AdminPasswordResetRequest[] }>(passwordResetsRes);
         if (!active) return;
         if (registrationsRes.ok && registrationsData?.leads) {
           setRegistrationLeads(registrationsData.leads);
           triggerLogoPulse();
         }
-        if (passwordResetsRes.ok && passwordResetsData?.requests) {
-          setPasswordResetRequests(sortPasswordResetRequests(passwordResetsData.requests));
-          setPasswordResetLoadError('');
+        const loadedPasswordResets = await loadPasswordResets();
+        if (!active) return;
+        if (loadedPasswordResets) {
           triggerLogoPulse();
-        } else if (!passwordResetsRes.ok) {
-          setPasswordResetLoadError(t('errors.loadData'));
         }
       } catch {
         if (!active) return;
-        setPasswordResetLoadError(t('errors.loadData'));
+        await loadPasswordResets();
       }
     };
 
@@ -309,7 +307,7 @@ const AdminPage: React.FC = () => {
       active = false;
       clearInterval(interval);
     };
-  }, [t]);
+  }, [loadPasswordResets]);
 
   useEffect(() => {
     return () => {

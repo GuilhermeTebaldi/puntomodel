@@ -472,7 +472,8 @@ const isResetIdentifierValid = (value) => {
 };
 const normalizeResetToken = (value) => {
   if (typeof value === 'number' && Number.isFinite(value)) {
-    return String(Math.trunc(value)).replace(/\D/g, '');
+    const sanitized = String(Math.trunc(value)).replace(/\D/g, '');
+    return sanitized.length <= 3 ? sanitized.padStart(3, '0') : sanitized;
   }
   if (typeof value === 'string') {
     return value.trim().replace(/\D/g, '');
@@ -486,6 +487,35 @@ const generateResetToken = (excluded = new Set()) => {
     if (!excluded.has(candidate)) return candidate;
   }
   return null;
+};
+const hasProvidedResetToken = (value) => {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'number') return true;
+  if (typeof value === 'string') return value.trim().length > 0;
+  return String(value).trim().length > 0;
+};
+const resolveResetRequestToken = ({ rawToken, previousToken }) => {
+  const tokenInput = normalizeResetToken(rawToken);
+  const provided = hasProvidedResetToken(rawToken);
+  if (provided && !isResetTokenValid(tokenInput)) {
+    return { token: '', error: 'Token inválido. Use 3 números.' };
+  }
+
+  const excluded = new Set();
+  const normalizedPrevious = normalizeResetToken(previousToken);
+  if (isResetTokenValid(normalizedPrevious)) {
+    excluded.add(normalizedPrevious);
+  }
+
+  if (isResetTokenValid(tokenInput) && !excluded.has(tokenInput)) {
+    return { token: tokenInput, error: '' };
+  }
+
+  const generated = generateResetToken(excluded);
+  if (!generated) {
+    return { token: '', error: 'Não foi possível gerar token.' };
+  }
+  return { token: generated, error: '' };
 };
 const phonesMatch = (left, right) => {
   const a = normalizePhoneDigits(left);
@@ -861,92 +891,102 @@ app.patch('/api/admin/users/:id/password', async (req, res) => {
 });
 
 app.post('/api/password-resets', async (req, res) => {
-  await ensureDb();
-  const payload = req.body || {};
-  const rawIdentifier = payload.identifier ?? payload.email;
-  const identifier = normalizeResetIdentifier(rawIdentifier);
-  if (!isResetIdentifierValid(identifier)) {
-    return res.status(400).json({ ok: false, error: 'Informe e-mail ou celular válido.' });
+  try {
+    await ensureDb();
+    const payload = req.body || {};
+    const rawIdentifier = payload.identifier ?? payload.email;
+    const identifier = normalizeResetIdentifier(rawIdentifier);
+    if (!isResetIdentifierValid(identifier)) {
+      return res.status(400).json({ ok: false, error: 'Informe e-mail ou celular válido.' });
+    }
+
+    const identity = await resolveResetIdentity(identifier);
+    const email = identity.email || (identifier.includes('@') ? normalizeEmail(identifier) : '');
+    if (!email || !email.includes('@')) {
+      return res.status(404).json({ ok: false, error: 'Usuário não encontrado.' });
+    }
+
+    const previousToken = await getLatestPasswordResetTokenByEmail(email);
+    const nextToken = resolveResetRequestToken({
+      rawToken: payload.token,
+      previousToken,
+    });
+    if (nextToken.error) {
+      const status = nextToken.error.includes('Token inválido') ? 400 : 500;
+      return res.status(status).json({ ok: false, error: nextToken.error });
+    }
+
+    const user = identity.user || await findUserByEmail(email);
+    const created = await createPasswordResetRequest({
+      email,
+      userId: user?.id || null,
+      token: nextToken.token,
+    });
+    if (!created) {
+      return res.status(500).json({ ok: false, error: 'Não foi possível enviar a solicitação de recuperação.' });
+    }
+    res.json({ ok: true, request: created });
+  } catch (error) {
+    console.error('[password-reset:create]', error);
+    res.status(500).json({ ok: false, error: 'Não foi possível enviar a solicitação de recuperação.' });
   }
-  const tokenInput = normalizeResetToken(payload.token);
-  if (!isResetTokenValid(tokenInput)) {
-    return res.status(400).json({ ok: false, error: 'Token inválido. Use 3 números.' });
-  }
-  const identity = await resolveResetIdentity(identifier);
-  const email = identity.email || (identifier.includes('@') ? normalizeEmail(identifier) : '');
-  if (!email || !email.includes('@')) {
-    return res.status(404).json({ ok: false, error: 'Usuário não encontrado.' });
-  }
-  // Avoid repeating the same token on consecutive requests for the same account.
-  const previousToken = await getLatestPasswordResetTokenByEmail(email);
-  const token = previousToken && tokenInput === previousToken
-    ? generateResetToken(new Set([previousToken]))
-    : tokenInput;
-  if (!token) {
-    return res.status(500).json({ ok: false, error: 'Não foi possível gerar token.' });
-  }
-  const user = identity.user || await findUserByEmail(email);
-  const created = await createPasswordResetRequest({
-    email,
-    userId: user?.id || null,
-    token,
-  });
-  if (!created) {
-    return res.status(500).json({ ok: false, error: 'Não foi possível enviar a solicitação de recuperação.' });
-  }
-  res.json({ ok: true, request: created });
 });
 
 app.post('/api/auth/password/reset-by-token', async (req, res) => {
-  await ensureDb();
-  const payload = req.body || {};
-  const rawIdentifier = payload.identifier ?? payload.email;
-  const identifier = normalizeResetIdentifier(rawIdentifier);
-  const token = normalizeResetToken(payload.token);
-  const newPassword = normalizePassword(payload.newPassword);
+  try {
+    await ensureDb();
+    const payload = req.body || {};
+    const rawIdentifier = payload.identifier ?? payload.email;
+    const identifier = normalizeResetIdentifier(rawIdentifier);
+    const token = normalizeResetToken(payload.token);
+    const newPassword = normalizePassword(payload.newPassword);
 
-  if (!isResetIdentifierValid(identifier)) {
-    return res.status(400).json({ ok: false, error: 'Informe e-mail ou celular válido.' });
-  }
-  if (!isResetTokenValid(token)) {
-    return res.status(400).json({ ok: false, error: 'Token inválido. Use 3 números.' });
-  }
-  if (!isPasswordValid(newPassword)) {
-    return res.status(400).json({ ok: false, error: 'Nova senha inválida.' });
-  }
+    if (!isResetIdentifierValid(identifier)) {
+      return res.status(400).json({ ok: false, error: 'Informe e-mail ou celular válido.' });
+    }
+    if (!isResetTokenValid(token)) {
+      return res.status(400).json({ ok: false, error: 'Token inválido. Use 3 números.' });
+    }
+    if (!isPasswordValid(newPassword)) {
+      return res.status(400).json({ ok: false, error: 'Nova senha inválida.' });
+    }
 
-  const identity = await resolveResetIdentity(identifier);
-  const email = identity.email || (identifier.includes('@') ? normalizeEmail(identifier) : '');
-  if (!email || !email.includes('@')) {
-    return res.status(404).json({ ok: false, error: 'Usuário não encontrado.' });
-  }
+    const identity = await resolveResetIdentity(identifier);
+    const email = identity.email || (identifier.includes('@') ? normalizeEmail(identifier) : '');
+    if (!email || !email.includes('@')) {
+      return res.status(404).json({ ok: false, error: 'Usuário não encontrado.' });
+    }
 
-  let request = await findActivePasswordResetRequestByToken({ token, email, userId: null });
-  if (!request && identity.user?.id) {
-    request = await findActivePasswordResetRequestByToken({ token, email: '', userId: identity.user.id });
-  }
-  if (!request) {
-    return res.status(401).json({ ok: false, error: 'Token inválido.' });
-  }
+    let request = await findActivePasswordResetRequestByToken({ token, email, userId: null });
+    if (!request && identity.user?.id) {
+      request = await findActivePasswordResetRequestByToken({ token, email: '', userId: identity.user.id });
+    }
+    if (!request) {
+      return res.status(401).json({ ok: false, error: 'Token inválido.' });
+    }
 
-  let user = identity.user;
-  if (!user && request.userId) {
-    user = await findUserById(request.userId);
-  }
-  if (!user) {
-    user = await findUserByEmail(request.email || email);
-  }
-  if (!user) {
-    return res.status(404).json({ ok: false, error: 'Usuário não encontrado.' });
-  }
+    let user = identity.user;
+    if (!user && request.userId) {
+      user = await findUserById(request.userId);
+    }
+    if (!user) {
+      user = await findUserByEmail(request.email || email);
+    }
+    if (!user) {
+      return res.status(404).json({ ok: false, error: 'Usuário não encontrado.' });
+    }
 
-  const updated = await updateUserPassword(user.id, newPassword);
-  if (!updated) {
-    return res.status(500).json({ ok: false, error: 'Não foi possível atualizar.' });
-  }
+    const updated = await updateUserPassword(user.id, newPassword);
+    if (!updated) {
+      return res.status(500).json({ ok: false, error: 'Não foi possível atualizar.' });
+    }
 
-  await resolvePasswordResetRequest(request.id);
-  res.json({ ok: true, user: sanitizeUser(updated) });
+    await resolvePasswordResetRequest(request.id);
+    res.json({ ok: true, user: sanitizeUser(updated) });
+  } catch (error) {
+    console.error('[password-reset:finish]', error);
+    res.status(500).json({ ok: false, error: 'Não foi possível atualizar.' });
+  }
 });
 
 app.get('/api/models', async (req, res) => {
@@ -1035,27 +1075,42 @@ app.get('/api/admin/registrations', async (_req, res) => {
 });
 
 app.get('/api/admin/password-resets', async (_req, res) => {
-  await ensureDb();
-  const requests = await listPasswordResetRequests();
-  res.json({ ok: true, requests });
+  try {
+    await ensureDb();
+    const requests = await listPasswordResetRequests();
+    res.json({ ok: true, requests });
+  } catch (error) {
+    console.error('[password-reset:list-admin]', error);
+    res.status(500).json({ ok: false, error: 'Não foi possível carregar as solicitações de recuperação.' });
+  }
 });
 
 app.patch('/api/admin/password-resets/:id/resolve', async (req, res) => {
-  await ensureDb();
-  const resolved = await resolvePasswordResetRequest(req.params.id);
-  if (!resolved) {
-    return res.status(404).json({ ok: false, error: 'Solicitação de recuperação não encontrada.' });
+  try {
+    await ensureDb();
+    const resolved = await resolvePasswordResetRequest(req.params.id);
+    if (!resolved) {
+      return res.status(404).json({ ok: false, error: 'Solicitação de recuperação não encontrada.' });
+    }
+    res.json({ ok: true, request: resolved });
+  } catch (error) {
+    console.error('[password-reset:resolve-admin]', error);
+    res.status(500).json({ ok: false, error: 'Não foi possível atualizar.' });
   }
-  res.json({ ok: true, request: resolved });
 });
 
 app.patch('/api/admin/password-resets/:id/token-sent', async (req, res) => {
-  await ensureDb();
-  const updated = await markPasswordResetTokenSent(req.params.id);
-  if (!updated) {
-    return res.status(404).json({ ok: false, error: 'Solicitação de recuperação não encontrada.' });
+  try {
+    await ensureDb();
+    const updated = await markPasswordResetTokenSent(req.params.id);
+    if (!updated) {
+      return res.status(404).json({ ok: false, error: 'Solicitação de recuperação não encontrada.' });
+    }
+    res.json({ ok: true, request: updated });
+  } catch (error) {
+    console.error('[password-reset:token-sent-admin]', error);
+    res.status(500).json({ ok: false, error: 'Não foi possível atualizar.' });
   }
-  res.json({ ok: true, request: updated });
 });
 
 app.post('/api/admin/models/:id/translate', async (req, res) => {
