@@ -655,6 +655,7 @@ export const translations = {
       tokenHint: 'O token será exibido no admin para envio manual ao WhatsApp cadastrado.',
       requestButton: 'Enviar solicitação',
       requestSuccess: 'Solicitação enviada para o admin com sucesso.',
+      requestSuccessWithToken: 'Solicitação enviada. Token registrado: {{token}}.',
       changeTitle: 'Trocar senha',
       changeHint: 'Se você souber sua senha atual, pode trocar por aqui.',
       currentPasswordLabel: 'Senha atual',

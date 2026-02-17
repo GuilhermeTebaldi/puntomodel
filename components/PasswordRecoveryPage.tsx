@@ -89,8 +89,9 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
       return;
     }
 
+    const savedToken = result.request?.token || token;
     setRequestToken('');
-    setRequestMessage(t('passwordRecovery.requestSuccess'));
+    setRequestMessage(t('passwordRecovery.requestSuccessWithToken', { token: savedToken }));
     setRequestMessageType('success');
   };
 
@@ -208,8 +209,18 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
             </button>
           </div>
 
-          {requestStep === 'email' ? (
-            <>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (requestStep === 'email') {
+                handleMoveToTokenStep();
+                return;
+              }
+              handleSendRequest();
+            }}
+          >
+            {requestStep === 'email' ? (
+              <>
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
                 {t('login.emailLabel')}
               </label>
@@ -222,16 +233,15 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
               />
               <div className="mt-4">
                 <button
-                  type="button"
-                  onClick={handleMoveToTokenStep}
+                  type="submit"
                   className="px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-widest"
                 >
                   {t('passwordRecovery.requestContinue')}
                 </button>
               </div>
-            </>
-          ) : (
-            <>
+              </>
+            ) : (
+              <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
@@ -264,8 +274,7 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
               <p className="text-xs text-gray-500 mt-3">{t('passwordRecovery.tokenHint')}</p>
               <div className="mt-4 flex items-center gap-2">
                 <button
-                  type="button"
-                  onClick={handleSendRequest}
+                  type="submit"
                   disabled={requesting}
                   className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
                 >
@@ -279,8 +288,9 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
                   {t('common.cancel')}
                 </button>
               </div>
-            </>
-          )}
+              </>
+            )}
+          </form>
 
           {requestMessage && (
             <p className={`mt-3 text-xs font-semibold ${requestMessageType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
@@ -295,7 +305,13 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
             <h2 className="text-lg font-black text-gray-900">{t('passwordRecovery.changeTitle')}</h2>
           </div>
           <p className="text-sm text-gray-500 mb-5">{t('passwordRecovery.changeHint')}</p>
-          <div className="space-y-3">
+          <form
+            className="space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              handleChangePassword();
+            }}
+          >
             <div>
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
                 {t('login.emailLabel')}
@@ -344,17 +360,16 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
                 autoComplete="new-password"
               />
             </div>
-          </div>
-          <div className="mt-4">
-            <button
-              type="button"
-              onClick={handleChangePassword}
-              disabled={changingPassword}
-              className="px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
-            >
-              {changingPassword ? t('common.saving') : t('passwordRecovery.changeButton')}
-            </button>
-          </div>
+            <div className="mt-4">
+              <button
+                type="submit"
+                disabled={changingPassword}
+                className="px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
+              >
+                {changingPassword ? t('common.saving') : t('passwordRecovery.changeButton')}
+              </button>
+            </div>
+          </form>
           {changeMessage && (
             <p className={`mt-3 text-xs font-semibold ${changeMessageType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
               {changeMessage}

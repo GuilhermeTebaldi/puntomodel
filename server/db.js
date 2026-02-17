@@ -102,6 +102,11 @@ export const ensureSchema = async () => {
   // Backward-compatible migrations for environments where table already exists.
   await query(`ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS token text NULL;`);
   await query(`ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS token_sent_at timestamptz NULL;`);
+  await query(`
+    UPDATE password_reset_requests
+    SET token = LPAD((FLOOR(RANDOM() * 1000)::int)::text, 3, '0')
+    WHERE token IS NULL;
+  `);
 
   await query(`CREATE INDEX IF NOT EXISTS payments_model_id_idx ON payments(model_id);`);
   await query(`CREATE INDEX IF NOT EXISTS events_model_id_idx ON events(model_id);`);
