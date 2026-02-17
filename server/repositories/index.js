@@ -336,6 +336,24 @@ export const createPasswordResetRequest = async ({ email, userId, token }) => {
   return rows[0] ? rowToPasswordResetRequest(rows[0]) : null;
 };
 
+export const resolveOpenPasswordResetRequestsByEmail = async (email) => {
+  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  if (!normalizedEmail) return 0;
+  const now = new Date().toISOString();
+  const result = await query(
+    `UPDATE password_reset_requests
+     SET
+       status = 'resolved',
+       resolved_at = COALESCE(resolved_at, $2),
+       updated_at = $2
+     WHERE
+       LOWER(email) = $1
+       AND COALESCE(NULLIF(BTRIM(status), ''), 'pending') <> 'resolved'`,
+    [normalizedEmail, now]
+  );
+  return Number(result.rowCount || 0);
+};
+
 export const listPasswordResetRequests = async () => {
   const { rows } = await query(
     `WITH normalized AS (
@@ -429,6 +447,11 @@ export const markPasswordResetTokenSent = async (id) => {
     [id, now]
   );
   return rows[0] ? rowToPasswordResetRequest(rows[0]) : null;
+};
+
+export const clearPasswordResetRequests = async () => {
+  await query('DELETE FROM password_reset_requests');
+  return true;
 };
 
 export const resetDatabase = async () => {

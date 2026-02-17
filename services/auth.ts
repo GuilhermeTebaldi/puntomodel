@@ -116,16 +116,38 @@ export const changePassword = async (payload: ChangePasswordPayload) => {
   }
 };
 
-export const requestPasswordReset = async (identifier: string, token: string) => {
+export const requestPasswordReset = async (identifier: string) => {
   try {
     const response = await apiFetch('/api/password-resets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier, token }),
+      body: JSON.stringify({ identifier }),
     });
     const data = await response.json();
     if (!response.ok) {
       return { ok: false, error: data?.error || 'Não foi possível enviar a solicitação de recuperação.' } as const;
+    }
+    return { ok: true, request: data.request as PasswordResetRequest } as const;
+  } catch {
+    return { ok: false, error: 'Servidor indisponível no momento.' } as const;
+  }
+};
+
+type VerifyPasswordResetTokenPayload = {
+  identifier: string;
+  token: string;
+};
+
+export const verifyPasswordResetToken = async (payload: VerifyPasswordResetTokenPayload) => {
+  try {
+    const response = await apiFetch('/api/password-resets/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      return { ok: false, error: data?.error || 'Token inválido.' } as const;
     }
     return { ok: true, request: data.request as PasswordResetRequest } as const;
   } catch {

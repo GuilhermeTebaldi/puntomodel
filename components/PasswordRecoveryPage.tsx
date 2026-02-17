@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, KeyRound, Mail } from 'lucide-react';
 import Logo from './Logo';
-import { requestPasswordReset, resetPasswordWithToken } from '../services/auth';
+import { requestPasswordReset, resetPasswordWithToken, verifyPasswordResetToken } from '../services/auth';
 import { useI18n } from '../translations/i18n';
 
 interface PasswordRecoveryPageProps {
@@ -20,12 +20,16 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
 }) => {
   const { t, translateError } = useI18n();
   const identifierSeed = (currentUserEmail || initialEmail || '').trim();
-  const [requestStep, setRequestStep] = useState<'email' | 'token'>('email');
   const [requestIdentifier, setRequestIdentifier] = useState(identifierSeed);
-  const [requestToken, setRequestToken] = useState('');
   const [requesting, setRequesting] = useState(false);
   const [requestMessage, setRequestMessage] = useState('');
   const [requestMessageType, setRequestMessageType] = useState<'success' | 'error' | null>(null);
+  const [requestSent, setRequestSent] = useState(false);
+
+  const [requestToken, setRequestToken] = useState('');
+  const [verifyingToken, setVerifyingToken] = useState(false);
+  const [tokenMessage, setTokenMessage] = useState('');
+  const [tokenMessageType, setTokenMessageType] = useState<'success' | 'error' | null>(null);
   const [validatedReset, setValidatedReset] = useState<{ identifier: string; token: string } | null>(null);
 
   const [newPassword, setNewPassword] = useState('');
@@ -45,6 +49,7 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
     if (!trimmed) return false;
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
   };
+
   const isIdentifierValid = (value: string) => {
     const trimmed = value.trim();
     if (!trimmed) return false;
@@ -56,36 +61,37 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
 
   const isTokenValid = (value: string) => /^\d{3}$/.test(value.trim());
 
-  const handleMoveToTokenStep = () => {
-    setRequestMessage('');
-    setRequestMessageType(null);
-    const identifier = requestIdentifier.trim();
-    if (!isIdentifierValid(identifier)) {
-      setRequestMessage(t('errors.identifierRequired'));
-      setRequestMessageType('error');
-      return;
-    }
-    setRequestStep('token');
+  const resetVerificationState = () => {
+    setRequestSent(false);
+    setRequestToken('');
+    setTokenMessage('');
+    setTokenMessageType(null);
+    setValidatedReset(null);
+    setNewPassword('');
+    setConfirmPassword('');
+    setChangeMessage('');
+    setChangeMessageType(null);
   };
 
-  const handleSendRequest = async () => {
+  const handleIdentifierChange = (value: string) => {
+    setRequestIdentifier(value);
+    setRequestMessage('');
+    setRequestMessageType(null);
+    resetVerificationState();
+  };
+
+  const handleRequestPasswordReset = async () => {
     setRequestMessage('');
     setRequestMessageType(null);
     const identifier = requestIdentifier.trim();
-    const token = requestToken.trim();
     if (!isIdentifierValid(identifier)) {
       setRequestMessage(t('errors.identifierRequired'));
-      setRequestMessageType('error');
-      return;
-    }
-    if (!isTokenValid(token)) {
-      setRequestMessage(t('errors.tokenInvalid'));
       setRequestMessageType('error');
       return;
     }
 
     setRequesting(true);
-    const result = await requestPasswordReset(identifier, token);
+    const result = await requestPasswordReset(identifier);
     setRequesting(false);
 
     if (!result.ok) {
@@ -94,35 +100,59 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
       return;
     }
 
-    const savedToken = (result.request?.token || token).trim();
-    setValidatedReset({
-      identifier,
-      token: savedToken,
-    });
-    setRequestMessage(t('passwordRecovery.requestSuccessWithToken', { token: savedToken }));
+    setRequestSent(true);
+    setRequestToken('');
+    setTokenMessage('');
+    setTokenMessageType(null);
+    setValidatedReset(null);
+    setRequestMessage(t('passwordRecovery.requestSuccess'));
     setRequestMessageType('success');
+  };
+
+  const handleValidateToken = async () => {
+    setTokenMessage('');
+    setTokenMessageType(null);
+    const identifier = requestIdentifier.trim();
+    const token = requestToken.trim();
+
+    if (!isIdentifierValid(identifier)) {
+      setTokenMessage(t('errors.identifierRequired'));
+      setTokenMessageType('error');
+      return;
+    }
+    if (!isTokenValid(token)) {
+      setTokenMessage(t('errors.tokenInvalid'));
+      setTokenMessageType('error');
+      return;
+    }
+
+    setVerifyingToken(true);
+    const result = await verifyPasswordResetToken({ identifier, token });
+    setVerifyingToken(false);
+
+    if (!result.ok) {
+      setTokenMessage(translateError(result.error));
+      setTokenMessageType('error');
+      return;
+    }
+
+    setValidatedReset({ identifier, token });
+    setTokenMessage(t('passwordRecovery.tokenVerified'));
+    setTokenMessageType('success');
   };
 
   const handleChangePassword = async () => {
     setChangeMessage('');
     setChangeMessageType(null);
     const unlock = validatedReset;
-    const identifier = unlock?.identifier || requestIdentifier.trim();
-    const token = unlock?.token || requestToken.trim();
+    if (!unlock) {
+      setChangeMessage(t('passwordRecovery.changeLockedHint'));
+      setChangeMessageType('error');
+      return;
+    }
+
     const next = newPassword.trim();
     const confirm = confirmPassword.trim();
-
-    if (!isIdentifierValid(identifier)) {
-      setChangeMessage(t('errors.identifierRequired'));
-      setChangeMessageType('error');
-      return;
-    }
-
-    if (!isTokenValid(token)) {
-      setChangeMessage(t('errors.tokenInvalid'));
-      setChangeMessageType('error');
-      return;
-    }
 
     if (!next || !confirm) {
       setChangeMessage(t('errors.passwordRequired'));
@@ -144,8 +174,8 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
 
     setChangingPassword(true);
     const result = await resetPasswordWithToken({
-      identifier,
-      token,
+      identifier: unlock.identifier,
+      token: unlock.token,
       newPassword: next,
     });
     setChangingPassword(false);
@@ -193,71 +223,65 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
             <h2 className="text-lg font-black text-gray-900">{t('passwordRecovery.requestTitle')}</h2>
           </div>
           <p className="text-sm text-gray-500 mb-5">{t('passwordRecovery.requestHint')}</p>
-
-          <div className="inline-flex rounded-full bg-gray-100 p-1 mb-5">
-            <button
-              type="button"
-              onClick={() => setRequestStep('email')}
-              className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                requestStep === 'email' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
-              }`}
-            >
-              {t('passwordRecovery.stepEmailTab')}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (isIdentifierValid(requestIdentifier)) {
-                  setRequestStep('token');
-                  return;
-                }
-                setRequestMessage(t('errors.identifierRequired'));
-                setRequestMessageType('error');
-              }}
-              className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                requestStep === 'token' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
-              }`}
-            >
-              {t('passwordRecovery.stepTokenTab')}
-            </button>
-          </div>
-
           <form
+            className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
-              if (requestStep === 'email') {
-                handleMoveToTokenStep();
-                return;
-              }
-              handleSendRequest();
+              handleRequestPasswordReset();
             }}
           >
-            {requestStep === 'email' ? (
-              <>
+            <div>
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
                 {t('login.emailLabel')}
               </label>
               <input
                 type="text"
                 value={requestIdentifier}
-                onChange={(event) => {
-                  setRequestIdentifier(event.target.value);
-                  if (validatedReset) setValidatedReset(null);
-                }}
+                onChange={(event) => handleIdentifierChange(event.target.value)}
                 className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
                 placeholder={t('login.emailPlaceholder')}
               />
-              <div className="mt-4">
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="submit"
+                disabled={requesting}
+                className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
+              >
+                {requesting ? t('common.sending') : t('passwordRecovery.requestButton')}
+              </button>
+              {requestSent && (
                 <button
-                  type="submit"
-                  className="px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-widest"
+                  type="button"
+                  onClick={resetVerificationState}
+                  className="px-4 py-2 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest"
                 >
-                  {t('passwordRecovery.requestContinue')}
+                  {t('common.cancel')}
                 </button>
-              </div>
-              </>
-            ) : (
-              <>
+              )}
+            </div>
+          </form>
+          {requestMessage && (
+            <p className={`mt-3 text-xs font-semibold ${requestMessageType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
+              {requestMessage}
+            </p>
+          )}
+        </section>
+
+        {requestSent && (
+          <section className="bg-white border border-gray-100 rounded-3xl p-6 sm:p-8 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <KeyRound size={16} className="text-[#e3262e]" />
+              <h2 className="text-lg font-black text-gray-900">{t('passwordRecovery.stepTokenTab')}</h2>
+            </div>
+            <p className="text-sm text-gray-500 mb-5">{t('passwordRecovery.tokenHint')}</p>
+            <form
+              className="space-y-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                handleValidateToken();
+              }}
+            >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
@@ -266,12 +290,8 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
                   <input
                     type="text"
                     value={requestIdentifier}
-                    onChange={(event) => {
-                      setRequestIdentifier(event.target.value);
-                      if (validatedReset) setValidatedReset(null);
-                    }}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
-                    placeholder={t('login.emailPlaceholder')}
+                    readOnly
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm text-gray-600"
                   />
                 </div>
                 <div>
@@ -284,42 +304,29 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
                     pattern="[0-9]*"
                     maxLength={3}
                     value={requestToken}
-                    onChange={(event) => {
-                      setRequestToken(event.target.value.replace(/\D/g, '').slice(0, 3));
-                      if (validatedReset) setValidatedReset(null);
-                    }}
+                    onChange={(event) => setRequestToken(event.target.value.replace(/\D/g, '').slice(0, 3))}
                     className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm tracking-[0.4em]"
                     placeholder={t('passwordRecovery.tokenPlaceholder')}
                   />
                 </div>
               </div>
-              <p className="text-xs text-gray-500 mt-3">{t('passwordRecovery.tokenHint')}</p>
-              <div className="mt-4 flex items-center gap-2">
+              <div className="mt-4">
                 <button
                   type="submit"
-                  disabled={requesting}
-                  className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
+                  disabled={verifyingToken}
+                  className="px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
                 >
-                  {requesting ? t('common.sending') : t('passwordRecovery.requestButton')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRequestStep('email')}
-                  className="px-4 py-2 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest"
-                >
-                  {t('common.cancel')}
+                  {verifyingToken ? t('common.saving') : t('common.continue')}
                 </button>
               </div>
-              </>
+            </form>
+            {tokenMessage && (
+              <p className={`mt-3 text-xs font-semibold ${tokenMessageType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
+                {tokenMessage}
+              </p>
             )}
-          </form>
-
-          {requestMessage && (
-            <p className={`mt-3 text-xs font-semibold ${requestMessageType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
-              {requestMessage}
-            </p>
-          )}
-        </section>
+          </section>
+        )}
 
         {validatedReset && (
           <section className="bg-white border border-gray-100 rounded-3xl p-6 sm:p-8 shadow-sm">

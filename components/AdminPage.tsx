@@ -141,6 +141,8 @@ const AdminPage: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<AdminModel | null>(null);
   const [selectedTranslationModel, setSelectedTranslationModel] = useState<AdminModel | null>(null);
   const [refreshingTranslations, setRefreshingTranslations] = useState(false);
+  const [refreshingPasswordResets, setRefreshingPasswordResets] = useState(false);
+  const [clearingPasswordResets, setClearingPasswordResets] = useState(false);
   const [translatingModelId, setTranslatingModelId] = useState<string | null>(null);
   const [logoPulse, setLogoPulse] = useState(false);
   const logoPulseTimeout = useRef<number | null>(null);
@@ -204,6 +206,35 @@ const AdminPage: React.FC = () => {
       return false;
     }
   }, [t, translateError]);
+
+  const refreshPasswordResetsNow = useCallback(async () => {
+    setRefreshingPasswordResets(true);
+    const loaded = await loadPasswordResets();
+    if (loaded) {
+      triggerLogoPulse();
+    }
+    setRefreshingPasswordResets(false);
+  }, [loadPasswordResets]);
+
+  const clearPasswordResetsHistory = async () => {
+    const confirmed = window.confirm(t('adminPage.passwordResetsConfirmClear'));
+    if (!confirmed) return;
+
+    setClearingPasswordResets(true);
+    setError('');
+    try {
+      const response = await apiFetch('/api/admin/password-resets', { method: 'DELETE' });
+      const data = await readJsonSafe<{ error?: string }>(response);
+      if (!response.ok) throw new Error(data?.error || t('errors.passwordResetClearFailed'));
+      setPasswordResetRequests([]);
+      setPasswordResetLoadError('');
+      triggerLogoPulse();
+    } catch (err) {
+      setError(err instanceof Error ? translateError(err.message) : t('errors.passwordResetClearFailed'));
+    } finally {
+      setClearingPasswordResets(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -816,9 +847,29 @@ const AdminPage: React.FC = () => {
           </div>
         ) : tab === 'passwordResets' ? (
           <div className="space-y-4">
-            <div>
+            <div className="flex items-center justify-between gap-3">
+              <div>
               <h2 className="text-lg font-black text-gray-900">{t('adminPage.passwordResetsTitle')}</h2>
               <p className="text-xs text-gray-500">{t('adminPage.passwordResetsHint')}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={refreshPasswordResetsNow}
+                  disabled={refreshingPasswordResets || clearingPasswordResets}
+                  className="px-3 py-2 rounded-full bg-gray-100 text-gray-700 text-[10px] font-bold uppercase tracking-widest disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {refreshingPasswordResets ? t('adminPage.translationsRefreshing') : t('adminPage.translationsRefresh')}
+                </button>
+                <button
+                  type="button"
+                  onClick={clearPasswordResetsHistory}
+                  disabled={clearingPasswordResets || refreshingPasswordResets}
+                  className="px-3 py-2 rounded-full bg-gray-100 text-red-600 text-[10px] font-bold uppercase tracking-widest disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {clearingPasswordResets ? t('adminPage.passwordResetsClearing') : t('adminPage.passwordResetsClearHistory')}
+                </button>
+              </div>
             </div>
             {passwordResetLoadError && (
               <p className="text-xs font-semibold text-red-500">{passwordResetLoadError}</p>
