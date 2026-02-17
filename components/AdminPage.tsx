@@ -108,6 +108,7 @@ const AdminPage: React.FC = () => {
   const [passwordConfirmInput, setPasswordConfirmInput] = useState('');
   const [updatingPasswordUserId, setUpdatingPasswordUserId] = useState<string | null>(null);
   const [sendingPasswordResetTokenId, setSendingPasswordResetTokenId] = useState<string | null>(null);
+  const [copiedPasswordResetId, setCopiedPasswordResetId] = useState<string | null>(null);
   const [resolvingPasswordResetId, setResolvingPasswordResetId] = useState<string | null>(null);
   const [passwordEditError, setPasswordEditError] = useState('');
   const [passwordEditSuccess, setPasswordEditSuccess] = useState('');
@@ -117,6 +118,7 @@ const AdminPage: React.FC = () => {
   const [translatingModelId, setTranslatingModelId] = useState<string | null>(null);
   const [logoPulse, setLogoPulse] = useState(false);
   const logoPulseTimeout = useRef<number | null>(null);
+  const copiedTimeoutRef = useRef<number | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const hasLoaded = useRef(false);
   const translationTargets = useMemo(
@@ -280,6 +282,9 @@ const AdminPage: React.FC = () => {
       if (logoPulseTimeout.current) {
         window.clearTimeout(logoPulseTimeout.current);
       }
+      if (copiedTimeoutRef.current) {
+        window.clearTimeout(copiedTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -435,6 +440,55 @@ const AdminPage: React.FC = () => {
   const findModelForPasswordReset = (request: AdminPasswordResetRequest) => {
     const targetEmail = request.email.trim().toLowerCase();
     return models.find((model) => model.email.trim().toLowerCase() === targetEmail) || null;
+  };
+
+  const copyTextToClipboard = async (text: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    if (typeof document === 'undefined') throw new Error('clipboard_unavailable');
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const copied = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    if (!copied) {
+      throw new Error('copy_failed');
+    }
+  };
+
+  const buildPasswordResetMessage = (request: AdminPasswordResetRequest, model: AdminModel | null) => {
+    const name = (model?.name || t('adminPage.passwordResetsDefaultName')).trim();
+    const token = (request.token || '').trim();
+    return t('adminPage.passwordResetsWhatsappMessage', { name, token });
+  };
+
+  const handleCopyPasswordResetMessage = async (request: AdminPasswordResetRequest) => {
+    const token = (request.token || '').trim();
+    if (!token) {
+      setError(t('adminPage.passwordResetsMissingToken'));
+      return;
+    }
+    const linkedModel = findModelForPasswordReset(request);
+    setError('');
+    try {
+      const message = buildPasswordResetMessage(request, linkedModel);
+      await copyTextToClipboard(message);
+      setCopiedPasswordResetId(request.id);
+      if (copiedTimeoutRef.current) {
+        window.clearTimeout(copiedTimeoutRef.current);
+      }
+      copiedTimeoutRef.current = window.setTimeout(() => {
+        setCopiedPasswordResetId((prev) => (prev === request.id ? null : prev));
+      }, 2200);
+    } catch {
+      setError(t('adminPage.passwordResetsCopyFailed'));
+    }
   };
 
   const handleSendPasswordResetToken = async (request: AdminPasswordResetRequest) => {
@@ -786,6 +840,15 @@ const AdminPage: React.FC = () => {
                                 {t('adminPage.passwordEdit')}
                               </button>
                             )}
+                            <button
+                              onClick={() => handleCopyPasswordResetMessage(request)}
+                              disabled={!request.token}
+                              className="text-xs font-bold uppercase tracking-widest text-gray-600 hover:text-gray-800 disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              {copiedPasswordResetId === request.id
+                                ? t('adminPage.passwordResetsCopied')
+                                : t('adminPage.passwordResetsCopyMessage')}
+                            </button>
                             {!isResolved && (
                               <button
                                 onClick={() => handleSendPasswordResetToken(request)}

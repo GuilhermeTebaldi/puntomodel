@@ -552,6 +552,13 @@ export const translations = {
       passwordResetsTitle: 'Solicitações de recuperação de senha',
       passwordResetsHint: 'Pedidos com token manual para envio por WhatsApp.',
       passwordResetsEmpty: 'Nenhuma solicitação de recuperação.',
+      passwordResetsCopyMessage: 'Copiar mensagem',
+      passwordResetsCopied: 'Copiada',
+      passwordResetsCopyFailed: 'Não foi possível copiar a mensagem.',
+      passwordResetsMissingToken: 'Token ausente nesta solicitação.',
+      passwordResetsDefaultName: 'modelo',
+      passwordResetsWhatsappMessage:
+        'Olá, {{name}}! Recebemos um pedido de recuperação de senha na sua conta da Punto Model. Seu token é {{token}}. Envie este token para o admin para confirmar e concluir a troca de senha. Se não foi você, ignore esta mensagem.',
       passwordResetsSendToken: 'Token enviado',
       passwordResetsSent: 'Token já enviado',
       passwordResetsResolve: 'Marcar resolvido',
