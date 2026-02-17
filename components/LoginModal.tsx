@@ -16,9 +16,10 @@ interface LoginModalProps {
   onClose: () => void;
   onSwitchToRegister: () => void;
   onLoginSuccess?: () => void;
+  onForgotPassword?: (identifier?: string) => void;
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToRegister, onLoginSuccess }) => {
+const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToRegister, onLoginSuccess, onForgotPassword }) => {
   const { t, translateError } = useI18n();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -145,7 +146,16 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToRegi
                 />
                 {t('login.rememberCredentials')}
               </label>
-              <button className="text-xs font-bold text-[#e3262e] hover:underline">{t('login.forgot')}</button>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onForgotPassword?.(identifier.trim());
+                }}
+                className="text-xs font-bold text-[#e3262e] hover:underline"
+              >
+                {t('login.forgot')}
+              </button>
             </div>
 
             {error && (

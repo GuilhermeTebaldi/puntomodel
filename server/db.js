@@ -85,12 +85,26 @@ export const ensureSchema = async () => {
     );
   `);
 
+  await query(`
+    CREATE TABLE IF NOT EXISTS password_reset_requests (
+      id text PRIMARY KEY,
+      email text NOT NULL,
+      user_id text NULL REFERENCES users(id) ON DELETE SET NULL,
+      status text NOT NULL DEFAULT 'pending',
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      resolved_at timestamptz NULL
+    );
+  `);
+
   await query(`CREATE INDEX IF NOT EXISTS payments_model_id_idx ON payments(model_id);`);
   await query(`CREATE INDEX IF NOT EXISTS events_model_id_idx ON events(model_id);`);
   await query(`CREATE INDEX IF NOT EXISTS comments_model_id_idx ON comments(model_id);`);
   await query(`CREATE INDEX IF NOT EXISTS notifications_model_id_idx ON notifications(model_id);`);
   await query(`CREATE INDEX IF NOT EXISTS registration_leads_status_idx ON registration_leads(status);`);
   await query(`CREATE INDEX IF NOT EXISTS registration_leads_updated_idx ON registration_leads(updated_at DESC);`);
+  await query(`CREATE INDEX IF NOT EXISTS password_reset_requests_status_idx ON password_reset_requests(status);`);
+  await query(`CREATE INDEX IF NOT EXISTS password_reset_requests_updated_idx ON password_reset_requests(updated_at DESC);`);
 };
 
 export const checkDb = async () => {

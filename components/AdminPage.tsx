@@ -46,6 +46,16 @@ interface AdminRegistrationLead {
   completedAt?: string | null;
 }
 
+interface AdminPasswordResetRequest {
+  id: string;
+  email: string;
+  userId?: string | null;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  resolvedAt?: string | null;
+}
+
 const readJsonSafe = async <T,>(response: Response): Promise<T | null> => {
   const text = await response.text();
   if (!text) return null;
@@ -85,7 +95,8 @@ const AdminPage: React.FC = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [models, setModels] = useState<AdminModel[]>([]);
   const [registrationLeads, setRegistrationLeads] = useState<AdminRegistrationLead[]>([]);
-  const [tab, setTab] = useState<'users' | 'models' | 'translations' | 'registrations'>('users');
+  const [passwordResetRequests, setPasswordResetRequests] = useState<AdminPasswordResetRequest[]>([]);
+  const [tab, setTab] = useState<'users' | 'models' | 'translations' | 'registrations' | 'passwordResets'>('users');
   const [error, setError] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
@@ -94,6 +105,7 @@ const AdminPage: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordConfirmInput, setPasswordConfirmInput] = useState('');
   const [updatingPasswordUserId, setUpdatingPasswordUserId] = useState<string | null>(null);
+  const [resolvingPasswordResetId, setResolvingPasswordResetId] = useState<string | null>(null);
   const [passwordEditError, setPasswordEditError] = useState('');
   const [passwordEditSuccess, setPasswordEditSuccess] = useState('');
   const [selectedModel, setSelectedModel] = useState<AdminModel | null>(null);
@@ -119,6 +131,7 @@ const AdminPage: React.FC = () => {
       { id: 'users' as const, label: t('adminPage.usersTab') },
       { id: 'models' as const, label: t('adminPage.modelsTab') },
       { id: 'registrations' as const, label: t('adminPage.registrationsTab') },
+      { id: 'passwordResets' as const, label: t('adminPage.passwordResetsTab') },
       { id: 'translations' as const, label: t('adminPage.translationsTab') },
     ],
     [t]
@@ -177,16 +190,23 @@ const AdminPage: React.FC = () => {
 
       if (!coreLoaded || !mounted) return;
       try {
-        const registrationsRes = await apiFetch('/api/admin/registrations');
-        const registrationsData = await readJsonSafe<{ leads?: AdminRegistrationLead[]; error?: string }>(
-          registrationsRes
+        const [registrationsRes, passwordResetsRes] = await Promise.all([
+          apiFetch('/api/admin/registrations'),
+          apiFetch('/api/admin/password-resets'),
+        ]);
+        const registrationsData = await readJsonSafe<{ leads?: AdminRegistrationLead[]; error?: string }>(registrationsRes);
+        const passwordResetsData = await readJsonSafe<{ requests?: AdminPasswordResetRequest[]; error?: string }>(
+          passwordResetsRes
         );
         if (!mounted) return;
         if (registrationsRes.ok) {
           setRegistrationLeads(registrationsData?.leads || []);
         }
+        if (passwordResetsRes.ok) {
+          setPasswordResetRequests(passwordResetsData?.requests || []);
+        }
       } catch {
-        // ignore registrations load failures so core admin data keeps working
+        // ignore secondary load failures so core admin data keeps working
       }
     };
 
@@ -225,15 +245,23 @@ const AdminPage: React.FC = () => {
 
       if (!active) return;
       try {
-        const registrationsRes = await apiFetch('/api/admin/registrations');
+        const [registrationsRes, passwordResetsRes] = await Promise.all([
+          apiFetch('/api/admin/registrations'),
+          apiFetch('/api/admin/password-resets'),
+        ]);
         const registrationsData = await readJsonSafe<{ leads?: AdminRegistrationLead[] }>(registrationsRes);
+        const passwordResetsData = await readJsonSafe<{ requests?: AdminPasswordResetRequest[] }>(passwordResetsRes);
         if (!active) return;
         if (registrationsRes.ok && registrationsData?.leads) {
           setRegistrationLeads(registrationsData.leads);
           triggerLogoPulse();
         }
+        if (passwordResetsRes.ok && passwordResetsData?.requests) {
+          setPasswordResetRequests(passwordResetsData.requests);
+          triggerLogoPulse();
+        }
       } catch {
-        // ignore registrations refresh failures
+        // ignore secondary refresh failures
       }
     };
 
@@ -389,6 +417,37 @@ const AdminPage: React.FC = () => {
       setPasswordEditError(err instanceof Error ? translateError(err.message) : t('errors.updateFailed'));
     } finally {
       setUpdatingPasswordUserId(null);
+    }
+  };
+
+  const findUserForPasswordReset = (request: AdminPasswordResetRequest) => {
+    if (request.userId) {
+      const byId = users.find((user) => user.id === request.userId);
+      if (byId) return byId;
+    }
+    const targetEmail = request.email.trim().toLowerCase();
+    return users.find((user) => user.email.trim().toLowerCase() === targetEmail) || null;
+  };
+
+  const handleResolvePasswordReset = async (request: AdminPasswordResetRequest) => {
+    if (request.status === 'resolved') return;
+    setResolvingPasswordResetId(request.id);
+    setError('');
+    try {
+      const response = await apiFetch(`/api/admin/password-resets/${request.id}/resolve`, {
+        method: 'PATCH',
+      });
+      const data = await readJsonSafe<{ request?: AdminPasswordResetRequest; error?: string }>(response);
+      if (!response.ok) throw new Error(data?.error || t('errors.updateFailed'));
+      if (data?.request) {
+        setPasswordResetRequests((prev) =>
+          prev.map((item) => (item.id === data.request?.id ? data.request : item))
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? translateError(err.message) : t('errors.updateFailed'));
+    } finally {
+      setResolvingPasswordResetId(null);
     }
   };
 
@@ -623,6 +682,84 @@ const AdminPage: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        ) : tab === 'passwordResets' ? (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-black text-gray-900">{t('adminPage.passwordResetsTitle')}</h2>
+              <p className="text-xs text-gray-500">{t('adminPage.passwordResetsHint')}</p>
+            </div>
+            <div className="bg-white border border-gray-100 rounded-2xl overflow-x-auto">
+              <table className="w-full min-w-[860px] text-sm">
+                <thead className="bg-gray-50 text-gray-500">
+                  <tr>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.email')}</th>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.status')}</th>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.createdAt')}</th>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.resolvedAt')}</th>
+                    <th className="text-right px-4 py-3">{t('adminPage.table.actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {passwordResetRequests.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-6 text-gray-400 text-center">
+                        {t('adminPage.passwordResetsEmpty')}
+                      </td>
+                    </tr>
+                  )}
+                  {passwordResetRequests.map((request) => {
+                    const isResolved = request.status === 'resolved';
+                    const linkedUser = findUserForPasswordReset(request);
+                    return (
+                      <tr key={request.id} className="border-t border-gray-100">
+                        <td className="px-4 py-3 text-gray-700 font-semibold">{request.email}</td>
+                        <td className="px-4 py-3">
+                          {isResolved ? (
+                            <span className="inline-flex items-center gap-2 text-emerald-600 text-xs font-bold uppercase tracking-widest">
+                              ✓ {t('adminPage.statusComplete')}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-2 text-red-500 text-xs font-bold uppercase tracking-widest">
+                              ✕ {t('adminPage.statusPending')}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 text-xs">
+                          {request.createdAt ? new Date(request.createdAt).toLocaleString(locale) : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 text-xs">
+                          {request.resolvedAt ? new Date(request.resolvedAt).toLocaleString(locale) : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-3">
+                            {linkedUser && (
+                              <button
+                                onClick={() => openPasswordEditor(linkedUser)}
+                                className="text-xs font-bold uppercase tracking-widest text-gray-600 hover:text-gray-800"
+                              >
+                                {t('adminPage.passwordEdit')}
+                              </button>
+                            )}
+                            {!isResolved && (
+                              <button
+                                onClick={() => handleResolvePasswordReset(request)}
+                                disabled={resolvingPasswordResetId === request.id}
+                                className="text-xs font-bold uppercase tracking-widest text-[#e3262e] hover:text-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                              >
+                                {resolvingPasswordResetId === request.id
+                                  ? t('common.saving')
+                                  : t('adminPage.passwordResetsResolve')}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : tab === 'registrations' ? (
           <div className="space-y-4">

@@ -14,9 +14,11 @@ import {
   addPayment,
   findUserByEmail,
   findUserById,
+  createPasswordResetRequest,
   getModelByEmail,
   getModelById as getModelByIdRepo,
   listModels,
+  listPasswordResetRequests,
   listRegistrationLeads,
   listUsers,
   markNotificationsRead,
@@ -24,6 +26,7 @@ import {
   resetDatabase,
   upsertRegistrationLead,
   completeRegistrationLead,
+  resolvePasswordResetRequest,
   updateUserPassword,
   updateModel,
   upsertModel,
@@ -799,6 +802,24 @@ app.patch('/api/admin/users/:id/password', async (req, res) => {
   res.json({ ok: true, user: sanitizeUser(updated) });
 });
 
+app.post('/api/password-resets', async (req, res) => {
+  await ensureDb();
+  const payload = req.body || {};
+  const email = normalizeEmail(payload.email);
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ ok: false, error: 'Informe um e-mail válido.' });
+  }
+  const user = await findUserByEmail(email);
+  const created = await createPasswordResetRequest({
+    email,
+    userId: user?.id || null,
+  });
+  if (!created) {
+    return res.status(500).json({ ok: false, error: 'Não foi possível enviar a solicitação de recuperação.' });
+  }
+  res.json({ ok: true, request: created });
+});
+
 app.get('/api/models', async (req, res) => {
   await ensureDb();
   const { featured, city, email, online } = req.query;
@@ -882,6 +903,21 @@ app.get('/api/admin/registrations', async (_req, res) => {
   await ensureDb();
   const leads = await listRegistrationLeads();
   res.json({ ok: true, leads });
+});
+
+app.get('/api/admin/password-resets', async (_req, res) => {
+  await ensureDb();
+  const requests = await listPasswordResetRequests();
+  res.json({ ok: true, requests });
+});
+
+app.patch('/api/admin/password-resets/:id/resolve', async (req, res) => {
+  await ensureDb();
+  const resolved = await resolvePasswordResetRequest(req.params.id);
+  if (!resolved) {
+    return res.status(404).json({ ok: false, error: 'Solicitação de recuperação não encontrada.' });
+  }
+  res.json({ ok: true, request: resolved });
 });
 
 app.post('/api/admin/models/:id/translate', async (req, res) => {

@@ -52,6 +52,16 @@ const rowToRegistrationLead = (row) => ({
   completedAt: toIso(row.completed_at),
 });
 
+const rowToPasswordResetRequest = (row) => ({
+  id: row.id,
+  email: row.email,
+  userId: row.user_id,
+  status: row.status,
+  createdAt: toIso(row.created_at),
+  updatedAt: toIso(row.updated_at),
+  resolvedAt: toIso(row.resolved_at),
+});
+
 const parseDateToMs = (value) => {
   if (!value) return null;
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
@@ -303,8 +313,39 @@ export const listRegistrationLeads = async () => {
   return rows.map(rowToRegistrationLead);
 };
 
+export const createPasswordResetRequest = async ({ email, userId }) => {
+  const id = nanoid();
+  const now = new Date().toISOString();
+  const { rows } = await query(
+    `INSERT INTO password_reset_requests (id, email, user_id, status, created_at, updated_at)
+     VALUES ($1, $2, $3, 'pending', $4, $4)
+     RETURNING *`,
+    [id, email, userId || null, now]
+  );
+  return rows[0] ? rowToPasswordResetRequest(rows[0]) : null;
+};
+
+export const listPasswordResetRequests = async () => {
+  const { rows } = await query('SELECT * FROM password_reset_requests ORDER BY updated_at DESC');
+  return rows.map(rowToPasswordResetRequest);
+};
+
+export const resolvePasswordResetRequest = async (id) => {
+  const now = new Date().toISOString();
+  const { rows } = await query(
+    `UPDATE password_reset_requests
+     SET status = 'resolved', resolved_at = COALESCE(resolved_at, $2), updated_at = $2
+     WHERE id = $1
+     RETURNING *`,
+    [id, now]
+  );
+  return rows[0] ? rowToPasswordResetRequest(rows[0]) : null;
+};
+
 export const resetDatabase = async () => {
-  await query('TRUNCATE TABLE notifications, comments, events, payments, models, users RESTART IDENTITY');
+  await query(
+    'TRUNCATE TABLE password_reset_requests, notifications, comments, events, payments, models, users RESTART IDENTITY'
+  );
 };
 
 export { isBillingActive };

@@ -74,6 +74,16 @@ type ChangePasswordPayload = {
   newPassword: string;
 };
 
+export type PasswordResetRequest = {
+  id: string;
+  email: string;
+  userId?: string | null;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  resolvedAt?: string | null;
+};
+
 export const changePassword = async (payload: ChangePasswordPayload) => {
   try {
     const response = await apiFetch('/api/auth/password', {
@@ -99,6 +109,23 @@ export const changePassword = async (payload: ChangePasswordPayload) => {
     }
 
     return { ok: true, user: data.user as AuthUser } as const;
+  } catch {
+    return { ok: false, error: 'Servidor indisponível no momento.' } as const;
+  }
+};
+
+export const requestPasswordReset = async (email: string) => {
+  try {
+    const response = await apiFetch('/api/password-resets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      return { ok: false, error: data?.error || 'Não foi possível enviar a solicitação de recuperação.' } as const;
+    }
+    return { ok: true, request: data.request as PasswordResetRequest } as const;
   } catch {
     return { ok: false, error: 'Servidor indisponível no momento.' } as const;
   }

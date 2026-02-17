@@ -18,6 +18,7 @@ import AdminPage from './components/AdminPage';
 import ModelDashboard from './components/ModelDashboard';
 import ModelListing from './components/ModelListing';
 import ModelCard from './components/ModelCard';
+import PasswordRecoveryPage from './components/PasswordRecoveryPage';
 import { resolveLanguageFromCountry } from './translations';
 import { useI18n } from './translations/i18n';
 
@@ -43,6 +44,7 @@ const App: React.FC = () => {
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [isListingOpen, setIsListingOpen] = useState(false);
   const [pathname, setPathname] = useState(window.location.pathname);
+  const [passwordRecoveryEmail, setPasswordRecoveryEmail] = useState('');
   const [myModelProfile, setMyModelProfile] = useState<ModelProfileData | null>(null);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [showLanguagePrompt, setShowLanguagePrompt] = useState(() => {
@@ -272,6 +274,16 @@ const App: React.FC = () => {
     }
     if (pathname !== '/cadastro') {
       navigateTo('/cadastro');
+    }
+  };
+
+  const openPasswordRecovery = (identifier?: string) => {
+    setIsLoginOpen(false);
+    setIsRegisterOpen(false);
+    setIsModelOnboardingOpen(false);
+    setPasswordRecoveryEmail((identifier || '').trim());
+    if (pathname !== '/esqueci-senha') {
+      navigateTo('/esqueci-senha');
     }
   };
 
@@ -547,7 +559,7 @@ const App: React.FC = () => {
     .map((model) => ({ id: model.id, name: model.name }));
 
   useEffect(() => {
-    if (pathname === '/admin' || pathname === '/dashboard' || pathname === '/blog') return;
+    if (pathname === '/admin' || pathname === '/dashboard' || pathname === '/blog' || pathname === '/esqueci-senha') return;
     if (pathname.startsWith('/modelo/')) return;
     if (pathname === '/cadastro') return;
     lastBasePathRef.current = pathname;
@@ -569,6 +581,17 @@ const App: React.FC = () => {
       setIsListingOpen(false);
       setIsSearching(false);
       setSelectedProfileModel(null);
+      document.body.style.overflow = 'auto';
+      return;
+    }
+
+    if (cleanPath === 'esqueci-senha') {
+      setIsListingOpen(false);
+      setIsSearching(false);
+      setSelectedProfileModel(null);
+      setIsLoginOpen(false);
+      setIsRegisterOpen(false);
+      setIsModelOnboardingOpen(false);
       document.body.style.overflow = 'auto';
       return;
     }
@@ -923,6 +946,14 @@ const App: React.FC = () => {
             </main>
           </div>
         )
+      ) : pathname === '/esqueci-senha' ? (
+        <PasswordRecoveryPage
+          initialEmail={passwordRecoveryEmail}
+          currentUserId={currentUser?.id}
+          currentUserEmail={currentUser?.email}
+          onBackToSite={() => navigateTo('/')}
+          onOpenLogin={openLogin}
+        />
       ) : pathname === '/blog' ? (
         <>
           {locationPrompt}
@@ -1066,6 +1097,7 @@ const App: React.FC = () => {
         onClose={() => setIsLoginOpen(false)} 
         onSwitchToRegister={openRegister}
         onLoginSuccess={handleLoginSuccess}
+        onForgotPassword={openPasswordRecovery}
       />
       <RegisterModal 
         isOpen={isRegisterOpen} 
