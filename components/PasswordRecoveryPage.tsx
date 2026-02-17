@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, KeyRound, Mail } from 'lucide-react';
 import Logo from './Logo';
-import { requestPasswordReset, resetPasswordWithToken, verifyPasswordResetToken } from '../services/auth';
+import {
+  requestPasswordReset,
+  resetPasswordWithToken,
+  saveRememberedCredentials,
+  verifyPasswordResetToken,
+} from '../services/auth';
 import { useI18n } from '../translations/i18n';
 
 interface PasswordRecoveryPageProps {
@@ -189,10 +194,21 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
       return;
     }
 
+    const rememberedEmail = (result.user?.email || '').trim().toLowerCase();
+    const fallbackEmail = validatedReset.identifier.includes('@') ? validatedReset.identifier.trim().toLowerCase() : '';
+    const loginEmail = rememberedEmail || fallbackEmail;
+    if (loginEmail) {
+      saveRememberedCredentials({
+        email: loginEmail,
+        password: next,
+      });
+    }
+
     setNewPassword('');
     setConfirmPassword('');
     setChangeMessage(t('passwordRecovery.changeSuccess'));
     setChangeMessageType('success');
+    onOpenLogin();
   };
 
   const activeIndex = useMemo(() => {

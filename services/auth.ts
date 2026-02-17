@@ -102,9 +102,9 @@ export const changePassword = async (payload: ChangePasswordPayload) => {
     const nextEmail = (payload.email || '').trim().toLowerCase();
     if (nextEmail) {
       const remembered = getRememberedCredentials();
-      if (remembered?.email && remembered.email.trim().toLowerCase() === nextEmail) {
+      if (!remembered || remembered.email.trim().toLowerCase() === nextEmail) {
         saveRememberedCredentials({
-          email: remembered.email,
+          email: payload.email?.trim() || nextEmail,
           password: payload.newPassword,
         });
       }
