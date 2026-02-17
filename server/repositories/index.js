@@ -56,9 +56,11 @@ const rowToPasswordResetRequest = (row) => ({
   id: row.id,
   email: row.email,
   userId: row.user_id,
+  token: row.token || null,
   status: row.status,
   createdAt: toIso(row.created_at),
   updatedAt: toIso(row.updated_at),
+  tokenSentAt: toIso(row.token_sent_at),
   resolvedAt: toIso(row.resolved_at),
 });
 
@@ -313,14 +315,14 @@ export const listRegistrationLeads = async () => {
   return rows.map(rowToRegistrationLead);
 };
 
-export const createPasswordResetRequest = async ({ email, userId }) => {
+export const createPasswordResetRequest = async ({ email, userId, token }) => {
   const id = nanoid();
   const now = new Date().toISOString();
   const { rows } = await query(
-    `INSERT INTO password_reset_requests (id, email, user_id, status, created_at, updated_at)
-     VALUES ($1, $2, $3, 'pending', $4, $4)
+    `INSERT INTO password_reset_requests (id, email, user_id, token, status, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, 'pending', $5, $5)
      RETURNING *`,
-    [id, email, userId || null, now]
+    [id, email, userId || null, token || null, now]
   );
   return rows[0] ? rowToPasswordResetRequest(rows[0]) : null;
 };
@@ -335,6 +337,21 @@ export const resolvePasswordResetRequest = async (id) => {
   const { rows } = await query(
     `UPDATE password_reset_requests
      SET status = 'resolved', resolved_at = COALESCE(resolved_at, $2), updated_at = $2
+     WHERE id = $1
+     RETURNING *`,
+    [id, now]
+  );
+  return rows[0] ? rowToPasswordResetRequest(rows[0]) : null;
+};
+
+export const markPasswordResetTokenSent = async (id) => {
+  const now = new Date().toISOString();
+  const { rows } = await query(
+    `UPDATE password_reset_requests
+     SET
+       status = CASE WHEN status = 'resolved' THEN status ELSE 'token_sent' END,
+       token_sent_at = COALESCE(token_sent_at, $2),
+       updated_at = $2
      WHERE id = $1
      RETURNING *`,
     [id, now]

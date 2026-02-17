@@ -50,9 +50,11 @@ interface AdminPasswordResetRequest {
   id: string;
   email: string;
   userId?: string | null;
+  token?: string | null;
   status?: string;
   createdAt?: string;
   updatedAt?: string;
+  tokenSentAt?: string | null;
   resolvedAt?: string | null;
 }
 
@@ -105,6 +107,7 @@ const AdminPage: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordConfirmInput, setPasswordConfirmInput] = useState('');
   const [updatingPasswordUserId, setUpdatingPasswordUserId] = useState<string | null>(null);
+  const [sendingPasswordResetTokenId, setSendingPasswordResetTokenId] = useState<string | null>(null);
   const [resolvingPasswordResetId, setResolvingPasswordResetId] = useState<string | null>(null);
   const [passwordEditError, setPasswordEditError] = useState('');
   const [passwordEditSuccess, setPasswordEditSuccess] = useState('');
@@ -429,6 +432,34 @@ const AdminPage: React.FC = () => {
     return users.find((user) => user.email.trim().toLowerCase() === targetEmail) || null;
   };
 
+  const findModelForPasswordReset = (request: AdminPasswordResetRequest) => {
+    const targetEmail = request.email.trim().toLowerCase();
+    return models.find((model) => model.email.trim().toLowerCase() === targetEmail) || null;
+  };
+
+  const handleSendPasswordResetToken = async (request: AdminPasswordResetRequest) => {
+    const alreadySent = request.status === 'token_sent' || Boolean(request.tokenSentAt);
+    if (request.status === 'resolved' || alreadySent) return;
+    setSendingPasswordResetTokenId(request.id);
+    setError('');
+    try {
+      const response = await apiFetch(`/api/admin/password-resets/${request.id}/token-sent`, {
+        method: 'PATCH',
+      });
+      const data = await readJsonSafe<{ request?: AdminPasswordResetRequest; error?: string }>(response);
+      if (!response.ok) throw new Error(data?.error || t('errors.updateFailed'));
+      if (data?.request) {
+        setPasswordResetRequests((prev) =>
+          prev.map((item) => (item.id === data.request?.id ? data.request : item))
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? translateError(err.message) : t('errors.updateFailed'));
+    } finally {
+      setSendingPasswordResetTokenId(null);
+    }
+  };
+
   const handleResolvePasswordReset = async (request: AdminPasswordResetRequest) => {
     if (request.status === 'resolved') return;
     setResolvingPasswordResetId(request.id);
@@ -690,12 +721,15 @@ const AdminPage: React.FC = () => {
               <p className="text-xs text-gray-500">{t('adminPage.passwordResetsHint')}</p>
             </div>
             <div className="bg-white border border-gray-100 rounded-2xl overflow-x-auto">
-              <table className="w-full min-w-[860px] text-sm">
+              <table className="w-full min-w-[1120px] text-sm">
                 <thead className="bg-gray-50 text-gray-500">
                   <tr>
                     <th className="text-left px-4 py-3">{t('adminPage.table.email')}</th>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.token')}</th>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.phone')}</th>
                     <th className="text-left px-4 py-3">{t('adminPage.table.status')}</th>
                     <th className="text-left px-4 py-3">{t('adminPage.table.createdAt')}</th>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.sentAt')}</th>
                     <th className="text-left px-4 py-3">{t('adminPage.table.resolvedAt')}</th>
                     <th className="text-right px-4 py-3">{t('adminPage.table.actions')}</th>
                   </tr>
@@ -703,21 +737,29 @@ const AdminPage: React.FC = () => {
                 <tbody>
                   {passwordResetRequests.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-4 py-6 text-gray-400 text-center">
+                      <td colSpan={8} className="px-4 py-6 text-gray-400 text-center">
                         {t('adminPage.passwordResetsEmpty')}
                       </td>
                     </tr>
                   )}
                   {passwordResetRequests.map((request) => {
                     const isResolved = request.status === 'resolved';
+                    const tokenSent = request.status === 'token_sent' || Boolean(request.tokenSentAt);
                     const linkedUser = findUserForPasswordReset(request);
+                    const linkedModel = findModelForPasswordReset(request);
                     return (
                       <tr key={request.id} className="border-t border-gray-100">
                         <td className="px-4 py-3 text-gray-700 font-semibold">{request.email}</td>
+                        <td className="px-4 py-3 text-gray-700 font-mono">{request.token || '-'}</td>
+                        <td className="px-4 py-3 text-gray-600">{linkedModel?.phone || '-'}</td>
                         <td className="px-4 py-3">
                           {isResolved ? (
                             <span className="inline-flex items-center gap-2 text-emerald-600 text-xs font-bold uppercase tracking-widest">
                               ✓ {t('adminPage.statusComplete')}
+                            </span>
+                          ) : tokenSent ? (
+                            <span className="inline-flex items-center gap-2 text-amber-600 text-xs font-bold uppercase tracking-widest">
+                              • {t('adminPage.statusTokenSent')}
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-2 text-red-500 text-xs font-bold uppercase tracking-widest">
@@ -727,6 +769,9 @@ const AdminPage: React.FC = () => {
                         </td>
                         <td className="px-4 py-3 text-gray-500 text-xs">
                           {request.createdAt ? new Date(request.createdAt).toLocaleString(locale) : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 text-xs">
+                          {request.tokenSentAt ? new Date(request.tokenSentAt).toLocaleString(locale) : '-'}
                         </td>
                         <td className="px-4 py-3 text-gray-500 text-xs">
                           {request.resolvedAt ? new Date(request.resolvedAt).toLocaleString(locale) : '-'}
@@ -739,6 +784,19 @@ const AdminPage: React.FC = () => {
                                 className="text-xs font-bold uppercase tracking-widest text-gray-600 hover:text-gray-800"
                               >
                                 {t('adminPage.passwordEdit')}
+                              </button>
+                            )}
+                            {!isResolved && (
+                              <button
+                                onClick={() => handleSendPasswordResetToken(request)}
+                                disabled={tokenSent || sendingPasswordResetTokenId === request.id}
+                                className="text-xs font-bold uppercase tracking-widest text-gray-600 hover:text-gray-800 disabled:opacity-60 disabled:cursor-not-allowed"
+                              >
+                                {sendingPasswordResetTokenId === request.id
+                                  ? t('common.saving')
+                                  : tokenSent
+                                  ? t('adminPage.passwordResetsSent')
+                                  : t('adminPage.passwordResetsSendToken')}
                               </button>
                             )}
                             {!isResolved && (

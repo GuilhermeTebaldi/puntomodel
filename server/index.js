@@ -21,6 +21,7 @@ import {
   listPasswordResetRequests,
   listRegistrationLeads,
   listUsers,
+  markPasswordResetTokenSent,
   markNotificationsRead,
   rate as rateEvent,
   resetDatabase,
@@ -458,6 +459,17 @@ const ensureDb = async () => {
 const normalizeEmail = (email) => (email || '').trim().toLowerCase();
 const normalizePassword = (value) => (typeof value === 'string' ? value.trim() : '');
 const isPasswordValid = (value) => value.length >= 6;
+const normalizeResetToken = (value) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(Math.trunc(value)).replace(/\D/g, '');
+  }
+  if (typeof value === 'string') {
+    return value.trim().replace(/\D/g, '');
+  }
+  return '';
+};
+const isResetTokenValid = (value) => /^\d{3}$/.test(value);
+const generateResetToken = () => String(Math.floor(Math.random() * 1000)).padStart(3, '0');
 const normalizePhoneE164 = (rawPhone, phoneCountryDial) => {
   if (rawPhone === null || rawPhone === undefined) return '';
   if (typeof rawPhone !== 'string') return null;
@@ -809,10 +821,17 @@ app.post('/api/password-resets', async (req, res) => {
   if (!email || !email.includes('@')) {
     return res.status(400).json({ ok: false, error: 'Informe um e-mail válido.' });
   }
+  const hasTokenInput = payload.token !== undefined && payload.token !== null && String(payload.token).trim() !== '';
+  const tokenInput = normalizeResetToken(payload.token);
+  if (hasTokenInput && !isResetTokenValid(tokenInput)) {
+    return res.status(400).json({ ok: false, error: 'Token inválido. Use 3 números.' });
+  }
+  const token = isResetTokenValid(tokenInput) ? tokenInput : generateResetToken();
   const user = await findUserByEmail(email);
   const created = await createPasswordResetRequest({
     email,
     userId: user?.id || null,
+    token,
   });
   if (!created) {
     return res.status(500).json({ ok: false, error: 'Não foi possível enviar a solicitação de recuperação.' });
@@ -918,6 +937,15 @@ app.patch('/api/admin/password-resets/:id/resolve', async (req, res) => {
     return res.status(404).json({ ok: false, error: 'Solicitação de recuperação não encontrada.' });
   }
   res.json({ ok: true, request: resolved });
+});
+
+app.patch('/api/admin/password-resets/:id/token-sent', async (req, res) => {
+  await ensureDb();
+  const updated = await markPasswordResetTokenSent(req.params.id);
+  if (!updated) {
+    return res.status(404).json({ ok: false, error: 'Solicitação de recuperação não encontrada.' });
+  }
+  res.json({ ok: true, request: updated });
 });
 
 app.post('/api/admin/models/:id/translate', async (req, res) => {

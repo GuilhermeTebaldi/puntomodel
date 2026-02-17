@@ -90,12 +90,18 @@ export const ensureSchema = async () => {
       id text PRIMARY KEY,
       email text NOT NULL,
       user_id text NULL REFERENCES users(id) ON DELETE SET NULL,
+      token text NULL,
       status text NOT NULL DEFAULT 'pending',
       created_at timestamptz NOT NULL DEFAULT now(),
       updated_at timestamptz NOT NULL DEFAULT now(),
+      token_sent_at timestamptz NULL,
       resolved_at timestamptz NULL
     );
   `);
+
+  // Backward-compatible migrations for environments where table already exists.
+  await query(`ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS token text NULL;`);
+  await query(`ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS token_sent_at timestamptz NULL;`);
 
   await query(`CREATE INDEX IF NOT EXISTS payments_model_id_idx ON payments(model_id);`);
   await query(`CREATE INDEX IF NOT EXISTS events_model_id_idx ON events(model_id);`);

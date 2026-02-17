@@ -21,7 +21,9 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
 }) => {
   const { t, translateError } = useI18n();
   const emailSeed = (currentUserEmail || initialEmail || '').trim();
+  const [requestStep, setRequestStep] = useState<'email' | 'token'>('email');
   const [requestEmail, setRequestEmail] = useState(emailSeed);
+  const [requestToken, setRequestToken] = useState('');
   const [requesting, setRequesting] = useState(false);
   const [requestMessage, setRequestMessage] = useState('');
   const [requestMessageType, setRequestMessageType] = useState<'success' | 'error' | null>(null);
@@ -47,7 +49,9 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
   };
 
-  const handleSendRequest = async () => {
+  const isTokenValid = (value: string) => /^\d{3}$/.test(value.trim());
+
+  const handleMoveToTokenStep = () => {
     setRequestMessage('');
     setRequestMessageType(null);
     const email = requestEmail.trim();
@@ -56,9 +60,27 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
       setRequestMessageType('error');
       return;
     }
+    setRequestStep('token');
+  };
+
+  const handleSendRequest = async () => {
+    setRequestMessage('');
+    setRequestMessageType(null);
+    const email = requestEmail.trim();
+    const token = requestToken.trim();
+    if (!isEmailValid(email)) {
+      setRequestMessage(t('errors.emailRequired'));
+      setRequestMessageType('error');
+      return;
+    }
+    if (!isTokenValid(token)) {
+      setRequestMessage(t('errors.tokenInvalid'));
+      setRequestMessageType('error');
+      return;
+    }
 
     setRequesting(true);
-    const result = await requestPasswordReset(email);
+    const result = await requestPasswordReset(email, token);
     setRequesting(false);
 
     if (!result.ok) {
@@ -67,6 +89,7 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
       return;
     }
 
+    setRequestToken('');
     setRequestMessage(t('passwordRecovery.requestSuccess'));
     setRequestMessageType('success');
   };
@@ -156,26 +179,109 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
             <h2 className="text-lg font-black text-gray-900">{t('passwordRecovery.requestTitle')}</h2>
           </div>
           <p className="text-sm text-gray-500 mb-5">{t('passwordRecovery.requestHint')}</p>
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-            {t('login.emailLabel')}
-          </label>
-          <input
-            type="email"
-            value={requestEmail}
-            onChange={(event) => setRequestEmail(event.target.value)}
-            className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
-            placeholder={t('login.emailPlaceholder')}
-          />
-          <div className="mt-4">
+
+          <div className="inline-flex rounded-full bg-gray-100 p-1 mb-5">
             <button
               type="button"
-              onClick={handleSendRequest}
-              disabled={requesting}
-              className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
+              onClick={() => setRequestStep('email')}
+              className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                requestStep === 'email' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+              }`}
             >
-              {requesting ? t('common.sending') : t('passwordRecovery.requestButton')}
+              {t('passwordRecovery.stepEmailTab')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (isEmailValid(requestEmail)) {
+                  setRequestStep('token');
+                  return;
+                }
+                setRequestMessage(t('errors.emailRequired'));
+                setRequestMessageType('error');
+              }}
+              className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                requestStep === 'token' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+              }`}
+            >
+              {t('passwordRecovery.stepTokenTab')}
             </button>
           </div>
+
+          {requestStep === 'email' ? (
+            <>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                {t('login.emailLabel')}
+              </label>
+              <input
+                type="email"
+                value={requestEmail}
+                onChange={(event) => setRequestEmail(event.target.value)}
+                className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
+                placeholder={t('login.emailPlaceholder')}
+              />
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={handleMoveToTokenStep}
+                  className="px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-widest"
+                >
+                  {t('passwordRecovery.requestContinue')}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                    {t('login.emailLabel')}
+                  </label>
+                  <input
+                    type="email"
+                    value={requestEmail}
+                    onChange={(event) => setRequestEmail(event.target.value)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
+                    placeholder={t('login.emailPlaceholder')}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                    {t('passwordRecovery.tokenLabel')}
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={3}
+                    value={requestToken}
+                    onChange={(event) => setRequestToken(event.target.value.replace(/\D/g, '').slice(0, 3))}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm tracking-[0.4em]"
+                    placeholder={t('passwordRecovery.tokenPlaceholder')}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-3">{t('passwordRecovery.tokenHint')}</p>
+              <div className="mt-4 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSendRequest}
+                  disabled={requesting}
+                  className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
+                >
+                  {requesting ? t('common.sending') : t('passwordRecovery.requestButton')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRequestStep('email')}
+                  className="px-4 py-2 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest"
+                >
+                  {t('common.cancel')}
+                </button>
+              </div>
+            </>
+          )}
+
           {requestMessage && (
             <p className={`mt-3 text-xs font-semibold ${requestMessageType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
               {requestMessage}

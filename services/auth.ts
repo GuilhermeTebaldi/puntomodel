@@ -78,9 +78,11 @@ export type PasswordResetRequest = {
   id: string;
   email: string;
   userId?: string | null;
+  token?: string | null;
   status?: string;
   createdAt?: string;
   updatedAt?: string;
+  tokenSentAt?: string | null;
   resolvedAt?: string | null;
 };
 
@@ -114,12 +116,12 @@ export const changePassword = async (payload: ChangePasswordPayload) => {
   }
 };
 
-export const requestPasswordReset = async (email: string) => {
+export const requestPasswordReset = async (email: string, token?: string) => {
   try {
     const response = await apiFetch('/api/password-resets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, token }),
     });
     const data = await response.json();
     if (!response.ok) {
