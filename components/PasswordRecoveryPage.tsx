@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, KeyRound, Mail } from 'lucide-react';
 import Logo from './Logo';
 import { requestPasswordReset, resetPasswordWithToken, verifyPasswordResetToken } from '../services/auth';
@@ -12,6 +12,8 @@ interface PasswordRecoveryPageProps {
   onOpenLogin: () => void;
 }
 
+type RecoveryScreen = 'request' | 'token' | 'change';
+
 const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
   initialEmail,
   currentUserEmail,
@@ -20,21 +22,23 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
 }) => {
   const { t, translateError } = useI18n();
   const identifierSeed = (currentUserEmail || initialEmail || '').trim();
-  const [requestIdentifier, setRequestIdentifier] = useState(identifierSeed);
-  const [requesting, setRequesting] = useState(false);
-  const [requestMessage, setRequestMessage] = useState('');
-  const [requestMessageType, setRequestMessageType] = useState<'success' | 'error' | null>(null);
-  const [requestSent, setRequestSent] = useState(false);
 
+  const [screen, setScreen] = useState<RecoveryScreen>('request');
+  const [requestIdentifier, setRequestIdentifier] = useState(identifierSeed);
   const [requestToken, setRequestToken] = useState('');
-  const [verifyingToken, setVerifyingToken] = useState(false);
-  const [tokenMessage, setTokenMessage] = useState('');
-  const [tokenMessageType, setTokenMessageType] = useState<'success' | 'error' | null>(null);
   const [validatedReset, setValidatedReset] = useState<{ identifier: string; token: string } | null>(null);
+
+  const [requesting, setRequesting] = useState(false);
+  const [verifyingToken, setVerifyingToken] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [changingPassword, setChangingPassword] = useState(false);
+
+  const [requestMessage, setRequestMessage] = useState('');
+  const [requestMessageType, setRequestMessageType] = useState<'success' | 'error' | null>(null);
+  const [tokenMessage, setTokenMessage] = useState('');
+  const [tokenMessageType, setTokenMessageType] = useState<'success' | 'error' | null>(null);
   const [changeMessage, setChangeMessage] = useState('');
   const [changeMessageType, setChangeMessageType] = useState<'success' | 'error' | null>(null);
 
@@ -61,28 +65,29 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
 
   const isTokenValid = (value: string) => /^\d{3}$/.test(value.trim());
 
-  const resetVerificationState = () => {
-    setRequestSent(false);
-    setRequestToken('');
+  const resetMessages = () => {
+    setRequestMessage('');
+    setRequestMessageType(null);
     setTokenMessage('');
     setTokenMessageType(null);
-    setValidatedReset(null);
-    setNewPassword('');
-    setConfirmPassword('');
     setChangeMessage('');
     setChangeMessageType(null);
   };
 
   const handleIdentifierChange = (value: string) => {
     setRequestIdentifier(value);
-    setRequestMessage('');
-    setRequestMessageType(null);
-    resetVerificationState();
+    setRequestToken('');
+    setValidatedReset(null);
+    setNewPassword('');
+    setConfirmPassword('');
+    resetMessages();
+    if (screen !== 'request') {
+      setScreen('request');
+    }
   };
 
   const handleRequestPasswordReset = async () => {
-    setRequestMessage('');
-    setRequestMessageType(null);
+    resetMessages();
     const identifier = requestIdentifier.trim();
     if (!isIdentifierValid(identifier)) {
       setRequestMessage(t('errors.identifierRequired'));
@@ -100,13 +105,11 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
       return;
     }
 
-    setRequestSent(true);
     setRequestToken('');
-    setTokenMessage('');
-    setTokenMessageType(null);
     setValidatedReset(null);
-    setRequestMessage(t('passwordRecovery.requestSuccess'));
-    setRequestMessageType('success');
+    setTokenMessage(t('passwordRecovery.requestSuccess'));
+    setTokenMessageType('success');
+    setScreen('token');
   };
 
   const handleValidateToken = async () => {
@@ -137,15 +140,15 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
     }
 
     setValidatedReset({ identifier, token });
-    setTokenMessage(t('passwordRecovery.tokenVerified'));
-    setTokenMessageType('success');
+    setChangeMessage('');
+    setChangeMessageType(null);
+    setScreen('change');
   };
 
   const handleChangePassword = async () => {
     setChangeMessage('');
     setChangeMessageType(null);
-    const unlock = validatedReset;
-    if (!unlock) {
+    if (!validatedReset) {
       setChangeMessage(t('passwordRecovery.changeLockedHint'));
       setChangeMessageType('error');
       return;
@@ -174,8 +177,8 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
 
     setChangingPassword(true);
     const result = await resetPasswordWithToken({
-      identifier: unlock.identifier,
-      token: unlock.token,
+      identifier: validatedReset.identifier,
+      token: validatedReset.token,
       newPassword: next,
     });
     setChangingPassword(false);
@@ -191,6 +194,12 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
     setChangeMessage(t('passwordRecovery.changeSuccess'));
     setChangeMessageType('success');
   };
+
+  const activeIndex = useMemo(() => {
+    if (screen === 'request') return 1;
+    if (screen === 'token') return 2;
+    return 3;
+  }, [screen]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -217,72 +226,27 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
           </button>
         </section>
 
-        <section className="bg-white border border-gray-100 rounded-3xl p-6 sm:p-8 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <Mail size={16} className="text-[#e3262e]" />
-            <h2 className="text-lg font-black text-gray-900">{t('passwordRecovery.requestTitle')}</h2>
+        <section className="bg-white border border-gray-100 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
+          <div className="flex items-center gap-2">
+            <span className={`h-2.5 w-2.5 rounded-full ${activeIndex >= 1 ? 'bg-[#e3262e]' : 'bg-gray-200'}`} />
+            <span className={`h-2.5 w-2.5 rounded-full ${activeIndex >= 2 ? 'bg-[#e3262e]' : 'bg-gray-200'}`} />
+            <span className={`h-2.5 w-2.5 rounded-full ${activeIndex >= 3 ? 'bg-[#e3262e]' : 'bg-gray-200'}`} />
           </div>
-          <p className="text-sm text-gray-500 mb-5">{t('passwordRecovery.requestHint')}</p>
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              handleRequestPasswordReset();
-            }}
-          >
-            <div>
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                {t('login.emailLabel')}
-              </label>
-              <input
-                type="text"
-                value={requestIdentifier}
-                onChange={(event) => handleIdentifierChange(event.target.value)}
-                className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
-                placeholder={t('login.emailPlaceholder')}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="submit"
-                disabled={requesting}
-                className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
-              >
-                {requesting ? t('common.sending') : t('passwordRecovery.requestButton')}
-              </button>
-              {requestSent && (
-                <button
-                  type="button"
-                  onClick={resetVerificationState}
-                  className="px-4 py-2 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest"
-                >
-                  {t('common.cancel')}
-                </button>
-              )}
-            </div>
-          </form>
-          {requestMessage && (
-            <p className={`mt-3 text-xs font-semibold ${requestMessageType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
-              {requestMessage}
-            </p>
-          )}
-        </section>
 
-        {requestSent && (
-          <section className="bg-white border border-gray-100 rounded-3xl p-6 sm:p-8 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <KeyRound size={16} className="text-[#e3262e]" />
-              <h2 className="text-lg font-black text-gray-900">{t('passwordRecovery.stepTokenTab')}</h2>
-            </div>
-            <p className="text-sm text-gray-500 mb-5">{t('passwordRecovery.tokenHint')}</p>
-            <form
-              className="space-y-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                handleValidateToken();
-              }}
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {screen === 'request' && (
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Mail size={16} className="text-[#e3262e]" />
+                <h2 className="text-lg font-black text-gray-900">{t('passwordRecovery.requestTitle')}</h2>
+              </div>
+              <p className="text-sm text-gray-500 mb-5">{t('passwordRecovery.requestHint')}</p>
+              <form
+                className="space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleRequestPasswordReset();
+                }}
+              >
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
                     {t('login.emailLabel')}
@@ -290,123 +254,183 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({
                   <input
                     type="text"
                     value={requestIdentifier}
-                    readOnly
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm text-gray-600"
+                    onChange={(event) => handleIdentifierChange(event.target.value)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
+                    placeholder={t('login.emailPlaceholder')}
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                    {t('passwordRecovery.tokenLabel')}
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={3}
-                    value={requestToken}
-                    onChange={(event) => setRequestToken(event.target.value.replace(/\D/g, '').slice(0, 3))}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm tracking-[0.4em]"
-                    placeholder={t('passwordRecovery.tokenPlaceholder')}
-                  />
+                  <button
+                    type="submit"
+                    disabled={requesting}
+                    className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
+                  >
+                    {requesting ? t('common.sending') : t('passwordRecovery.requestButton')}
+                  </button>
                 </div>
-              </div>
-              <div className="mt-4">
-                <button
-                  type="submit"
-                  disabled={verifyingToken}
-                  className="px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
-                >
-                  {verifyingToken ? t('common.saving') : t('common.continue')}
-                </button>
-              </div>
-            </form>
-            {tokenMessage && (
-              <p className={`mt-3 text-xs font-semibold ${tokenMessageType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
-                {tokenMessage}
-              </p>
-            )}
-          </section>
-        )}
-
-        {validatedReset && (
-          <section className="bg-white border border-gray-100 rounded-3xl p-6 sm:p-8 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <KeyRound size={16} className="text-[#e3262e]" />
-              <h2 className="text-lg font-black text-gray-900">{t('passwordRecovery.changeTitle')}</h2>
+              </form>
+              {requestMessage && (
+                <p className={`mt-3 text-xs font-semibold ${requestMessageType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
+                  {requestMessage}
+                </p>
+              )}
             </div>
-            <p className="text-sm text-gray-500 mb-5">{t('passwordRecovery.changeHint')}</p>
-            <form
-              className="space-y-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                handleChangePassword();
-              }}
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          )}
+
+          {screen === 'token' && (
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <KeyRound size={16} className="text-[#e3262e]" />
+                <h2 className="text-lg font-black text-gray-900">{t('passwordRecovery.stepTokenTab')}</h2>
+              </div>
+              <p className="text-sm text-gray-500 mb-5">{t('passwordRecovery.tokenHint')}</p>
+              <form
+                className="space-y-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleValidateToken();
+                }}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                      {t('login.emailLabel')}
+                    </label>
+                    <input
+                      type="text"
+                      value={requestIdentifier}
+                      readOnly
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm text-gray-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                      {t('passwordRecovery.tokenLabel')}
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={3}
+                      value={requestToken}
+                      onChange={(event) => setRequestToken(event.target.value.replace(/\D/g, '').slice(0, 3))}
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm tracking-[0.4em]"
+                      placeholder={t('passwordRecovery.tokenPlaceholder')}
+                    />
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setScreen('request')}
+                    className="px-4 py-2 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest"
+                  >
+                    {t('common.back')}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={verifyingToken}
+                    className="px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
+                  >
+                    {verifyingToken ? t('common.saving') : t('common.continue')}
+                  </button>
+                </div>
+              </form>
+              {tokenMessage && (
+                <p className={`mt-3 text-xs font-semibold ${tokenMessageType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
+                  {tokenMessage}
+                </p>
+              )}
+            </div>
+          )}
+
+          {screen === 'change' && (
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <KeyRound size={16} className="text-[#e3262e]" />
+                <h2 className="text-lg font-black text-gray-900">{t('passwordRecovery.changeTitle')}</h2>
+              </div>
+              <p className="text-sm text-gray-500 mb-5">{t('passwordRecovery.changeHint')}</p>
+              <form
+                className="space-y-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleChangePassword();
+                }}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                      {t('login.emailLabel')}
+                    </label>
+                    <input
+                      type="text"
+                      value={validatedReset?.identifier || requestIdentifier}
+                      readOnly
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm text-gray-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                      {t('passwordRecovery.tokenLabel')}
+                    </label>
+                    <input
+                      type="text"
+                      value={validatedReset?.token || requestToken}
+                      readOnly
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm text-gray-600 tracking-[0.4em]"
+                    />
+                  </div>
+                </div>
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                    {t('login.emailLabel')}
+                    {t('passwordRecovery.newPasswordLabel')}
                   </label>
                   <input
-                    type="text"
-                    value={validatedReset.identifier}
-                    readOnly
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm text-gray-600"
+                    type="password"
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
+                    autoComplete="new-password"
                   />
                 </div>
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                    {t('passwordRecovery.tokenLabel')}
+                    {t('passwordRecovery.confirmPasswordLabel')}
                   </label>
                   <input
-                    type="text"
-                    value={validatedReset.token}
-                    readOnly
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 text-sm text-gray-600 tracking-[0.4em]"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
+                    autoComplete="new-password"
                   />
                 </div>
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                  {t('passwordRecovery.newPasswordLabel')}
-                </label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
-                  autoComplete="new-password"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                  {t('passwordRecovery.confirmPasswordLabel')}
-                </label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
-                  autoComplete="new-password"
-                />
-              </div>
-              <div className="mt-4">
-                <button
-                  type="submit"
-                  disabled={changingPassword}
-                  className="px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
-                >
-                  {changingPassword ? t('common.saving') : t('passwordRecovery.changeButton')}
-                </button>
-              </div>
-            </form>
-            {changeMessage && (
-              <p className={`mt-3 text-xs font-semibold ${changeMessageType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
-                {changeMessage}
-              </p>
-            )}
-          </section>
-        )}
+                <div className="mt-4 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setScreen('token')}
+                    className="px-4 py-2 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest"
+                  >
+                    {t('common.back')}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={changingPassword}
+                    className="px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
+                  >
+                    {changingPassword ? t('common.saving') : t('passwordRecovery.changeButton')}
+                  </button>
+                </div>
+              </form>
+              {changeMessage && (
+                <p className={`mt-3 text-xs font-semibold ${changeMessageType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
+                  {changeMessage}
+                </p>
+              )}
+            </div>
+          )}
+        </section>
       </main>
     </div>
   );
