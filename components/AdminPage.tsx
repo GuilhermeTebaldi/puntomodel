@@ -125,6 +125,7 @@ const AdminPage: React.FC = () => {
   const [passwordResetRequests, setPasswordResetRequests] = useState<AdminPasswordResetRequest[]>([]);
   const [tab, setTab] = useState<'users' | 'models' | 'translations' | 'registrations' | 'passwordResets'>('users');
   const [error, setError] = useState('');
+  const [passwordResetLoadError, setPasswordResetLoadError] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
@@ -218,7 +219,7 @@ const AdminPage: React.FC = () => {
         setError(err instanceof Error ? translateError(err.message) : t('errors.loadData'));
       }
 
-      if (!coreLoaded || !mounted) return;
+      if (!mounted) return;
       try {
         const [registrationsRes, passwordResetsRes] = await Promise.all([
           apiFetch('/api/admin/registrations'),
@@ -234,9 +235,13 @@ const AdminPage: React.FC = () => {
         }
         if (passwordResetsRes.ok) {
           setPasswordResetRequests(sortPasswordResetRequests(passwordResetsData?.requests || []));
+          setPasswordResetLoadError('');
+        } else {
+          setPasswordResetLoadError(translateError(passwordResetsData?.error || t('errors.loadData')));
         }
       } catch {
-        // ignore secondary load failures so core admin data keeps working
+        if (!mounted) return;
+        setPasswordResetLoadError(t('errors.loadData'));
       }
     };
 
@@ -288,10 +293,14 @@ const AdminPage: React.FC = () => {
         }
         if (passwordResetsRes.ok && passwordResetsData?.requests) {
           setPasswordResetRequests(sortPasswordResetRequests(passwordResetsData.requests));
+          setPasswordResetLoadError('');
           triggerLogoPulse();
+        } else if (!passwordResetsRes.ok) {
+          setPasswordResetLoadError(t('errors.loadData'));
         }
       } catch {
-        // ignore secondary refresh failures
+        if (!active) return;
+        setPasswordResetLoadError(t('errors.loadData'));
       }
     };
 
@@ -300,7 +309,7 @@ const AdminPage: React.FC = () => {
       active = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     return () => {
@@ -813,6 +822,9 @@ const AdminPage: React.FC = () => {
               <h2 className="text-lg font-black text-gray-900">{t('adminPage.passwordResetsTitle')}</h2>
               <p className="text-xs text-gray-500">{t('adminPage.passwordResetsHint')}</p>
             </div>
+            {passwordResetLoadError && (
+              <p className="text-xs font-semibold text-red-500">{passwordResetLoadError}</p>
+            )}
             <div className="bg-white border border-gray-100 rounded-2xl overflow-x-auto">
               <table className="w-full min-w-[1120px] text-sm">
                 <thead className="bg-gray-50 text-gray-500">

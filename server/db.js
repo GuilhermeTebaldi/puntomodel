@@ -100,8 +100,23 @@ export const ensureSchema = async () => {
   `);
 
   // Backward-compatible migrations for environments where table already exists.
+  await query(`ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS user_id text NULL;`);
   await query(`ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS token text NULL;`);
+  await query(`ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS status text NULL;`);
+  await query(`ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS created_at timestamptz NULL;`);
+  await query(`ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS updated_at timestamptz NULL;`);
   await query(`ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS token_sent_at timestamptz NULL;`);
+  await query(`ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS resolved_at timestamptz NULL;`);
+  await query(`
+    UPDATE password_reset_requests
+    SET
+      status = COALESCE(NULLIF(BTRIM(status), ''), 'pending'),
+      created_at = COALESCE(created_at, now()),
+      updated_at = COALESCE(updated_at, created_at, now());
+  `);
+  await query(`ALTER TABLE password_reset_requests ALTER COLUMN status SET DEFAULT 'pending';`);
+  await query(`ALTER TABLE password_reset_requests ALTER COLUMN created_at SET DEFAULT now();`);
+  await query(`ALTER TABLE password_reset_requests ALTER COLUMN updated_at SET DEFAULT now();`);
   await query(`
     UPDATE password_reset_requests
     SET token = LPAD((FLOOR(RANDOM() * 1000)::int)::text, 3, '0')
