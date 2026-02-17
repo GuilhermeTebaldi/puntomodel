@@ -87,7 +87,7 @@ const AdminPage: React.FC = () => {
   const [registrationLeads, setRegistrationLeads] = useState<AdminRegistrationLead[]>([]);
   const [tab, setTab] = useState<'users' | 'models' | 'translations' | 'registrations'>('users');
   const [error, setError] = useState('');
-  const [resetting, setResetting] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<AdminModel | null>(null);
@@ -96,6 +96,7 @@ const AdminPage: React.FC = () => {
   const [translatingModelId, setTranslatingModelId] = useState<string | null>(null);
   const [logoPulse, setLogoPulse] = useState(false);
   const logoPulseTimeout = useRef<number | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const hasLoaded = useRef(false);
   const translationTargets = useMemo(
     () =>
@@ -106,6 +107,18 @@ const AdminPage: React.FC = () => {
       })),
     [languageOptions]
   );
+
+  const tabOptions = useMemo(
+    () => [
+      { id: 'users' as const, label: t('adminPage.usersTab') },
+      { id: 'models' as const, label: t('adminPage.modelsTab') },
+      { id: 'registrations' as const, label: t('adminPage.registrationsTab') },
+      { id: 'translations' as const, label: t('adminPage.translationsTab') },
+    ],
+    [t]
+  );
+
+  const activeTabLabel = tabOptions.find((option) => option.id === tab)?.label ?? '';
 
   const syncModelsState = (nextModels: AdminModel[]) => {
     setModels(nextModels);
@@ -233,6 +246,26 @@ const AdminPage: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (menuRef.current && !menuRef.current.contains(target)) {
+        setMenuOpen(false);
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [menuOpen]);
+
   const updateModelInState = (updated: AdminModel) => {
     setModels((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     setSelectedTranslationModel((prev) => (prev && prev.id === updated.id ? updated : prev));
@@ -271,24 +304,6 @@ const AdminPage: React.FC = () => {
       setError(err instanceof Error ? translateError(err.message) : t('errors.updateFailed'));
     } finally {
       setTranslatingModelId(null);
-    }
-  };
-
-  const handleReset = async () => {
-    const confirmed = window.confirm(t('adminPage.confirmReset'));
-    if (!confirmed) return;
-    setResetting(true);
-    try {
-      const response = await apiFetch('/api/admin/reset', { method: 'POST' });
-      const data = await readJsonSafe<{ error?: string }>(response);
-      if (!response.ok) throw new Error(data?.error || t('errors.resetFailed'));
-      setUsers([]);
-      setModels([]);
-      setError('');
-    } catch (err) {
-      setError(err instanceof Error ? translateError(err.message) : t('errors.resetError'));
-    } finally {
-      setResetting(false);
     }
   };
 
@@ -383,46 +398,39 @@ const AdminPage: React.FC = () => {
       <main className="w-full px-6 py-10">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-black text-gray-900">{t('adminPage.title')}</h1>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleReset}
-              disabled={resetting}
-              className="px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest bg-gray-900 text-white disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {resetting ? t('adminPage.resetting') : t('adminPage.resetDb')}
-            </button>
-            <button
-              onClick={() => setTab('users')}
-              className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${
-                tab === 'users' ? 'bg-[#e3262e] text-white' : 'bg-white text-gray-500 border border-gray-200'
-              }`}
-            >
-              {t('adminPage.usersTab')}
-            </button>
-            <button
-              onClick={() => setTab('models')}
-              className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${
-                tab === 'models' ? 'bg-[#e3262e] text-white' : 'bg-white text-gray-500 border border-gray-200'
-              }`}
-            >
-              {t('adminPage.modelsTab')}
-            </button>
-            <button
-              onClick={() => setTab('registrations')}
-              className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${
-                tab === 'registrations' ? 'bg-[#e3262e] text-white' : 'bg-white text-gray-500 border border-gray-200'
-              }`}
-            >
-              {t('adminPage.registrationsTab')}
-            </button>
-            <button
-              onClick={() => setTab('translations')}
-              className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${
-                tab === 'translations' ? 'bg-[#e3262e] text-white' : 'bg-white text-gray-500 border border-gray-200'
-              }`}
-            >
-              {t('adminPage.translationsTab')}
-            </button>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-widest">{activeTabLabel}</span>
+            <div ref={menuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuOpen((prev) => !prev)}
+                aria-label={t('adminPage.menuLabel')}
+                aria-expanded={menuOpen}
+                className="h-10 w-10 rounded-full border border-gray-200 bg-white flex flex-col items-center justify-center gap-1 text-gray-700 hover:border-gray-300"
+              >
+                <span className="block h-0.5 w-5 bg-gray-700" />
+                <span className="block h-0.5 w-5 bg-gray-700" />
+                <span className="block h-0.5 w-5 bg-gray-700" />
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-gray-100 bg-white shadow-lg p-2 z-20">
+                  {tabOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => {
+                        setTab(option.id);
+                        setMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-xl text-sm font-semibold ${
+                        tab === option.id ? 'bg-[#e3262e] text-white' : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
