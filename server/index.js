@@ -16,6 +16,7 @@ import {
   findUserById,
   findActivePasswordResetRequestByToken,
   createPasswordResetRequest,
+  listPasswordResetTokensByEmail,
   getModelByEmail,
   getModelById as getModelByIdRepo,
   listModels,
@@ -479,6 +480,13 @@ const normalizeResetToken = (value) => {
   return '';
 };
 const isResetTokenValid = (value) => /^\d{3}$/.test(value);
+const generateResetToken = (excluded = new Set()) => {
+  for (let attempt = 0; attempt < 1200; attempt += 1) {
+    const candidate = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+    if (!excluded.has(candidate)) return candidate;
+  }
+  return null;
+};
 const phonesMatch = (left, right) => {
   const a = normalizePhoneDigits(left);
   const b = normalizePhoneDigits(right);
@@ -869,7 +877,14 @@ app.post('/api/password-resets', async (req, res) => {
   if (!email || !email.includes('@')) {
     return res.status(404).json({ ok: false, error: 'Usuário não encontrado.' });
   }
-  const token = tokenInput;
+  const usedTokens = await listPasswordResetTokensByEmail(email);
+  const excludedTokens = new Set(usedTokens);
+  const token = excludedTokens.has(tokenInput)
+    ? generateResetToken(excludedTokens)
+    : tokenInput;
+  if (!token) {
+    return res.status(500).json({ ok: false, error: 'Não foi possível gerar token.' });
+  }
   const user = identity.user || await findUserByEmail(email);
   const created = await createPasswordResetRequest({
     email,

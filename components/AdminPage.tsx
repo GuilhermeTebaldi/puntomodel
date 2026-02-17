@@ -92,6 +92,31 @@ const getBioTranslationEntry = (
 
 const AUTO_REFRESH_MS = 8000;
 
+const toTimeMs = (value?: string | null) => {
+  if (!value) return 0;
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const sortPasswordResetRequests = (items: AdminPasswordResetRequest[]) => {
+  return [...items].sort((left, right) => {
+    const leftResolved = left.status === 'resolved';
+    const rightResolved = right.status === 'resolved';
+    if (leftResolved !== rightResolved) {
+      return leftResolved ? 1 : -1;
+    }
+
+    const leftTime = leftResolved
+      ? toTimeMs(left.resolvedAt) || toTimeMs(left.updatedAt) || toTimeMs(left.createdAt)
+      : toTimeMs(left.createdAt) || toTimeMs(left.updatedAt);
+    const rightTime = rightResolved
+      ? toTimeMs(right.resolvedAt) || toTimeMs(right.updatedAt) || toTimeMs(right.createdAt)
+      : toTimeMs(right.createdAt) || toTimeMs(right.updatedAt);
+
+    return rightTime - leftTime;
+  });
+};
+
 const AdminPage: React.FC = () => {
   const { t, translateError, locale, languageOptions } = useI18n();
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -208,7 +233,7 @@ const AdminPage: React.FC = () => {
           setRegistrationLeads(registrationsData?.leads || []);
         }
         if (passwordResetsRes.ok) {
-          setPasswordResetRequests(passwordResetsData?.requests || []);
+          setPasswordResetRequests(sortPasswordResetRequests(passwordResetsData?.requests || []));
         }
       } catch {
         // ignore secondary load failures so core admin data keeps working
@@ -262,7 +287,7 @@ const AdminPage: React.FC = () => {
           triggerLogoPulse();
         }
         if (passwordResetsRes.ok && passwordResetsData?.requests) {
-          setPasswordResetRequests(passwordResetsData.requests);
+          setPasswordResetRequests(sortPasswordResetRequests(passwordResetsData.requests));
           triggerLogoPulse();
         }
       } catch {
@@ -468,6 +493,20 @@ const AdminPage: React.FC = () => {
     return t('adminPage.passwordResetsWhatsappMessage', { name, token });
   };
 
+  const normalizePhoneForWhatsApp = (value?: string | null) => (value || '').replace(/\D/g, '');
+
+  const handleOpenPasswordResetWhatsApp = (request: AdminPasswordResetRequest) => {
+    const linkedModel = findModelForPasswordReset(request);
+    const phoneDigits = normalizePhoneForWhatsApp(linkedModel?.phone);
+    if (!phoneDigits) {
+      setError(t('adminPage.passwordResetsPhoneMissing'));
+      return;
+    }
+    const message = buildPasswordResetMessage(request, linkedModel);
+    const url = `https://wa.me/${phoneDigits}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   const handleCopyPasswordResetMessage = async (request: AdminPasswordResetRequest) => {
     const token = (request.token || '').trim();
     if (!token) {
@@ -504,7 +543,7 @@ const AdminPage: React.FC = () => {
       if (!response.ok) throw new Error(data?.error || t('errors.updateFailed'));
       if (data?.request) {
         setPasswordResetRequests((prev) =>
-          prev.map((item) => (item.id === data.request?.id ? data.request : item))
+          sortPasswordResetRequests(prev.map((item) => (item.id === data.request?.id ? data.request : item)))
         );
       }
     } catch (err) {
@@ -526,7 +565,7 @@ const AdminPage: React.FC = () => {
       if (!response.ok) throw new Error(data?.error || t('errors.updateFailed'));
       if (data?.request) {
         setPasswordResetRequests((prev) =>
-          prev.map((item) => (item.id === data.request?.id ? data.request : item))
+          sortPasswordResetRequests(prev.map((item) => (item.id === data.request?.id ? data.request : item)))
         );
       }
     } catch (err) {
@@ -840,6 +879,13 @@ const AdminPage: React.FC = () => {
                                 {t('adminPage.passwordEdit')}
                               </button>
                             )}
+                            <button
+                              onClick={() => handleOpenPasswordResetWhatsApp(request)}
+                              disabled={!linkedModel?.phone || !request.token}
+                              className="text-xs font-bold uppercase tracking-widest text-gray-600 hover:text-gray-800 disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              {t('adminPage.passwordResetsOpenWhatsapp')}
+                            </button>
                             <button
                               onClick={() => handleCopyPasswordResetMessage(request)}
                               disabled={!request.token}
