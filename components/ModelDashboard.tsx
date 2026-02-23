@@ -445,6 +445,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordFeedback, setPasswordFeedback] = useState('');
   const [passwordFeedbackType, setPasswordFeedbackType] = useState<'success' | 'error' | null>(null);
+  const [showDeactivationPanel, setShowDeactivationPanel] = useState(false);
   const [deactivationReason, setDeactivationReason] = useState('');
   const [deactivatingAccount, setDeactivatingAccount] = useState(false);
   const [deactivationFeedback, setDeactivationFeedback] = useState('');
@@ -622,6 +623,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
       setAvatarInput(model.avatarUrl ?? null);
     }
     setLocationDraft(toLocationValue(model.location));
+    setShowDeactivationPanel(false);
     setDeactivationReason('');
     setDeactivationFeedback('');
     setDeactivationFeedbackType(null);
@@ -746,6 +748,7 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
         email: currentUserEmail || model.email,
       });
       onModelUpdated?.(updated);
+      setShowDeactivationPanel(false);
       setDeactivationReason('');
       setDeactivationFeedback(t('dashboard.settings.deactivationSuccess'));
       setDeactivationFeedbackType('success');
@@ -2283,46 +2286,76 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                       )}
                     </div>
                   </div>
-                  <div className="border border-red-100 bg-red-50/40 rounded-[24px] sm:rounded-3xl p-5 sm:p-6">
-                    <p className="text-xs font-black text-red-500 uppercase mb-2">
-                      {t('dashboard.settings.deactivationTitle')}
-                    </p>
-                    <p className="text-sm text-gray-600 mb-4">
-                      {t('dashboard.settings.deactivationHint')}
-                    </p>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">
-                          {t('dashboard.settings.deactivationReasonLabel')}
-                        </label>
-                        <textarea
-                          value={deactivationReason}
-                          onChange={(event) => setDeactivationReason(event.target.value)}
-                          className="w-full min-h-[110px] bg-white border border-red-100 rounded-2xl py-3 px-4 focus:outline-none text-sm resize-y"
-                          placeholder={t('dashboard.settings.deactivationReasonPlaceholder')}
-                          maxLength={600}
-                        />
-                      </div>
-                      <button
-                        onClick={handleRequestDeactivation}
-                        disabled={!canRequestDeactivation || deactivatingAccount}
-                        className="px-4 py-2 rounded-full bg-red-600 text-white text-xs font-bold uppercase tracking-widest disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        {deactivatingAccount
-                          ? t('common.saving')
-                          : canRequestDeactivation
-                          ? t('dashboard.settings.deactivationSubmitReady')
-                          : t('dashboard.settings.deactivationSubmitDisabled')}
-                      </button>
-                      {deactivationFeedback && (
-                        <p
-                          className={`text-xs font-semibold ${
-                            deactivationFeedbackType === 'success' ? 'text-emerald-600' : 'text-red-500'
-                          }`}
-                        >
-                          {deactivationFeedback}
+                  <div className="border border-red-100 rounded-[24px] sm:rounded-3xl overflow-hidden bg-white">
+                    <button
+                      type="button"
+                      onClick={() => setShowDeactivationPanel((prev) => !prev)}
+                      className="w-full px-5 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-red-50 via-white to-red-50 flex items-center justify-between gap-4"
+                    >
+                      <div className="text-left">
+                        <p className="text-xs font-black text-red-500 uppercase tracking-widest mb-1">
+                          {t('dashboard.settings.deactivationTitle')}
                         </p>
-                      )}
+                        <p className="text-sm text-gray-600">
+                          {showDeactivationPanel
+                            ? t('dashboard.settings.deactivationToggleClose')
+                            : t('dashboard.settings.deactivationToggleOpen')}
+                        </p>
+                      </div>
+                      <span
+                        className={`w-9 h-9 rounded-full bg-white border border-red-100 flex items-center justify-center text-red-500 transition-transform duration-300 ${
+                          showDeactivationPanel ? 'rotate-180' : ''
+                        }`}
+                      >
+                        <ChevronDown size={18} />
+                      </span>
+                    </button>
+                    <div
+                      className={`grid transition-all duration-300 ease-in-out ${
+                        showDeactivationPanel ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                      }`}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="border-t border-red-100 bg-red-50/40 px-5 sm:px-6 py-5 sm:py-6">
+                          <p className="text-sm text-gray-600 mb-4">
+                            {t('dashboard.settings.deactivationHint')}
+                          </p>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">
+                                {t('dashboard.settings.deactivationReasonLabel')}
+                              </label>
+                              <textarea
+                                value={deactivationReason}
+                                onChange={(event) => setDeactivationReason(event.target.value)}
+                                className="w-full min-h-[110px] bg-white border border-red-100 rounded-2xl py-3 px-4 focus:outline-none text-sm resize-y"
+                                placeholder={t('dashboard.settings.deactivationReasonPlaceholder')}
+                                maxLength={600}
+                              />
+                            </div>
+                            <button
+                              onClick={handleRequestDeactivation}
+                              disabled={!canRequestDeactivation || deactivatingAccount}
+                              className="px-4 py-2 rounded-full bg-red-600 text-white text-xs font-bold uppercase tracking-widest disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              {deactivatingAccount
+                                ? t('common.saving')
+                                : canRequestDeactivation
+                                ? t('dashboard.settings.deactivationSubmitReady')
+                                : t('dashboard.settings.deactivationSubmitDisabled')}
+                            </button>
+                            {deactivationFeedback && (
+                              <p
+                                className={`text-xs font-semibold ${
+                                  deactivationFeedbackType === 'success' ? 'text-emerald-600' : 'text-red-500'
+                                }`}
+                              >
+                                {deactivationFeedback}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 

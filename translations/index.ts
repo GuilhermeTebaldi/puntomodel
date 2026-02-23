@@ -1056,6 +1056,8 @@ export const translations = {
         changePasswordButton: 'Atualizar senha',
         passwordUpdated: 'Senha atualizada com sucesso.',
         deactivationTitle: 'Excluir conta (ocultar perfil)',
+        deactivationToggleOpen: 'Clique para abrir a confirmação',
+        deactivationToggleClose: 'Toque para fechar esta área',
         deactivationHint:
           'Seu perfil será ocultado do site, sem apagar seus dados. Ao entrar novamente com login e senha, ele será reativado automaticamente.',
         deactivationReasonLabel: 'Motivo da exclusão',
