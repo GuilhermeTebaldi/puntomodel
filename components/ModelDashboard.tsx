@@ -32,6 +32,7 @@ import {
   fetchModelMetrics,
   fetchModelNotifications,
   markModelNotificationsRead,
+  requestModelDeactivation,
   updateModelProfile,
   ModelBilling,
   ModelPayment,
@@ -444,6 +445,10 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordFeedback, setPasswordFeedback] = useState('');
   const [passwordFeedbackType, setPasswordFeedbackType] = useState<'success' | 'error' | null>(null);
+  const [deactivationReason, setDeactivationReason] = useState('');
+  const [deactivatingAccount, setDeactivatingAccount] = useState(false);
+  const [deactivationFeedback, setDeactivationFeedback] = useState('');
+  const [deactivationFeedbackType, setDeactivationFeedbackType] = useState<'success' | 'error' | null>(null);
   const [showOnlinePicker, setShowOnlinePicker] = useState(false);
   const [onlineDuration, setOnlineDuration] = useState(60);
   const [metrics, setMetrics] = useState({
@@ -454,6 +459,8 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     estimatedEarningsMonth: 0,
   });
   const billingCurrency = 'EUR';
+  const deactivationReasonTrimmed = deactivationReason.trim();
+  const canRequestDeactivation = deactivationReasonTrimmed.length >= 8;
   const [notifications, setNotifications] = useState<Array<{
     id: string;
     type: string;
@@ -615,6 +622,9 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
       setAvatarInput(model.avatarUrl ?? null);
     }
     setLocationDraft(toLocationValue(model.location));
+    setDeactivationReason('');
+    setDeactivationFeedback('');
+    setDeactivationFeedbackType(null);
   }, [model]);
 
   useEffect(() => {
@@ -714,6 +724,40 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     setConfirmPasswordInput('');
     setPasswordFeedback(t('dashboard.settings.passwordUpdated'));
     setPasswordFeedbackType('success');
+  };
+
+  const handleRequestDeactivation = async () => {
+    if (!canRequestDeactivation) {
+      setDeactivationFeedback(t('dashboard.settings.deactivationReasonMin'));
+      setDeactivationFeedbackType('error');
+      return;
+    }
+
+    const confirmed = window.confirm(t('dashboard.settings.deactivationConfirm'));
+    if (!confirmed) return;
+
+    setDeactivatingAccount(true);
+    setDeactivationFeedback('');
+    setDeactivationFeedbackType(null);
+    try {
+      const updated = await requestModelDeactivation(model.id, {
+        reason: deactivationReasonTrimmed,
+        userId: currentUserId ?? null,
+        email: currentUserEmail || model.email,
+      });
+      onModelUpdated?.(updated);
+      setDeactivationReason('');
+      setDeactivationFeedback(t('dashboard.settings.deactivationSuccess'));
+      setDeactivationFeedbackType('success');
+      window.setTimeout(() => {
+        onLogout();
+      }, 1200);
+    } catch (err) {
+      setDeactivationFeedback(err instanceof Error ? translateError(err.message) : t('errors.updateFailed'));
+      setDeactivationFeedbackType('error');
+    } finally {
+      setDeactivatingAccount(false);
+    }
   };
 
   const handleSaveBio = async () => {
@@ -2235,6 +2279,48 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                       {passwordFeedback && (
                         <p className={`text-xs font-semibold ${passwordFeedbackType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
                           {passwordFeedback}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="border border-red-100 bg-red-50/40 rounded-[24px] sm:rounded-3xl p-5 sm:p-6">
+                    <p className="text-xs font-black text-red-500 uppercase mb-2">
+                      {t('dashboard.settings.deactivationTitle')}
+                    </p>
+                    <p className="text-sm text-gray-600 mb-4">
+                      {t('dashboard.settings.deactivationHint')}
+                    </p>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">
+                          {t('dashboard.settings.deactivationReasonLabel')}
+                        </label>
+                        <textarea
+                          value={deactivationReason}
+                          onChange={(event) => setDeactivationReason(event.target.value)}
+                          className="w-full min-h-[110px] bg-white border border-red-100 rounded-2xl py-3 px-4 focus:outline-none text-sm resize-y"
+                          placeholder={t('dashboard.settings.deactivationReasonPlaceholder')}
+                          maxLength={600}
+                        />
+                      </div>
+                      <button
+                        onClick={handleRequestDeactivation}
+                        disabled={!canRequestDeactivation || deactivatingAccount}
+                        className="px-4 py-2 rounded-full bg-red-600 text-white text-xs font-bold uppercase tracking-widest disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {deactivatingAccount
+                          ? t('common.saving')
+                          : canRequestDeactivation
+                          ? t('dashboard.settings.deactivationSubmitReady')
+                          : t('dashboard.settings.deactivationSubmitDisabled')}
+                      </button>
+                      {deactivationFeedback && (
+                        <p
+                          className={`text-xs font-semibold ${
+                            deactivationFeedbackType === 'success' ? 'text-emerald-600' : 'text-red-500'
+                          }`}
+                        >
+                          {deactivationFeedback}
                         </p>
                       )}
                     </div>

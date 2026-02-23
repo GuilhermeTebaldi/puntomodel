@@ -463,6 +463,94 @@ const ensureDb = async () => {
 const normalizeEmail = (email) => (email || '').trim().toLowerCase();
 const normalizePassword = (value) => (typeof value === 'string' ? value.trim() : '');
 const isPasswordValid = (value) => value.length >= 6;
+const normalizeDeactivationReason = (value) => {
+  if (typeof value !== 'string') return '';
+  return value.trim().replace(/\s+/g, ' ').slice(0, 600);
+};
+const normalizeDeactivationHistoryEntry = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const reason = typeof value.reason === 'string' ? value.reason.trim() : '';
+  if (!reason) return null;
+  const id = typeof value.id === 'string' && value.id.trim() ? value.id.trim() : nanoid();
+  const requestedAt =
+    typeof value.requestedAt === 'string' && value.requestedAt.trim()
+      ? value.requestedAt
+      : new Date().toISOString();
+  const requestedByUserId =
+    typeof value.requestedByUserId === 'string' && value.requestedByUserId.trim()
+      ? value.requestedByUserId.trim()
+      : null;
+  const requestedByEmail =
+    typeof value.requestedByEmail === 'string' && value.requestedByEmail.trim()
+      ? normalizeEmail(value.requestedByEmail)
+      : null;
+  const reactivatedAt =
+    typeof value.reactivatedAt === 'string' && value.reactivatedAt.trim()
+      ? value.reactivatedAt
+      : null;
+  return {
+    id,
+    reason,
+    requestedAt,
+    requestedByUserId,
+    requestedByEmail,
+    reactivatedAt,
+  };
+};
+const getModelDeactivationState = (model) => {
+  if (!model || typeof model !== 'object') return null;
+  const state = model.deactivation;
+  if (!state || typeof state !== 'object' || Array.isArray(state)) return null;
+  return state;
+};
+const isModelHidden = (model) => {
+  const state = getModelDeactivationState(model);
+  return Boolean(state?.isHidden === true);
+};
+const reactivateHiddenModelOnLogin = async (user) => {
+  if (!user || user.role !== 'model') return;
+  const model = await getModelByEmail(user.email);
+  if (!model || !isModelHidden(model)) return;
+
+  const nowIso = new Date().toISOString();
+  const currentState = getModelDeactivationState(model) || {};
+  const currentEntryId =
+    typeof currentState.entryId === 'string' && currentState.entryId.trim()
+      ? currentState.entryId.trim()
+      : '';
+
+  const existingHistory = Array.isArray(model.deactivationHistory)
+    ? model.deactivationHistory
+        .map((entry) => normalizeDeactivationHistoryEntry(entry))
+        .filter(Boolean)
+    : [];
+
+  let appliedToCurrent = false;
+  const nextHistory = existingHistory.map((entry) => {
+    if (!entry || entry.reactivatedAt) return entry;
+    if (currentEntryId && entry.id === currentEntryId) {
+      appliedToCurrent = true;
+      return { ...entry, reactivatedAt: nowIso };
+    }
+    return entry;
+  });
+
+  if (!appliedToCurrent) {
+    const firstOpenIndex = nextHistory.findIndex((entry) => entry && !entry.reactivatedAt);
+    if (firstOpenIndex >= 0) {
+      nextHistory[firstOpenIndex] = { ...nextHistory[firstOpenIndex], reactivatedAt: nowIso };
+    }
+  }
+
+  model.deactivationHistory = nextHistory;
+  model.deactivation = {
+    ...currentState,
+    isHidden: false,
+    reactivatedAt: nowIso,
+  };
+  model.updatedAt = nowIso;
+  await updateModel(model.id, model);
+};
 const normalizeResetIdentifier = (value) => (typeof value === 'string' ? value.trim() : '');
 const normalizePhoneDigits = (value) =>
   typeof value === 'string' ? value.replace(/\D/g, '') : '';
@@ -742,7 +830,7 @@ const sanitizeUser = (user) => ({
 
 const sanitizeModelPublic = (model) => {
   if (!model) return model;
-  const { identity, ...rest } = model;
+  const { identity, deactivation, deactivationHistory, ...rest } = model;
   return rest;
 };
 
@@ -860,6 +948,12 @@ app.post('/api/auth/login', async (req, res) => {
 
   if (!user || user.password !== normalizedPassword) {
     return res.status(401).json({ ok: false, error: 'E-mail ou senha inválidos.' });
+  }
+
+  try {
+    await reactivateHiddenModelOnLogin(user);
+  } catch (error) {
+    console.error('[auth:login:reactivate-model]', error);
   }
 
   res.json({ ok: true, user: sanitizeUser(user) });
@@ -1092,6 +1186,7 @@ app.get('/api/models', async (req, res) => {
   const emailFilter = email ? String(email).toLowerCase() : null;
   let models = await listModels({ email: emailFilter || undefined });
   models = await Promise.all(models.map((model) => refreshModelState(model)));
+  models = models.filter((model) => !isModelHidden(model));
 
   if (!includeUnpaid) {
     models = models.filter((model) => isBillingActive(model));
@@ -1131,6 +1226,9 @@ app.get('/api/models/:id', async (req, res) => {
     return res.status(404).json({ ok: false, error: 'Perfil não encontrado.' });
   }
   const refreshed = await refreshModelState(model);
+  if (isModelHidden(refreshed)) {
+    return res.status(404).json({ ok: false, error: 'Perfil não encontrado.' });
+  }
   if (!hasAllBioTranslations(refreshed)) {
     scheduleBioTranslations(refreshed.id, refreshed.bio, refreshed.bioLanguage);
   }
@@ -1404,6 +1502,8 @@ app.post('/api/models', async (req, res) => {
     notifications: payload.notifications ?? [],
     billing: payload.billing ?? existingBilling,
     payments: payload.payments ?? existingPayments,
+    deactivation: existingModel?.deactivation ?? null,
+    deactivationHistory: existingModel?.deactivationHistory ?? [],
   };
 
   const nowIso = new Date().toISOString();
@@ -1525,6 +1625,59 @@ app.patch('/api/models/:id', async (req, res) => {
   }
 
   res.json({ ok: true, model: sanitizeModelPublic(savedModel) });
+});
+
+app.post('/api/models/:id/deactivation', async (req, res) => {
+  await ensureDb();
+  const model = await getModelByIdRepo(req.params.id);
+  if (!model) {
+    return res.status(404).json({ ok: false, error: 'Perfil não encontrado.' });
+  }
+
+  const payload = req.body || {};
+  const reason = normalizeDeactivationReason(payload.reason);
+  if (reason.length < 8) {
+    return res.status(400).json({
+      ok: false,
+      error: 'Informe o motivo da exclusão com pelo menos 8 caracteres.',
+    });
+  }
+
+  const requestedByUserId =
+    typeof payload.userId === 'string' && payload.userId.trim() ? payload.userId.trim() : null;
+  const requestedByEmail =
+    typeof payload.email === 'string' && payload.email.trim() ? normalizeEmail(payload.email) : null;
+  const nowIso = new Date().toISOString();
+  const historyEntry = {
+    id: nanoid(),
+    reason,
+    requestedAt: nowIso,
+    requestedByUserId,
+    requestedByEmail,
+    reactivatedAt: null,
+  };
+  const existingHistory = Array.isArray(model.deactivationHistory)
+    ? model.deactivationHistory
+        .map((entry) => normalizeDeactivationHistoryEntry(entry))
+        .filter(Boolean)
+    : [];
+
+  model.deactivationHistory = [historyEntry, ...existingHistory].slice(0, 100);
+  model.deactivation = {
+    isHidden: true,
+    reason: historyEntry.reason,
+    requestedAt: historyEntry.requestedAt,
+    requestedByUserId: historyEntry.requestedByUserId,
+    requestedByEmail: historyEntry.requestedByEmail,
+    entryId: historyEntry.id,
+    reactivatedAt: null,
+  };
+  model.isOnline = false;
+  model.onlineUntil = null;
+  model.updatedAt = nowIso;
+
+  const savedModel = await updateModel(model.id, model);
+  res.json({ ok: true, model: sanitizeModelPublic(savedModel || model) });
 });
 
 app.post('/api/models/:id/payments', async (req, res) => {

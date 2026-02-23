@@ -44,6 +44,25 @@ export interface ModelMapPoint {
   y?: number;
 }
 
+export interface ModelDeactivation {
+  isHidden?: boolean;
+  reason?: string;
+  requestedAt?: string;
+  requestedByUserId?: string | null;
+  requestedByEmail?: string | null;
+  entryId?: string | null;
+  reactivatedAt?: string | null;
+}
+
+export interface ModelDeactivationHistoryEntry {
+  id: string;
+  reason: string;
+  requestedAt: string;
+  requestedByUserId?: string | null;
+  requestedByEmail?: string | null;
+  reactivatedAt?: string | null;
+}
+
 export type ModelBillingStatus = 'active' | 'expired' | 'none';
 
 export interface ModelBilling {
@@ -95,6 +114,8 @@ export interface ModelProfileData {
   currency?: string;
   billing?: ModelBilling | null;
   payments?: ModelPayment[];
+  deactivation?: ModelDeactivation | null;
+  deactivationHistory?: ModelDeactivationHistoryEntry[];
   stats?: {
     views?: Record<string, number>;
     whatsapp?: Record<string, number>;
@@ -213,6 +234,22 @@ export const updateModelProfile = async (
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.error || 'Não foi possível atualizar perfil.');
+  }
+  return data.model as ModelProfileData;
+};
+
+export const requestModelDeactivation = async (
+  id: string,
+  payload: { reason: string; userId?: string | null; email?: string | null }
+) => {
+  const response = await apiFetch(`/api/models/${id}/deactivation`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.error || 'Não foi possível ocultar o perfil.');
   }
   return data.model as ModelProfileData;
 };

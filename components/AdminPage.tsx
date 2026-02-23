@@ -32,6 +32,23 @@ interface AdminModel {
     birthDate?: string;
   } | null;
   featured?: boolean;
+  deactivation?: {
+    isHidden?: boolean;
+    reason?: string;
+    requestedAt?: string;
+    requestedByUserId?: string | null;
+    requestedByEmail?: string | null;
+    entryId?: string | null;
+    reactivatedAt?: string | null;
+  } | null;
+  deactivationHistory?: Array<{
+    id?: string;
+    reason?: string;
+    requestedAt?: string;
+    requestedByUserId?: string | null;
+    requestedByEmail?: string | null;
+    reactivatedAt?: string | null;
+  }>;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -118,13 +135,26 @@ const sortPasswordResetRequests = (items: AdminPasswordResetRequest[]) => {
   });
 };
 
+type AdminDeactivationEvent = {
+  id: string;
+  modelId: string;
+  modelName: string;
+  modelEmail: string;
+  reason: string;
+  requestedAt: string;
+  requestedByUserId?: string | null;
+  requestedByEmail?: string | null;
+  reactivatedAt?: string | null;
+  active: boolean;
+};
+
 const AdminPage: React.FC = () => {
   const { t, translateError, locale, languageOptions } = useI18n();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [models, setModels] = useState<AdminModel[]>([]);
   const [registrationLeads, setRegistrationLeads] = useState<AdminRegistrationLead[]>([]);
   const [passwordResetRequests, setPasswordResetRequests] = useState<AdminPasswordResetRequest[]>([]);
-  const [tab, setTab] = useState<'users' | 'models' | 'translations' | 'registrations' | 'passwordResets'>('users');
+  const [tab, setTab] = useState<'users' | 'models' | 'translations' | 'registrations' | 'passwordResets' | 'deletions'>('users');
   const [error, setError] = useState('');
   const [passwordResetLoadError, setPasswordResetLoadError] = useState('');
   const [passwordResetLiveAlert, setPasswordResetLiveAlert] = useState('');
@@ -169,6 +199,7 @@ const AdminPage: React.FC = () => {
       { id: 'users' as const, label: t('adminPage.usersTab') },
       { id: 'models' as const, label: t('adminPage.modelsTab') },
       { id: 'registrations' as const, label: t('adminPage.registrationsTab') },
+      { id: 'deletions' as const, label: t('adminPage.deletionsTab') },
       { id: 'passwordResets' as const, label: t('adminPage.passwordResetsTab') },
       { id: 'translations' as const, label: t('adminPage.translationsTab') },
     ],
@@ -780,6 +811,81 @@ const AdminPage: React.FC = () => {
     return age;
   };
 
+  const deactivationEvents = useMemo<AdminDeactivationEvent[]>(() => {
+    const events = models.flatMap((model) => {
+      const currentState =
+        model.deactivation && typeof model.deactivation === 'object' ? model.deactivation : null;
+      const currentEntryId =
+        typeof currentState?.entryId === 'string' ? currentState.entryId.trim() : '';
+      const currentIsHidden = currentState?.isHidden === true;
+      const history = Array.isArray(model.deactivationHistory) ? model.deactivationHistory : [];
+      const normalizedHistory = history
+        .map((item) => {
+          if (!item || typeof item !== 'object') return null;
+          const reason = typeof item.reason === 'string' ? item.reason.trim() : '';
+          if (!reason) return null;
+          const requestedAt = typeof item.requestedAt === 'string' ? item.requestedAt : '';
+          if (!requestedAt) return null;
+          const id =
+            typeof item.id === 'string' && item.id.trim()
+              ? item.id.trim()
+              : `${model.id}-${requestedAt}-${reason.slice(0, 16)}`;
+          const reactivatedAt =
+            typeof item.reactivatedAt === 'string' && item.reactivatedAt.trim()
+              ? item.reactivatedAt
+              : null;
+          const active = currentIsHidden && (currentEntryId ? currentEntryId === id : !reactivatedAt);
+          return {
+            id,
+            modelId: model.id,
+            modelName: model.name,
+            modelEmail: model.email,
+            reason,
+            requestedAt,
+            requestedByUserId:
+              typeof item.requestedByUserId === 'string' ? item.requestedByUserId : null,
+            requestedByEmail:
+              typeof item.requestedByEmail === 'string' ? item.requestedByEmail : null,
+            reactivatedAt,
+            active,
+          } satisfies AdminDeactivationEvent;
+        })
+        .filter((item): item is AdminDeactivationEvent => Boolean(item));
+
+      if (normalizedHistory.length > 0) {
+        return normalizedHistory;
+      }
+
+      const fallbackReason =
+        typeof currentState?.reason === 'string' ? currentState.reason.trim() : '';
+      const fallbackRequestedAt =
+        typeof currentState?.requestedAt === 'string' ? currentState.requestedAt : '';
+      if (!fallbackReason || !fallbackRequestedAt) {
+        return [];
+      }
+
+      return [{
+        id: `${model.id}-${fallbackRequestedAt}-fallback`,
+        modelId: model.id,
+        modelName: model.name,
+        modelEmail: model.email,
+        reason: fallbackReason,
+        requestedAt: fallbackRequestedAt,
+        requestedByUserId:
+          typeof currentState?.requestedByUserId === 'string' ? currentState.requestedByUserId : null,
+        requestedByEmail:
+          typeof currentState?.requestedByEmail === 'string' ? currentState.requestedByEmail : null,
+        reactivatedAt:
+          typeof currentState?.reactivatedAt === 'string' && currentState.reactivatedAt.trim()
+            ? currentState.reactivatedAt
+            : null,
+        active: currentIsHidden,
+      }];
+    });
+
+    return events.sort((left, right) => toTimeMs(right.requestedAt) - toTimeMs(left.requestedAt));
+  }, [models]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100">
@@ -1101,6 +1207,62 @@ const AdminPage: React.FC = () => {
                       </tr>
                     );
                   })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : tab === 'deletions' ? (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-black text-gray-900">{t('adminPage.deletionsTitle')}</h2>
+              <p className="text-xs text-gray-500">{t('adminPage.deletionsHint')}</p>
+            </div>
+            <div className="bg-white border border-gray-100 rounded-2xl overflow-x-auto">
+              <table className="w-full min-w-[1080px] text-sm">
+                <thead className="bg-gray-50 text-gray-500">
+                  <tr>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.name')}</th>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.email')}</th>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.reason')}</th>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.createdAt')}</th>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.status')}</th>
+                    <th className="text-left px-4 py-3">{t('adminPage.table.resolvedAt')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {deactivationEvents.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-6 text-gray-400 text-center">
+                        {t('adminPage.deletionsEmpty')}
+                      </td>
+                    </tr>
+                  )}
+                  {deactivationEvents.map((event) => (
+                    <tr key={event.id} className="border-t border-gray-100">
+                      <td className="px-4 py-3 font-semibold text-gray-800">{event.modelName}</td>
+                      <td className="px-4 py-3 text-gray-600">{event.modelEmail}</td>
+                      <td className="px-4 py-3 text-gray-700 whitespace-pre-wrap break-words max-w-[420px]">
+                        {event.reason}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">
+                        {event.requestedAt ? new Date(event.requestedAt).toLocaleString(locale) : '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        {event.active ? (
+                          <span className="inline-flex items-center gap-2 text-red-500 text-xs font-bold uppercase tracking-widest">
+                            ✕ {t('adminPage.statusHidden')}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-2 text-emerald-600 text-xs font-bold uppercase tracking-widest">
+                            ✓ {t('adminPage.statusReactivated')}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">
+                        {event.reactivatedAt ? new Date(event.reactivatedAt).toLocaleString(locale) : '-'}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
