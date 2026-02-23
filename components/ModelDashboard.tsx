@@ -22,6 +22,7 @@ import {
   Clock,
   Smartphone,
   Info,
+  Menu,
 } from 'lucide-react';
 import Logo from './Logo';
 import LocationPicker, { LocationValue } from './LocationPicker';
@@ -37,7 +38,7 @@ import {
   ModelBilling,
   ModelPayment,
 } from '../services/models';
-import { uploadImage } from '../services/cloudinary';
+import { uploadImageWithProgress } from '../services/cloudinary';
 import { getTranslationTarget } from '../services/translate';
 import { changePassword } from '../services/auth';
 import { useI18n } from '../translations/i18n';
@@ -118,6 +119,14 @@ const PLAN_DURATION_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const PAYMENT_UI_ENABLED = false;
 const ONLINE_STATUS_REQUIRES_PAYMENT = false;
+const DASHBOARD_IMAGE_UPLOAD_OPTIONS = {
+  optimize: true,
+  maxDimension: 1600,
+  quality: 0.82,
+  minFileSizeBytes: 550 * 1024,
+} as const;
+
+const clampPercent = (value: number) => Math.min(100, Math.max(0, Math.round(value)));
 
 const parseDateToMs = (value?: string | number | null) => {
   if (!value) return null;
@@ -435,16 +444,22 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   const [editingLocation, setEditingLocation] = useState(false);
   const [editingPhotos, setEditingPhotos] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [uploadProgressPercent, setUploadProgressPercent] = useState(0);
+  const [uploadFlow, setUploadFlow] = useState<'idle' | 'photos' | 'avatar'>('idle');
+  const [uploadCompletedFiles, setUploadCompletedFiles] = useState(0);
+  const [uploadTotalFiles, setUploadTotalFiles] = useState(0);
   const [editingName, setEditingName] = useState(false);
   const [editingPhone, setEditingPhone] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [updatingAvatar, setUpdatingAvatar] = useState(false);
   const [currentPasswordInput, setCurrentPasswordInput] = useState('');
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordFeedback, setPasswordFeedback] = useState('');
   const [passwordFeedbackType, setPasswordFeedbackType] = useState<'success' | 'error' | null>(null);
+  const [showPasswordPanel, setShowPasswordPanel] = useState(false);
   const [showDeactivationPanel, setShowDeactivationPanel] = useState(false);
   const [deactivationReason, setDeactivationReason] = useState('');
   const [deactivatingAccount, setDeactivatingAccount] = useState(false);
@@ -462,6 +477,9 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
   const billingCurrency = 'EUR';
   const deactivationReasonTrimmed = deactivationReason.trim();
   const canRequestDeactivation = deactivationReasonTrimmed.length >= 8;
+  const isUploadingImages = uploadingPhotos && uploadFlow !== 'idle';
+  const uploadScopeLabel =
+    uploadFlow === 'avatar' ? t('dashboard.photos.avatarTitle') : t('dashboard.photos.title');
   const [notifications, setNotifications] = useState<Array<{
     id: string;
     type: string;
@@ -919,18 +937,58 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     setServicesInput((prev) => prev.filter((item) => item !== service));
   };
 
+  const resetUploadProgress = () => {
+    setUploadProgressPercent(0);
+    setUploadFlow('idle');
+    setUploadCompletedFiles(0);
+    setUploadTotalFiles(0);
+  };
+
+  const updateOverallUploadProgress = (values: number[]) => {
+    if (!values.length) {
+      setUploadProgressPercent(0);
+      return;
+    }
+    const sum = values.reduce((acc, value) => acc + clampPercent(value), 0);
+    const average = sum / values.length;
+    setUploadProgressPercent(clampPercent(average));
+  };
+
   const handlePhotoAdd = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []) as File[];
     if (!files.length) return;
     setUploadingPhotos(true);
+    setUploadFlow('photos');
+    setUploadTotalFiles(files.length);
+    setUploadCompletedFiles(0);
+    setUploadProgressPercent(0);
     setSaveError('');
     try {
-      const uploaded = await Promise.all(files.map((file) => uploadImage(file)));
+      const progressMap = files.map(() => 0);
+      let completedCount = 0;
+      const uploaded = await Promise.all(
+        files.map((file, index) =>
+          uploadImageWithProgress(
+            file,
+            (percent) => {
+              progressMap[index] = percent;
+              updateOverallUploadProgress(progressMap);
+            },
+            DASHBOARD_IMAGE_UPLOAD_OPTIONS
+          ).then((url) => {
+            completedCount += 1;
+            setUploadCompletedFiles(completedCount);
+            return url;
+          })
+        )
+      );
+      setUploadProgressPercent(100);
       setPhotosInput((prev) => [...prev, ...uploaded]);
     } catch {
       setSaveError(t('errors.imageLoadFailedGeneric'));
     } finally {
       setUploadingPhotos(false);
+      window.setTimeout(() => resetUploadProgress(), 220);
       event.target.value = '';
     }
   };
@@ -947,21 +1005,62 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     handleSave({ photos: photosInput }, () => setEditingPhotos(false));
   };
 
+  const handleSelectAvatarFromExistingPhoto = async (photoUrl: string) => {
+    if (!photoUrl || updatingAvatar || uploadingPhotos) return;
+    const previousAvatar = avatarInput || model.avatarUrl || null;
+    if (previousAvatar === photoUrl) {
+      setIsAvatarPickerOpen(false);
+      return;
+    }
+
+    setAvatarInput(photoUrl);
+    setIsAvatarPickerOpen(false);
+    setUpdatingAvatar(true);
+    setSaveError('');
+    try {
+      const updated = await updateModelProfile(model.id, { avatarUrl: photoUrl });
+      onModelUpdated?.(updated);
+    } catch (err) {
+      setAvatarInput(previousAvatar);
+      setSaveError(err instanceof Error ? translateError(err.message) : t('errors.updateFailed'));
+    } finally {
+      setUpdatingAvatar(false);
+    }
+  };
+
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    const previousAvatar = avatarInput || model.avatarUrl || null;
+    const localPreviewUrl = URL.createObjectURL(file);
     setUploadingPhotos(true);
+    setUpdatingAvatar(true);
+    setUploadFlow('avatar');
+    setUploadTotalFiles(1);
+    setUploadCompletedFiles(0);
+    setUploadProgressPercent(0);
     setSaveError('');
+    setAvatarInput(localPreviewUrl);
+    setIsAvatarPickerOpen(false);
     try {
-      const uploaded = await uploadImage(file);
-      await handleSave({ avatarUrl: uploaded }, () => {
-        setAvatarInput(uploaded);
-        setIsAvatarPickerOpen(false);
-      });
-    } catch {
-      setSaveError(t('errors.imageLoadFailedGeneric'));
+      const uploaded = await uploadImageWithProgress(
+        file,
+        (percent) => setUploadProgressPercent(clampPercent(percent)),
+        DASHBOARD_IMAGE_UPLOAD_OPTIONS
+      );
+      setUploadCompletedFiles(1);
+      setUploadProgressPercent(100);
+      setAvatarInput(uploaded);
+      const updated = await updateModelProfile(model.id, { avatarUrl: uploaded });
+      onModelUpdated?.(updated);
+    } catch (err) {
+      setAvatarInput(previousAvatar);
+      setSaveError(err instanceof Error ? translateError(err.message) : t('errors.imageLoadFailedGeneric'));
     } finally {
+      URL.revokeObjectURL(localPreviewUrl);
       setUploadingPhotos(false);
+      setUpdatingAvatar(false);
+      window.setTimeout(() => resetUploadProgress(), 220);
       event.target.value = '';
     }
   };
@@ -1019,6 +1118,12 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (activeSection !== 'settings' && showPasswordPanel) {
+      setShowPasswordPanel(false);
+    }
+  }, [activeSection, showPasswordPanel]);
 
   const visibleNotifications = notifications.filter((notification) => notification.type !== 'comment');
   const unreadCount = visibleNotifications.filter((notification) => !notification.read).length;
@@ -1121,7 +1226,14 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
       {/* Sidebar - Hidden on Mobile */}
       <aside className="hidden md:flex flex-col w-72 bg-white border-r border-gray-100 p-6 sticky top-0 h-screen">
         <div className="mb-10 px-2">
-          <Logo />
+          <button
+            type="button"
+            onClick={handleBackToSite}
+            className="text-left"
+            aria-label={t('common.backToSite')}
+          >
+            <Logo />
+          </button>
         </div>
 
         <nav className="flex-1 space-y-1">
@@ -1174,12 +1286,6 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
           >
             <ChevronLeft size={20} /> {t('common.backToSite')}
           </button>
-          <button
-            onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-red-500 transition-colors font-bold text-sm"
-          >
-            <LogOut size={20} /> {t('dashboard.logout')}
-          </button>
         </div>
       </aside>
 
@@ -1188,7 +1294,14 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
         {/* Top Header */}
         <header className="bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex flex-col md:flex-row items-center justify-between gap-3 sticky top-0 z-20">
           <div className="w-full flex items-center justify-center md:hidden">
-            <Logo />
+            <button
+              type="button"
+              onClick={handleBackToSite}
+              className="text-left"
+              aria-label={t('common.backToSite')}
+            >
+              <Logo />
+            </button>
           </div>
 
           <div className="hidden md:block">
@@ -1266,12 +1379,15 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
           <div className="relative" ref={avatarRef}>
             <button
               type="button"
+              disabled={updatingAvatar || uploadingPhotos}
               onClick={(event) => {
                 event.stopPropagation();
                 setIsAvatarPickerOpen((prev) => !prev);
               }}
               title={t('dashboard.photos.avatarAction')}
-              className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-[#e3262e] bg-gray-100 group"
+              className={`relative w-10 h-10 rounded-full overflow-hidden border-2 border-[#e3262e] bg-gray-100 group ${
+                updatingAvatar || uploadingPhotos ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
             >
               {avatarPhoto ? (
                 <img src={avatarPhoto} alt={model.name} className="w-full h-full object-cover" />
@@ -1290,6 +1406,11 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                     {t('dashboard.photos.avatarTitle')}
                   </p>
                   <p className="text-[11px] text-gray-400">{t('dashboard.photos.profileHint')}</p>
+                  {updatingAvatar && (
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#e3262e] mt-2">
+                      {t('common.saving')}
+                    </p>
+                  )}
                 </div>
                 <div className="p-3">
                   <div className="flex items-center justify-between gap-3 mb-3">
@@ -1298,13 +1419,13 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                       type="file"
                       accept="image/*"
                       onChange={handleAvatarUpload}
-                      disabled={uploadingPhotos}
+                      disabled={uploadingPhotos || updatingAvatar}
                       className="sr-only"
                     />
                     <label
                       htmlFor="avatar-upload"
                       className={`inline-flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-[#e3262e] text-white text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-red-200 transition-colors ${
-                        uploadingPhotos ? 'opacity-70 pointer-events-none' : 'hover:bg-red-700 cursor-pointer'
+                        uploadingPhotos || updatingAvatar ? 'opacity-70 pointer-events-none' : 'hover:bg-red-700 cursor-pointer'
                       }`}
                     >
                       <Camera size={12} />
@@ -1327,15 +1448,13 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                           <button
                             key={`${photo}-${index}`}
                             type="button"
+                            disabled={updatingAvatar || uploadingPhotos}
                             onClick={() => {
-                              handleSave({ avatarUrl: photo }, () => {
-                                setAvatarInput(photo);
-                                setIsAvatarPickerOpen(false);
-                              });
+                              void handleSelectAvatarFromExistingPhoto(photo);
                             }}
                             className={`relative rounded-lg overflow-hidden focus:outline-none ${
                               isProfile ? 'ring-2 ring-[#e3262e]' : 'ring-1 ring-gray-200'
-                            }`}
+                            } ${(updatingAvatar || uploadingPhotos) ? 'opacity-70 cursor-not-allowed' : ''}`}
                           >
                             <img src={photo} alt={`avatar-${index}`} className="w-full h-14 object-cover" />
                           </button>
@@ -2233,57 +2352,87 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                     <p className="text-sm text-gray-600">{t('dashboard.settings.registeredEmail', { email: model.email || t('profile.notInformed') })}</p>
                     <p className="text-sm text-gray-600 mt-1">{t('adminPage.table.phone')}: {model.phone || t('profile.notInformed')}</p>
                   </div>
-                  <div className="border border-gray-100 rounded-[24px] sm:rounded-3xl p-5 sm:p-6">
-                    <p className="text-xs font-black text-gray-400 uppercase mb-4">{t('dashboard.settings.passwordTitle')}</p>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                          {t('dashboard.settings.currentPasswordLabel')}
-                        </label>
-                        <input
-                          type="password"
-                          value={currentPasswordInput}
-                          onChange={(event) => setCurrentPasswordInput(event.target.value)}
-                          className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
-                          autoComplete="current-password"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                          {t('dashboard.settings.newPasswordLabel')}
-                        </label>
-                        <input
-                          type="password"
-                          value={newPasswordInput}
-                          onChange={(event) => setNewPasswordInput(event.target.value)}
-                          className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
-                          autoComplete="new-password"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                          {t('dashboard.settings.confirmPasswordLabel')}
-                        </label>
-                        <input
-                          type="password"
-                          value={confirmPasswordInput}
-                          onChange={(event) => setConfirmPasswordInput(event.target.value)}
-                          className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
-                          autoComplete="new-password"
-                        />
-                      </div>
-                      <button
-                        onClick={handleChangePassword}
-                        disabled={changingPassword}
-                        className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
-                      >
-                        {changingPassword ? t('common.saving') : t('dashboard.settings.changePasswordButton')}
-                      </button>
-                      {passwordFeedback && (
-                        <p className={`text-xs font-semibold ${passwordFeedbackType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
-                          {passwordFeedback}
+                  <div className="border border-gray-100 rounded-[24px] sm:rounded-3xl overflow-hidden bg-white">
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordPanel((prev) => !prev)}
+                      className="w-full px-5 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-gray-50 via-white to-gray-50 flex items-center justify-between gap-4"
+                    >
+                      <div className="text-left flex items-center gap-3">
+                        <span className="w-9 h-9 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600">
+                          <Menu size={16} />
+                        </span>
+                        <p className="text-xs font-black text-gray-500 uppercase tracking-widest">
+                          {t('dashboard.settings.passwordTitle')}
                         </p>
-                      )}
+                      </div>
+                      <span
+                        className={`w-9 h-9 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-500 transition-transform duration-300 ${
+                          showPasswordPanel ? 'rotate-180' : ''
+                        }`}
+                      >
+                        <ChevronDown size={18} />
+                      </span>
+                    </button>
+                    <div
+                      className={`grid transition-all duration-300 ease-in-out ${
+                        showPasswordPanel ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                      }`}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="border-t border-gray-100 bg-gray-50/40 p-5 sm:p-6">
+                          <div className="space-y-3">
+                            <div>
+                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                                {t('dashboard.settings.currentPasswordLabel')}
+                              </label>
+                              <input
+                                type="password"
+                                value={currentPasswordInput}
+                                onChange={(event) => setCurrentPasswordInput(event.target.value)}
+                                className="w-full bg-white border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
+                                autoComplete="current-password"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                                {t('dashboard.settings.newPasswordLabel')}
+                              </label>
+                              <input
+                                type="password"
+                                value={newPasswordInput}
+                                onChange={(event) => setNewPasswordInput(event.target.value)}
+                                className="w-full bg-white border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
+                                autoComplete="new-password"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                                {t('dashboard.settings.confirmPasswordLabel')}
+                              </label>
+                              <input
+                                type="password"
+                                value={confirmPasswordInput}
+                                onChange={(event) => setConfirmPasswordInput(event.target.value)}
+                                className="w-full bg-white border border-gray-100 rounded-2xl py-3 px-4 focus:outline-none text-sm"
+                                autoComplete="new-password"
+                              />
+                            </div>
+                            <button
+                              onClick={handleChangePassword}
+                              disabled={changingPassword}
+                              className="px-4 py-2 rounded-full bg-[#e3262e] text-white text-xs font-bold uppercase tracking-widest disabled:opacity-70"
+                            >
+                              {changingPassword ? t('common.saving') : t('dashboard.settings.changePasswordButton')}
+                            </button>
+                            {passwordFeedback && (
+                              <p className={`text-xs font-semibold ${passwordFeedbackType === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
+                                {passwordFeedback}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div className="border border-red-100 rounded-[24px] sm:rounded-3xl overflow-hidden bg-white">
@@ -2366,6 +2515,8 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
                     >
                       <ChevronLeft size={16} /> {t('common.backToSite')}
                     </button>
+                  </div>
+                  <div className="space-y-2">
                     <button
                       onClick={onLogout}
                       className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border border-red-200 text-red-600 font-bold text-xs uppercase tracking-widest hover:bg-red-50 transition-colors"
@@ -2430,6 +2581,39 @@ const ModelDashboard: React.FC<ModelDashboardProps> = ({ onLogout, onViewProfile
               >
                 {t('dashboard.onlinePicker.activate')}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {isUploadingImages && (
+        <div className="fixed inset-x-4 bottom-24 md:inset-x-auto md:right-6 md:bottom-6 md:w-[min(92vw,24rem)] z-[180] pointer-events-none">
+          <div className="relative overflow-hidden rounded-[24px] border border-white/60 bg-white/80 backdrop-blur-xl shadow-[0_24px_55px_rgba(17,24,39,0.2)]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(227,38,46,0.2),transparent_55%),radial-gradient(circle_at_bottom_left,rgba(255,140,92,0.16),transparent_55%)]" />
+            <div className="relative p-4 sm:p-5">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="relative w-10 h-10 rounded-2xl bg-[#e3262e] text-white flex items-center justify-center shadow-lg shadow-red-200">
+                  <span className="w-4 h-4 rounded-full border-2 border-white/90 border-t-transparent animate-spin" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#e3262e]">
+                    {t('dashboard.photos.uploading')}
+                  </p>
+                  <p className="text-sm font-bold text-gray-900 truncate">{uploadScopeLabel}</p>
+                </div>
+                <div className="ml-auto text-right">
+                  <p className="text-xl sm:text-2xl font-black text-gray-900">{uploadProgressPercent}%</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
+                    {Math.max(0, uploadCompletedFiles)}/{Math.max(1, uploadTotalFiles)}
+                  </p>
+                </div>
+              </div>
+              <div className="relative h-3 rounded-full bg-white/90 border border-white overflow-hidden">
+                <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(227,38,46,0.08),rgba(255,255,255,0.58),rgba(255,140,92,0.14))]" />
+                <div
+                  className="relative h-full rounded-full transition-[width] duration-300 bg-[linear-gradient(90deg,#e3262e,#ff5f6d,#ff9f5f)] shadow-[0_0_16px_rgba(227,38,46,0.45)]"
+                  style={{ width: `${uploadProgressPercent}%` }}
+                />
+              </div>
             </div>
           </div>
         </div>
