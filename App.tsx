@@ -11,6 +11,7 @@ import ModelOnboarding from './components/ModelOnboarding';
 import MapView from './components/MapView';
 import ModelProfile from './components/ModelProfile';
 import BlogSection from './components/BlogSection';
+import SourceDiscoveryBanner from './components/SourceDiscoveryBanner';
 import { AuthUser, clearCurrentUser, getCurrentUser, getPendingModelProfile, PendingModelProfile } from './services/auth';
 import { fetchModelByEmail, fetchModelById, fetchModelsAll, ModelProfileData } from './services/models';
 import { getSavedModelIds, isSavedModelsStorageKey, pruneSavedModels } from './services/savedModels';
@@ -978,6 +979,9 @@ const App: React.FC = () => {
       ) : (
         <>
           {locationPrompt}
+          {pathname === '/' && !showAgeGate && !showLanguagePrompt && !isSearching && !isListingOpen && !selectedProfileModel && (
+            <SourceDiscoveryBanner />
+          )}
           <Header
             onLoginClick={openLogin}
             onRegisterClick={openRegister}
