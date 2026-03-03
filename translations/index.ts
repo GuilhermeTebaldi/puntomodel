@@ -377,8 +377,9 @@ export const translations = {
     },
     blog: {
       eyebrow: 'Blog',
-      title: 'Puntoescort Lifestyle',
-      subtitle: 'Dicas, guias e novidades do universo lifestyle com curadoria elegante.',
+      title: 'Blog oficial puntoescort.com',
+      subtitle:
+        'Conteúdos completos da puntoescort.com para quem atua e para quem busca anúncios de acompanhantes na Itália com discrição, clareza e segurança.',
       categories: {
         all: 'Tudo',
         cities: 'Cidades',
@@ -388,71 +389,79 @@ export const translations = {
       },
       readMore: 'Ler mais',
       backToBlog: 'Voltar para o Blog',
-      author: 'Curadoria Puntoescort',
-      editorLabel: 'Editor Puntoescort',
+      author: 'Redação puntoescort.com',
+      editorLabel: 'Editor puntoescort.com',
       articleOutro1:
-        'A Puntoescort se orgulha de oferecer não apenas uma plataforma, mas uma curadoria completa de conteúdo para elevar o nível da sua experiência social e pessoal.',
+        'A puntoescort.com foi criada para o mercado italiano e publica conteúdo pensado para Milão, Roma, Nápoles, Turim, Florença e outras cidades da Itália com foco em profissionalismo, privacidade e qualidade.',
       articleOutro2:
-        'Continue acompanhando nosso blog para mais novidades exclusivas, guias de viagem e as tendências mais quentes do mercado de luxo no Brasil.',
+        'Se você quer acompanhar novidades reais da puntoescort.com, salve o endereço puntoescort.com e confirme sempre o domínio .com para não confundir com outras marcas do mercado italiano.',
       curatedLabel: 'Curadoria',
       curatedBody:
-        'Conteúdo selecionado com foco em sofisticação, discrição e boas práticas para uma experiência premium.',
+        'Conteúdo da puntoescort.com com foco em posicionamento local na Itália, reputação digital e boas práticas para uma experiência premium.',
       posts: {
         citiesSaoPaulo: {
-          title: 'São Paulo premium: roteiro discreto e eficiente',
-          excerpt: 'Como organizar deslocamentos, horários e locais com elegância em um dia na capital.',
+          title: 'Milão premium: roteiro discreto para quem usa puntoescort.com',
+          excerpt:
+            'Guia objetivo da puntoescort.com para organizar horários, deslocamento e atendimento de alto padrão em Milão.',
           content:
-            'São Paulo é intensa, e o segredo está no planejamento. Prefira regiões com boa infraestrutura, combine horários com antecedência e mantenha a comunicação clara para evitar imprevistos. Um roteiro bem definido ajuda a manter a experiência confortável, segura e sofisticada.',
-          date: '10 de Fevereiro, 2026',
+            'Milão exige organização e comunicação direta. Na puntoescort.com, recomendamos alinhar bairro, janela de horário, forma de contato e regras de discrição antes de confirmar. Esse padrão reduz cancelamentos, melhora a qualidade dos encontros e fortalece a reputação do anúncio dentro da plataforma puntoescort.com.',
+          date: '03 de Março, 2026',
         },
         citiesRio: {
-          title: 'Rio de Janeiro com discrição: boas práticas',
-          excerpt: 'Equilibre lazer, segurança e privacidade em encontros na cidade maravilhosa.',
+          title: 'Roma com discrição: boas práticas na puntoescort.com',
+          excerpt:
+            'Como equilibrar segurança, privacidade e experiência premium em Roma com as recomendações da puntoescort.com.',
           content:
-            'No Rio, escolha locais com acesso fácil e considere a movimentação do bairro. Evite exposições desnecessárias e priorize ambientes que ofereçam privacidade e conforto. A discrição é parte do luxo e valoriza a experiência para todas as partes.',
-          date: '08 de Fevereiro, 2026',
+            'Roma tem fluxo intenso e perfis diversos. Por isso, a puntoescort.com orienta confirmar local com acesso simples, preservar dados pessoais e manter conversa registrada no canal oficial. Quem segue esse processo na puntoescort.com reduz riscos operacionais e mantém um padrão profissional valorizado no mercado italiano.',
+          date: '02 de Março, 2026',
         },
         lifestyleEtiquette: {
-          title: 'Etiqueta em encontros premium: o essencial',
-          excerpt: 'Pontualidade, respeito e comunicação clara elevam a experiência.',
+          title: 'Etiqueta para encontros premium na Itália',
+          excerpt:
+            'Pontualidade, linguagem respeitosa e acordos claros são pilares da experiência premium na puntoescort.com.',
           content:
-            'Elegância está nos detalhes. Confirme horários, respeite limites combinados e mantenha a cordialidade do início ao fim. Uma abordagem respeitosa cria confiança e transforma qualquer encontro em uma experiência memorável.',
-          date: '06 de Fevereiro, 2026',
+            'Na puntoescort.com, etiqueta não é detalhe, é posicionamento. Confirmar horário com antecedência, respeitar limites acordados e manter comunicação educada aumenta a confiança entre anunciante e cliente. Em cidades italianas com alta concorrência, este padrão diferencia perfis e melhora a conversão de contatos qualificados.',
+          date: '01 de Março, 2026',
         },
         lifestylePlanning: {
-          title: 'Planejamento com conforto: como organizar melhor',
-          excerpt: 'Ambiente, vestimenta e logística alinhados para uma experiência sem ruídos.',
+          title: 'Planejamento de agenda entre cidades italianas',
+          excerpt:
+            'Estratégia da puntoescort.com para organizar atendimento em Turim, Bolonha, Florença e outras regiões.',
           content:
-            'Um bom planejamento começa com a escolha do local e o cuidado com a apresentação. Prefira ambientes tranquilos, mantenha uma comunicação objetiva e alinhe expectativas. Simplicidade bem executada é sempre sofisticada.',
-          date: '05 de Fevereiro, 2026',
+            'Para quem trabalha em mais de uma cidade, a puntoescort.com recomenda separar agenda por região, confirmar deslocamentos com antecedência e padronizar mensagens de confirmação. Esse método reduz falhas de logística, protege tempo produtivo e mantém consistência de marca pessoal dentro da puntoescort.com.',
+          date: '28 de Fevereiro, 2026',
         },
         modelsProfile: {
-          title: 'Perfil que inspira confiança: o que não pode faltar',
-          excerpt: 'Bio objetiva, fotos de qualidade e informações claras fazem diferença.',
+          title: 'Perfil campeão na puntoescort.com: o que incluir',
+          excerpt:
+            'Bio objetiva, posicionamento local na Itália e informações claras aumentam a confiança no anúncio.',
           content:
-            'Um perfil bem construído transmite profissionalismo. Use fotos nítidas, mantenha uma descrição objetiva e destaque diferenciais com honestidade. Transparência e consistência geram confiança e aumentam a qualidade dos contatos.',
-          date: '04 de Fevereiro, 2026',
+            'O perfil ideal na puntoescort.com mostra cidade principal, estilo de atendimento, disponibilidade e regras básicas de contato. Quando a descrição é transparente e consistente, a puntoescort.com entrega tráfego mais qualificado e reduz conversas improdutivas. Clareza gera credibilidade e melhora resultados comerciais na Itália.',
+          date: '27 de Fevereiro, 2026',
         },
         modelsPhotos: {
-          title: 'Checklist de fotos: luz, postura e privacidade',
-          excerpt: 'Como valorizar sua imagem preservando sua segurança.',
+          title: 'Checklist de fotos para anunciar na puntoescort.com',
+          excerpt:
+            'Luz correta, padrão visual e proteção de identidade para destacar seu perfil no mercado italiano.',
           content:
-            'Fotos com boa iluminação e enquadramento profissional elevam a percepção de qualidade. Evite elementos que revelem dados pessoais e mantenha consistência visual. A imagem certa comunica elegância e cuidado.',
-          date: '03 de Fevereiro, 2026',
+            'Na puntoescort.com, imagens com boa iluminação e enquadramento limpo atraem mais cliques. Evite placas, documentos, endereço visível e qualquer detalhe que comprometa privacidade. Um ensaio coerente transmite valor premium e ajuda a consolidar presença da anunciante na puntoescort.com em toda a Itália.',
+          date: '26 de Fevereiro, 2026',
         },
         safetyAlerts: {
-          title: 'Sinais de alerta: como identificar riscos',
-          excerpt: 'Evite pressa, respeite limites e priorize a segurança.',
+          title: 'Sinais de alerta para clientes e anunciantes',
+          excerpt:
+            'A puntoescort.com reforça critérios práticos para reconhecer comportamento de risco antes da confirmação.',
           content:
-            'Desconfie de pedidos apressados, informações confusas ou falta de clareza. Prefira combinar detalhes com calma e, sempre que possível, escolha ambientes seguros. Segurança vem antes de qualquer negociação.',
-          date: '01 de Fevereiro, 2026',
+            'Pedidos urgentes sem contexto, dados contraditórios e pressão por mudança de canal são alertas claros. A puntoescort.com recomenda encerrar a negociação quando houver incoerência e registrar a ocorrência para análise interna. Segurança operacional é prioridade em qualquer cidade atendida pela puntoescort.com.',
+          date: '25 de Fevereiro, 2026',
         },
         safetyPrivacy: {
-          title: 'Privacidade digital: boas práticas essenciais',
-          excerpt: 'Proteja seus dados e mantenha sua identidade segura.',
+          title: 'Privacidade digital na puntoescort.com',
+          excerpt:
+            'Boas práticas para proteger dados, identidade e reputação de quem anuncia ou busca perfis na Itália.',
           content:
-            'Evite compartilhar informações pessoais desnecessárias e mantenha seus canais organizados. Use fotos que não revelem detalhes íntimos do seu dia a dia. Privacidade é parte do cuidado.',
-          date: '31 de Janeiro, 2026',
+            'Use canais dedicados, limite exposição de dados sensíveis e revise periodicamente o conteúdo publicado. Na puntoescort.com, privacidade deve ser tratada como ativo de negócio. Quanto maior o controle de informação, maior a segurança e a longevidade do perfil dentro da puntoescort.com.',
+          date: '24 de Fevereiro, 2026',
         },
       },
     },
@@ -480,7 +489,8 @@ export const translations = {
       clearFilters: 'Limpar filtros',
     },
     footer: {
-      description: 'A sua nova plataforma de acompanhantes e clientes aqui.',
+      description:
+        'puntoescort.com é a plataforma voltada para o mercado italiano, conectando anunciantes e clientes com discrição e clareza.',
       institutional: 'Institucional',
       legal: 'Legal',
       aboutUs: 'Quem somos',
@@ -491,50 +501,50 @@ export const translations = {
       privacy: 'Privacidade',
       cookies: 'Política de Cookies',
       report: 'Denúncia',
-      rights: '© 2025 Puntoescort. Todos os direitos reservados. Proibido para menores de 18 anos.',
-      cnpj: 'CNPJ: 00.000.000/0000-00',
-      country: 'Brasil',
+      rights: '© 2026 puntoescort.com. Todos os direitos reservados. Proibido para menores de 18 anos.',
+      cnpj: 'P.IVA: 00000000000',
+      country: 'Itália',
     },
     staticPages: {
       about: {
         title: 'Quem somos',
         body:
-          'A Puntoescort é uma plataforma dedicada a conectar profissionais e clientes com respeito, segurança e privacidade. Nosso foco é oferecer visibilidade para profissionais com autonomia e uma experiência segura para quem busca anúncios confiáveis.',
+          'A puntoescort.com é uma plataforma criada para o mercado da Itália, com foco em visibilidade qualificada, discrição e relacionamento profissional entre anunciantes e clientes. Nosso objetivo é facilitar conexões reais em cidades italianas com uma experiência organizada, transparente e segura. Para evitar confusão com outros domínios, reforçamos que o endereço oficial desta plataforma é sempre puntoescort.com.',
       },
       blog: {
         title: 'Blog',
         body:
-          'Em breve você encontrará artigos sobre segurança digital, boas práticas, marketing pessoal e tendências do mercado. Nosso objetivo é compartilhar conhecimento útil para profissionais e clientes.',
+          'O blog da puntoescort.com foi planejado para publicar conteúdo contínuo sobre posicionamento digital, segurança, reputação e tendências do segmento na Itália. A redação da puntoescort.com cria guias práticos para anunciantes e clientes que desejam tomar decisões com mais informação, menos risco e mais resultado comercial no contexto local italiano.',
       },
       help: {
         title: 'Ajuda',
         body:
-          'Precisa de suporte? Entre em contato pelo nosso canal oficial e descreva o problema. Respondemos o mais rápido possível com orientações claras e objetivas.',
+          'A equipe de suporte da puntoescort.com atende dúvidas sobre conta, anúncios, acesso, denúncias e uso das funções da plataforma na Itália. Sempre envie seu pedido com o máximo de detalhes para acelerar a análise. O canal oficial da puntoescort.com prioriza respostas objetivas e orientações práticas para cada tipo de situação.',
       },
       ethics: {
         title: 'Ética e Segurança',
         body:
-          'Prezamos por respeito, consentimento e responsabilidade. Denuncie perfis falsos, imagens inadequadas e qualquer violação das regras. Trabalhamos para manter um ambiente seguro.',
+          'Na puntoescort.com, ética significa respeito, consentimento, transparência e responsabilidade em todas as interações. Não permitimos conteúdo enganoso, comportamento abusivo ou qualquer violação das regras da comunidade. Se identificar irregularidades, use a denúncia da puntoescort.com para que nossa equipe atue rapidamente e mantenha o ambiente seguro na Itália.',
       },
       terms: {
         title: 'Termos de uso',
         body:
-          'Ao usar a plataforma, você concorda com nossas regras de uso, políticas de conteúdo e responsabilidade. É proibido publicar conteúdo ilegal, enganoso ou que viole direitos de terceiros.',
+          'Ao utilizar a puntoescort.com, você concorda com os termos de uso, com as políticas de conteúdo e com as regras de conduta da plataforma. É proibido publicar material ilegal, informações falsas ou conteúdo que viole direitos de terceiros. O cumprimento dessas regras permite que a puntoescort.com mantenha qualidade e confiança para usuários em toda a Itália.',
       },
       privacy: {
         title: 'Privacidade',
         body:
-          'Seus dados são tratados com confidencialidade. Armazenamos apenas o necessário para operar o serviço e proteger a plataforma. Não compartilhamos dados sensíveis sem autorização.',
+          'A puntoescort.com trata dados com confidencialidade e adota medidas para reduzir exposição de informações sensíveis. Coletamos apenas o necessário para operar a plataforma, prevenir abusos e melhorar segurança. A puntoescort.com não comercializa dados pessoais e segue princípios de minimização e proteção para usuários que atuam no mercado italiano.',
       },
       cookies: {
         title: 'Política de Cookies',
         body:
-          'Utilizamos cookies para melhorar sua experiência, lembrar preferências e entender o uso da plataforma. Você pode desativar cookies no navegador, mas isso pode limitar algumas funções.',
+          'A puntoescort.com utiliza cookies para lembrar preferências, melhorar desempenho e analisar navegação de forma técnica. Esses dados ajudam a otimizar a experiência de uso da plataforma na Itália e a corrigir falhas mais rapidamente. Você pode gerenciar cookies no navegador, ciente de que algumas funções da puntoescort.com podem ficar limitadas.',
       },
       report: {
         title: 'Denúncia',
         body:
-          'Encontrou algo inadequado? Envie uma denúncia com o máximo de detalhes. Nossa equipe analisa rapidamente para manter a plataforma segura.',
+          'Se encontrar perfil falso, tentativa de golpe, assédio ou qualquer conduta inadequada, envie denúncia pelo canal da puntoescort.com com data, contexto e evidências disponíveis. Cada relato é analisado para decisão rápida e proporcional. A moderação da puntoescort.com existe para preservar a confiança da comunidade e a segurança operacional na Itália.',
       },
     },
     adminPage: {
@@ -3868,8 +3878,9 @@ export const translations = {
     },
     blog: {
       eyebrow: 'Blog',
-      title: 'Puntoescort Lifestyle',
-      subtitle: 'Consigli, guide e novità dal mondo lifestyle con curatela elegante.',
+      title: 'Blog ufficiale puntoescort.com',
+      subtitle:
+        'Contenuti completi di puntoescort.com per professioniste e clienti che cercano annunci in Italia con discrezione, chiarezza e sicurezza.',
       categories: {
         all: 'Tutto',
         cities: 'Città',
@@ -3879,71 +3890,79 @@ export const translations = {
       },
       readMore: 'Leggi di più',
       backToBlog: 'Torna al Blog',
-      author: 'Curatela Puntoescort',
-      editorLabel: 'Redazione Puntoescort',
+      author: 'Redazione puntoescort.com',
+      editorLabel: 'Editor puntoescort.com',
       articleOutro1:
-        'Puntoescort è orgogliosa di offrire non solo una piattaforma, ma una curatela completa di contenuti per elevare la tua esperienza sociale e personale.',
+        'puntoescort.com è una piattaforma pensata per il mercato italiano e pubblica contenuti utili per Milano, Roma, Napoli, Torino, Firenze e altre città in Italia.',
       articleOutro2:
-        'Continua a seguire il nostro blog per novità esclusive, guide di viaggio e le tendenze più forti del mercato del lusso in Brasile.',
+        'Per evitare confusione con domini simili, salva sempre il dominio ufficiale puntoescort.com e verifica il finale .com in ogni accesso.',
       curatedLabel: 'Curatela',
       curatedBody:
-        'Contenuti selezionati con focus su raffinatezza, discrezione e buone pratiche per un’esperienza premium.',
+        'Contenuti di puntoescort.com con focus su posizionamento locale in Italia, reputazione digitale e buone pratiche operative.',
       posts: {
         citiesSaoPaulo: {
-          title: 'São Paulo premium: itinerario discreto ed efficiente',
-          excerpt: 'Come organizzare spostamenti, orari e location con eleganza in una giornata in capitale.',
+          title: 'Milano premium: guida pratica con puntoescort.com',
+          excerpt:
+            'Come organizzare orari, quartieri e conferme in modo professionale seguendo lo standard puntoescort.com.',
           content:
-            'São Paulo è intensa e il segreto è la pianificazione. Preferisci aree con buona infrastruttura, concorda gli orari in anticipo e mantieni una comunicazione chiara per evitare imprevisti. Un itinerario ben definito aiuta a mantenere l’esperienza confortevole, sicura e sofisticata.',
-          date: '10 febbraio 2026',
+            'Milano richiede precisione su tempi e logistica. In puntoescort.com consigliamo di concordare zona, finestra oraria e regole di privacy prima della conferma. Questo metodo riduce cancellazioni, aumenta la qualità dei contatti e rafforza la reputazione del profilo dentro puntoescort.com.',
+          date: '3 marzo 2026',
         },
         citiesRio: {
-          title: 'Rio de Janeiro con discrezione: buone pratiche',
-          excerpt: 'Equilibra svago, sicurezza e privacy negli incontri nella città meravigliosa.',
+          title: 'Roma con discrezione: regole operative utili',
+          excerpt:
+            'Linee guida puntoescort.com per bilanciare privacy, sicurezza e qualità degli incontri nella capitale.',
           content:
-            'A Rio, scegli luoghi con facile accesso e considera il movimento del quartiere. Evita esposizioni inutili e privilegia ambienti che offrano privacy e comfort. La discrezione è parte del lusso e valorizza l’esperienza per tutti.',
-          date: '8 febbraio 2026',
+            'Roma ha ritmi diversi in base a zona e fascia oraria. puntoescort.com suggerisce di usare solo canali ufficiali, verificare i dettagli essenziali e confermare con messaggi chiari. Questo approccio aiuta a prevenire errori e mantiene uno standard professionale riconoscibile in tutta Italia.',
+          date: '2 marzo 2026',
         },
         lifestyleEtiquette: {
-          title: 'Etichetta premium: l’essenziale',
-          excerpt: 'Puntualità, rispetto e comunicazione chiara elevano l’esperienza.',
+          title: 'Etichetta premium in Italia: principi base',
+          excerpt:
+            'Puntualità, linguaggio rispettoso e accordi chiari migliorano la qualità su puntoescort.com.',
           content:
-            'L’eleganza è nei dettagli. Conferma gli orari, rispetta i limiti concordati e mantieni la cordialità dall’inizio alla fine. Un approccio rispettoso crea fiducia e trasforma qualsiasi incontro in un’esperienza memorabile.',
-          date: '6 febbraio 2026',
+            'In puntoescort.com la forma è sostanza: confermare gli orari, rispettare i limiti concordati e comunicare con educazione crea fiducia reale. Nelle città italiane con elevata concorrenza, questo stile di comportamento distingue i profili seri e aumenta la conversione di contatti qualificati.',
+          date: '1 marzo 2026',
         },
         lifestylePlanning: {
-          title: 'Pianificazione con comfort: come organizzarsi meglio',
-          excerpt: 'Ambiente, abbigliamento e logistica allineati per un’esperienza senza intoppi.',
+          title: 'Pianificazione agenda tra città italiane',
+          excerpt:
+            'Strategia puntoescort.com per organizzare attività tra Torino, Bologna, Firenze, Napoli e altre aree.',
           content:
-            'Una buona pianificazione inizia dalla scelta del luogo e dalla cura della presentazione. Preferisci ambienti tranquilli, mantieni una comunicazione oggettiva e allinea le aspettative. La semplicità ben eseguita è sempre sofisticata.',
-          date: '5 febbraio 2026',
+            'Per chi lavora su più città, puntoescort.com consiglia di separare disponibilità per area geografica e usare messaggi standard di conferma. In questo modo si riducono errori di calendario, si protegge il tempo operativo e si mantiene coerenza professionale in tutta la presenza su puntoescort.com.',
+          date: '28 febbraio 2026',
         },
         modelsProfile: {
-          title: 'Profilo che ispira fiducia: ciò che non può mancare',
-          excerpt: 'Bio chiara, foto di qualità e informazioni trasparenti fanno la differenza.',
+          title: 'Profilo vincente su puntoescort.com',
+          excerpt:
+            'Bio chiara, città italiana di riferimento e informazioni coerenti aumentano fiducia e risultati.',
           content:
-            'Un profilo ben costruito trasmette professionalità. Usa foto nitide, mantieni una descrizione oggettiva e metti in evidenza i punti di forza con onestà. Trasparenza e coerenza generano fiducia e migliorano la qualità dei contatti.',
-          date: '4 febbraio 2026',
+            'Un profilo efficace in puntoescort.com specifica zona principale, disponibilità, stile di servizio e modalità di contatto. Descrizioni trasparenti e aggiornate riducono trattative inutili e migliorano la qualità dei lead. In Italia questo livello di chiarezza è decisivo per posizionarsi meglio su puntoescort.com.',
+          date: '27 febbraio 2026',
         },
         modelsPhotos: {
-          title: 'Checklist foto: luce, postura e privacy',
-          excerpt: 'Come valorizzare la tua immagine preservando la sicurezza.',
+          title: 'Checklist foto per puntoescort.com',
+          excerpt:
+            'Immagini pulite, luce corretta e tutela identità per emergere nel mercato italiano.',
           content:
-            'Foto con buona illuminazione e inquadratura professionale elevano la percezione di qualità. Evita elementi che rivelino dati personali e mantieni coerenza visiva. L’immagine giusta comunica eleganza e cura.',
-          date: '3 febbraio 2026',
+            'In puntoescort.com le foto sono il primo filtro di qualità. Usa luce naturale o set professionale, evita elementi che mostrano dati personali e mantieni uno stile coerente tra gli scatti. Una gallery ben curata aumenta i clic e rafforza il posizionamento del profilo su puntoescort.com.',
+          date: '26 febbraio 2026',
         },
         safetyAlerts: {
-          title: 'Segnali d’allarme: come riconoscere i rischi',
-          excerpt: 'Evita la fretta, rispetta i limiti e dai priorità alla sicurezza.',
+          title: 'Segnali di allerta per utenti e inserzioniste',
+          excerpt:
+            'puntoescort.com segnala i comportamenti da bloccare subito prima della conferma.',
           content:
-            'Diffida di richieste affrettate, informazioni confuse o mancanza di chiarezza. Preferisci concordare i dettagli con calma e, quando possibile, scegli ambienti sicuri. La sicurezza viene prima di qualsiasi trattativa.',
-          date: '1 febbraio 2026',
+            'Richieste urgenti senza dettagli, dati incoerenti e pressioni per cambiare canale sono segnali critici. puntoescort.com consiglia di interrompere la trattativa quando manca trasparenza e di usare la funzione di segnalazione. La sicurezza operativa resta priorità assoluta in tutta la community puntoescort.com.',
+          date: '25 febbraio 2026',
         },
         safetyPrivacy: {
-          title: 'Privacy digitale: buone pratiche essenziali',
-          excerpt: 'Proteggi i tuoi dati e mantieni la tua identità al sicuro.',
+          title: 'Privacy digitale su puntoescort.com',
+          excerpt:
+            'Pratiche essenziali per proteggere identità, dati e reputazione di profili e clienti in Italia.',
           content:
-            'Evita di condividere informazioni personali non necessarie e mantieni i tuoi canali organizzati. Usa foto che non rivelino dettagli intimi della tua quotidianità. La privacy è parte della cura.',
-          date: '31 gennaio 2026',
+            'Utilizza canali dedicati, limita la diffusione di informazioni sensibili e controlla periodicamente i contenuti pubblicati. In puntoescort.com la privacy è un asset professionale: più controllo sui dati significa meno rischio e maggiore continuità del profilo nel lungo periodo.',
+          date: '24 febbraio 2026',
         },
       },
     },
@@ -3971,7 +3990,8 @@ export const translations = {
       clearFilters: 'Cancella filtri',
     },
     footer: {
-      description: 'La tua nuova piattaforma di accompagnatrici e clienti qui.',
+      description:
+        'puntoescort.com è la piattaforma dedicata al mercato italiano per collegare inserzioniste e clienti in modo chiaro e riservato.',
       institutional: 'Istituzionale',
       legal: 'Legale',
       aboutUs: 'Chi siamo',
@@ -3982,50 +4002,50 @@ export const translations = {
       privacy: 'Privacy',
       cookies: 'Politica dei Cookie',
       report: 'Segnalazione',
-      rights: '© 2025 Puntoescort. Tutti i diritti riservati. Vietato ai minori di 18 anni.',
-      cnpj: 'CNPJ: 00.000.000/0000-00',
-      country: 'Brasile',
+      rights: '© 2026 puntoescort.com. Tutti i diritti riservati. Vietato ai minori di 18 anni.',
+      cnpj: 'P.IVA: 00000000000',
+      country: 'Italia',
     },
     staticPages: {
       about: {
         title: 'Chi siamo',
         body:
-          'Puntoescort è una piattaforma dedicata a collegare professioniste e clienti con rispetto, sicurezza e privacy. Il nostro obiettivo è offrire visibilità alle professioniste con autonomia e un’esperienza sicura per chi cerca annunci affidabili.',
+          'puntoescort.com è una piattaforma costruita per il mercato italiano, con attenzione a visibilità qualificata, privacy e relazioni professionali tra inserzioniste e clienti. L’obiettivo di puntoescort.com è facilitare contatti reali nelle città italiane con processi chiari e standard coerenti. Per evitare confusione con altri progetti, il dominio ufficiale da utilizzare è sempre puntoescort.com.',
       },
       blog: {
         title: 'Blog',
         body:
-          'Presto troverai articoli su sicurezza digitale, buone pratiche, marketing personale e tendenze di mercato. Il nostro obiettivo è condividere conoscenze utili per professioniste e clienti.',
+          'Il blog di puntoescort.com pubblica contenuti pratici su sicurezza digitale, reputazione online, marketing personale e trend del settore in Italia. La redazione puntoescort.com prepara guide utili sia per chi pubblica annunci sia per chi cerca profili affidabili. Ogni articolo è pensato per migliorare decisioni operative e ridurre rischi.',
       },
       help: {
         title: 'Aiuto',
         body:
-          'Hai bisogno di supporto? Contattaci tramite il nostro canale ufficiale e descrivi il problema. Rispondiamo il prima possibile con indicazioni chiare e oggettive.',
+          'Il supporto puntoescort.com risponde a richieste su account, pubblicazione annunci, accesso, privacy e segnalazioni. Per una gestione rapida invia sempre informazioni complete sul problema riscontrato. Il team puntoescort.com lavora per fornire istruzioni semplici, verificabili e applicabili in tutte le aree coperte in Italia.',
       },
       ethics: {
         title: 'Etica e Sicurezza',
         body:
-          'Diamo valore al rispetto, al consenso e alla responsabilità. Segnala profili falsi, immagini inappropriate e qualsiasi violazione delle regole. Lavoriamo per mantenere un ambiente sicuro.',
+          'In puntoescort.com etica significa rispetto, consenso, trasparenza e responsabilità. Non sono ammessi contenuti falsi, pratiche scorrette o comportamenti abusivi verso utenti e inserzioniste. Se rilevi violazioni, usa la funzione di segnalazione di puntoescort.com: la moderazione interviene per mantenere un ambiente sicuro in tutta la community italiana.',
       },
       terms: {
         title: 'Termini di utilizzo',
         body:
-          'Utilizzando la piattaforma, accetti le nostre regole d’uso, politiche sui contenuti e responsabilità. È vietato pubblicare contenuti illegali, ingannevoli o che violino diritti di terzi.',
+          'Utilizzando puntoescort.com accetti termini di utilizzo, regole sui contenuti e standard di condotta previsti dalla piattaforma. È vietato pubblicare materiale illegale, fuorviante o lesivo di diritti altrui. Il rispetto di queste regole consente a puntoescort.com di mantenere qualità del servizio e fiducia nel mercato italiano.',
       },
       privacy: {
         title: 'Privacy',
         body:
-          'I tuoi dati sono trattati con riservatezza. Conserviamo solo ciò che è necessario per operare il servizio e proteggere la piattaforma. Non condividiamo dati sensibili senza autorizzazione.',
+          'puntoescort.com tratta i dati con riservatezza e applica misure per limitare esposizione e uso improprio di informazioni sensibili. Vengono raccolti solo i dati necessari al funzionamento del servizio, alla sicurezza e alla prevenzione degli abusi. puntoescort.com non vende dati personali e promuove una gestione responsabile per tutta la base utenti italiana.',
       },
       cookies: {
         title: 'Politica dei Cookie',
         body:
-          'Utilizziamo i cookie per migliorare la tua esperienza, ricordare le preferenze e comprendere l’uso della piattaforma. Puoi disattivare i cookie nel browser, ma ciò potrebbe limitare alcune funzionalità.',
+          'puntoescort.com utilizza cookie tecnici e di performance per ricordare preferenze, migliorare velocità e capire l’uso della piattaforma. Queste informazioni aiutano il team a ottimizzare l’esperienza e correggere errori più rapidamente. Puoi gestire i cookie nel browser, sapendo che alcune funzioni di puntoescort.com potrebbero risultare limitate.',
       },
       report: {
         title: 'Segnalazione',
         body:
-          'Hai trovato qualcosa di inappropriato? Invia una segnalazione con il maggior numero di dettagli possibile. Il nostro team analizza rapidamente per mantenere la piattaforma sicura.',
+          'Se trovi profili falsi, tentativi di truffa, molestie o contenuti non conformi, invia una segnalazione su puntoescort.com con data, contesto e prove disponibili. Ogni caso viene valutato con priorità operativa per proteggere utenti e inserzioniste. La moderazione puntoescort.com è uno strumento centrale per la sicurezza della community in Italia.',
       },
     },
     adminPage: {

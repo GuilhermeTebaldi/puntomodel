@@ -20,42 +20,42 @@ const BLOG_POSTS: BlogPostBase[] = [
   {
     id: 'citiesSaoPaulo',
     category: 'cities',
-    imageUrl: 'https://picsum.photos/seed/saopaulo/800/500',
+    imageUrl: 'https://i.pinimg.com/1200x/dd/e6/b6/dde6b6897e049c60c16420337802dfc4.jpg',
   },
   {
     id: 'citiesRio',
     category: 'cities',
-    imageUrl: 'https://picsum.photos/seed/riodejaneiro/800/500',
+    imageUrl: 'https://i.pinimg.com/1200x/6d/4f/1f/6d4f1f0763036bb83049b79efdc0721b.jpg',
   },
   {
     id: 'lifestyleEtiquette',
     category: 'lifestyle',
-    imageUrl: 'https://picsum.photos/seed/lifestyle/800/500',
+    imageUrl: 'https://i.pinimg.com/736x/07/19/9d/07199d43bb05c0498d1bd5a1929eca10.jpg',
   },
   {
     id: 'lifestylePlanning',
     category: 'lifestyle',
-    imageUrl: 'https://picsum.photos/seed/elegance/800/500',
+    imageUrl: 'https://i.pinimg.com/736x/8b/5c/dd/8b5cddd09f0ee0ddb3f90249798c785d.jpg',
   },
   {
     id: 'modelsProfile',
     category: 'models',
-    imageUrl: 'https://picsum.photos/seed/profile/800/500',
+    imageUrl: 'https://i.pinimg.com/736x/7b/9e/23/7b9e23c118ac7f1e3d654b465e062a9f.jpg',
   },
   {
     id: 'modelsPhotos',
     category: 'models',
-    imageUrl: 'https://picsum.photos/seed/photos/800/500',
+    imageUrl: 'https://i.pinimg.com/736x/c6/b4/f2/c6b4f2a4c260107e90b77d7ad42ce1b7.jpg',
   },
   {
     id: 'safetyAlerts',
     category: 'safety',
-    imageUrl: 'https://picsum.photos/seed/safety/800/500',
+    imageUrl: 'https://i.pinimg.com/736x/a8/81/c4/a881c482bcdbc6d19f6c256cb1607d1e.jpg',
   },
   {
     id: 'safetyPrivacy',
     category: 'safety',
-    imageUrl: 'https://picsum.photos/seed/privacy/800/500',
+    imageUrl: 'https://i.pinimg.com/736x/1a/ae/77/1aae7721ecbd2c73dbd70d9cc6d196b5.jpg',
   },
 ];
 
