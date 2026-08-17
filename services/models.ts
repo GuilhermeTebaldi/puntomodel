@@ -1,4 +1,5 @@
 import { apiFetch } from './api';
+import { demoModels, getDemoModelById, getDemoModelMetrics, isDemoModelId } from '../demo/models';
 
 const INCLUDE_UNPAID_MODELS = true;
 
@@ -146,48 +147,72 @@ export const isBillingActive = (billing?: ModelBilling | null) => {
 };
 
 export const fetchFeaturedModels = async () => {
-  const response = await apiFetch(withIncludeUnpaid('/api/models?featured=true&online=true'));
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data?.error || 'Não foi possível carregar modelos.');
+  try {
+    const response = await apiFetch(withIncludeUnpaid('/api/models?featured=true&online=true'));
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.error || 'Não foi possível carregar modelos.');
+    }
+    return data.models as ModelProfileData[];
+  } catch {
+    return demoModels.filter((model) => model.featured && model.isOnline !== false);
   }
-  return data.models as ModelProfileData[];
 };
 
 export const fetchModels = async () => {
-  const response = await apiFetch(withIncludeUnpaid('/api/models?online=true'));
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data?.error || 'Não foi possível carregar modelos.');
+  try {
+    const response = await apiFetch(withIncludeUnpaid('/api/models?online=true'));
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.error || 'Não foi possível carregar modelos.');
+    }
+    return data.models as ModelProfileData[];
+  } catch {
+    return demoModels.filter((model) => model.isOnline !== false);
   }
-  return data.models as ModelProfileData[];
 };
 
 export const fetchModelsByCity = async (city: string) => {
-  const response = await apiFetch(withIncludeUnpaid(`/api/models?city=${encodeURIComponent(city)}&online=true`));
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data?.error || 'Não foi possível carregar modelos.');
+  try {
+    const response = await apiFetch(withIncludeUnpaid(`/api/models?city=${encodeURIComponent(city)}&online=true`));
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.error || 'Não foi possível carregar modelos.');
+    }
+    return data.models as ModelProfileData[];
+  } catch {
+    const normalizedCity = city.trim().toLowerCase();
+    return demoModels.filter(
+      (model) => model.isOnline !== false && model.location?.city?.toLowerCase() === normalizedCity
+    );
   }
-  return data.models as ModelProfileData[];
 };
 
 export const fetchModelsAll = async () => {
-  const response = await apiFetch(withIncludeUnpaid('/api/models'));
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data?.error || 'Não foi possível carregar modelos.');
+  try {
+    const response = await apiFetch(withIncludeUnpaid('/api/models'));
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.error || 'Não foi possível carregar modelos.');
+    }
+    return data.models as ModelProfileData[];
+  } catch {
+    return demoModels;
   }
-  return data.models as ModelProfileData[];
 };
 
 export const fetchModelsByCityAll = async (city: string) => {
-  const response = await apiFetch(withIncludeUnpaid(`/api/models?city=${encodeURIComponent(city)}`));
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data?.error || 'Não foi possível carregar modelos.');
+  try {
+    const response = await apiFetch(withIncludeUnpaid(`/api/models?city=${encodeURIComponent(city)}`));
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.error || 'Não foi possível carregar modelos.');
+    }
+    return data.models as ModelProfileData[];
+  } catch {
+    const normalizedCity = city.trim().toLowerCase();
+    return demoModels.filter((model) => model.location?.city?.toLowerCase() === normalizedCity);
   }
-  return data.models as ModelProfileData[];
 };
 
 export const fetchModelByEmail = async (email: string) => {
@@ -201,6 +226,10 @@ export const fetchModelByEmail = async (email: string) => {
 };
 
 export const fetchModelById = async (id: string) => {
+  if (isDemoModelId(id)) {
+    const demoModel = getDemoModelById(id);
+    if (demoModel) return demoModel;
+  }
   const response = await apiFetch(`/api/models/${id}`);
   const data = await response.json();
   if (!response.ok) {
@@ -280,6 +309,7 @@ export const createModelPayment = async (
 };
 
 export const trackModelEvent = async (id: string, type: 'view' | 'whatsapp') => {
+  if (isDemoModelId(id)) return;
   const response = await apiFetch(`/api/models/${id}/events`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -296,6 +326,7 @@ export const rateModel = async (
   value: number,
   rater?: { id?: string; name?: string; email?: string }
 ) => {
+  if (isDemoModelId(id)) return;
   const response = await apiFetch(`/api/models/${id}/rate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -313,6 +344,7 @@ export const rateModel = async (
 };
 
 export const fetchModelMetrics = async (id: string) => {
+  if (isDemoModelId(id)) return getDemoModelMetrics(id);
   const response = await apiFetch(`/api/models/${id}/metrics`);
   const data = await response.json();
   if (!response.ok) {
