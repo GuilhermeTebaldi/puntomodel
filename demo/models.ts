@@ -1,5 +1,6 @@
 import type { ModelProfileData } from '../services/models';
 import ladysOneProfilesRaw from '../services/ladys_one_50_perfis_europeias.json?raw';
+import ladysOneRomaProfilesRaw from '../services/ladys_one_roma_perfis.json?raw';
 
 type DemoModelSeed = {
   name: string;
@@ -45,6 +46,20 @@ type LadysOneProfile = {
     overnight?: string;
   };
   photos: string[];
+};
+
+type LadysOneRomaProfile = {
+  id: string;
+  name: string;
+  age: number;
+  city: string;
+  country: string;
+  nationality: string;
+  height: string;
+  weight: string;
+  bust: string;
+  rate?: string | null;
+  tags?: string[];
 };
 
 const demoSeeds: DemoModelSeed[] = [
@@ -892,7 +907,17 @@ const parseLadysOneProfiles = () => {
   }
 };
 
+const parseLadysOneRomaProfiles = () => {
+  try {
+    const parsed = JSON.parse(ladysOneRomaProfilesRaw);
+    return Array.isArray(parsed) ? (parsed as LadysOneRomaProfile[]) : [];
+  } catch {
+    return [];
+  }
+};
+
 const cityCoordinates: Record<string, { lat: number; lon: number; state: string }> = {
+  Roma: { lat: 41.9028, lon: 12.4964, state: 'Lazio' },
   Lisboa: { lat: 38.7223, lon: -9.1393, state: 'Lisboa' },
   Porto: { lat: 41.1579, lon: -8.6291, state: 'Porto' },
   Cascais: { lat: 38.6968, lon: -9.4215, state: 'Lisboa' },
@@ -922,6 +947,16 @@ const nationalityCodes: Record<string, string> = {
   Romênia: 'ro',
   Rússia: 'ru',
   Ucrânia: 'ua',
+};
+
+const romaNationalityCodes: Record<string, string> = {
+  Brasileira: 'br',
+  Caucasiana: 'it',
+  Européias: 'it',
+  Italiana: 'it',
+  Latina: 'it',
+  Russa: 'ru',
+  Ucranianas: 'ua',
 };
 
 const normalizePrimaryCity = (city: string) => city.replace(/\s*\(.+\)\s*$/, '').trim();
@@ -1001,6 +1036,41 @@ const buildLadysOneSeed = (profile: LadysOneProfile, index: number): DemoModelSe
 
 const ladysOneSeeds = parseLadysOneProfiles().map(buildLadysOneSeed);
 
+const buildLadysOneRomaSeed = (profile: LadysOneRomaProfile, index: number): DemoModelSeed => {
+  const coords = cityCoordinates.Roma;
+  const offset = (index % 10) * 0.0035;
+  const angle = (index * 53 * Math.PI) / 180;
+  const tagServices = (profile.tags || []).filter((tag) => ['kissing', 'oral'].includes(tag));
+  const services = Array.from(new Set(['vip', 'hotel', 'dinner', ...tagServices])).slice(0, 4);
+  const price = parseEuroRate(profile.rate || undefined);
+
+  return {
+    name: profile.name,
+    age: profile.age,
+    phone: `+39 000 000 000 ${String(index + 101).padStart(4, '0')}`,
+    price,
+    city: profile.city,
+    state: coords.state,
+    lat: coords.lat + Math.sin(angle) * offset,
+    lon: coords.lon + Math.cos(angle) * offset,
+    photos: [],
+    nationality: romaNationalityCodes[profile.nationality] || 'it',
+    hair: index % 3 === 0 ? 'brunette' : index % 3 === 1 ? 'blonde' : 'black',
+    eyes: index % 4 === 0 ? 'brown' : index % 4 === 1 ? 'green' : index % 4 === 2 ? 'blue' : 'black',
+    height: (Number(parseMetric(profile.height, 'cm')) / 100).toFixed(2),
+    weight: parseMetric(profile.weight, 'kg'),
+    feet: String(36 + (index % 5)),
+    services,
+    bio: `${profile.name} em Roma, perfil verificado com atendimento discreto em hotel e companhia VIP. Dados importados da listagem pública: ${profile.age} anos, ${profile.height}, ${profile.weight}, busto ${profile.bust}.`,
+    ratingAvg: 4.5 + (index % 5) * 0.1,
+    ratingCount: 30 + index * 2,
+    viewsToday: 110 + index * 5,
+    whatsappToday: 10 + (index % 16),
+  };
+};
+
+const ladysOneRomaSeeds = parseLadysOneRomaProfiles().map(buildLadysOneRomaSeed);
+
 const buildModel = (seed: DemoModelSeed, index: number): ModelProfileData => {
   const idNumber = String(index + 1).padStart(2, '0');
   const now = Date.now();
@@ -1062,7 +1132,7 @@ const buildModel = (seed: DemoModelSeed, index: number): ModelProfileData => {
   };
 };
 
-export const demoModels = [...demoSeeds, ...ladysOneSeeds].map(buildModel);
+export const demoModels = [...demoSeeds, ...ladysOneSeeds, ...ladysOneRomaSeeds].map(buildModel);
 
 export const isDemoModelId = (id: string) => id.startsWith('demo-model-');
 
