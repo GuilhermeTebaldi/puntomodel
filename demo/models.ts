@@ -1,6 +1,7 @@
 import type { ModelProfileData } from '../services/models';
 import happyEscortsMultiProfilesRaw from '../services/happyescorts_multi_perfis.json?raw';
 import happyEscortsRomaProfilesRaw from '../services/happyescorts_roma_perfis.json?raw';
+import orhidiSpainProfilesRaw from '../services/orhidi_es_perfis.json?raw';
 
 type DemoModelSeed = {
   name: string;
@@ -34,6 +35,20 @@ type HappyEscortsProfile = {
   country: string;
   profileUrl: string;
   photos: string[];
+};
+
+type OrhidiProfile = HappyEscortsProfile & {
+  region?: string;
+  price?: number | null;
+  heightCm?: number | null;
+  nationalityLabel?: string;
+  hairLabel?: string;
+  eyeLabel?: string;
+  services?: string[];
+  tags?: string[];
+  isOnline?: boolean;
+  rating?: number | null;
+  commentsCount?: number;
 };
 
 const demoSeeds: DemoModelSeed[] = [
@@ -890,6 +905,15 @@ const parseHappyEscortsRomaProfiles = () => {
   }
 };
 
+const parseOrhidiSpainProfiles = () => {
+  try {
+    const parsed = JSON.parse(orhidiSpainProfilesRaw);
+    return Array.isArray(parsed) ? (parsed as OrhidiProfile[]) : [];
+  } catch {
+    return [];
+  }
+};
+
 const cityCoordinates: Record<string, { lat: number; lon: number; state: string }> = {
   Roma: { lat: 41.9028, lon: 12.4964, state: 'Lazio' },
   Lisboa: { lat: 38.7223, lon: -9.1393, state: 'Lisboa' },
@@ -908,12 +932,23 @@ const cityCoordinates: Record<string, { lat: number; lon: number; state: string 
   Évora: { lat: 38.5714, lon: -7.9135, state: 'Évora' },
   Portimão: { lat: 37.1366, lon: -8.5377, state: 'Algarve' },
   Funchal: { lat: 32.6669, lon: -16.9241, state: 'Madeira' },
+  Madrid: { lat: 40.4168, lon: -3.7038, state: 'Comunidade de Madrid' },
+  Barcelona: { lat: 41.3874, lon: 2.1686, state: 'Catalunha' },
+  Valencia: { lat: 39.4699, lon: -0.3763, state: 'Valência' },
+  Alicante: { lat: 38.3452, lon: -0.481, state: 'Valência' },
+  Málaga: { lat: 36.7213, lon: -4.4214, state: 'Andaluzia' },
+  Marbella: { lat: 36.5101, lon: -4.8824, state: 'Andaluzia' },
+  Sevilha: { lat: 37.3891, lon: -5.9845, state: 'Andaluzia' },
+  Palma: { lat: 39.5696, lon: 2.6502, state: 'Ilhas Baleares' },
+  Saragoça: { lat: 41.6488, lon: -0.8891, state: 'Aragão' },
+  Benidorm: { lat: 38.5411, lon: -0.1225, state: 'Valência' },
 };
 
 const countryCoordinates: Record<string, { lat: number; lon: number; state: string; nationality: string }> = {
   Argentina: { lat: -34.6037, lon: -58.3816, state: 'Buenos Aires', nationality: 'ar' },
   Armênia: { lat: 40.1792, lon: 44.4991, state: 'Armênia', nationality: 'am' },
   Brasil: { lat: -23.5505, lon: -46.6333, state: 'Brasil', nationality: 'br' },
+  Espanha: { lat: 40.4168, lon: -3.7038, state: 'Espanha', nationality: 'es' },
   França: { lat: 48.8566, lon: 2.3522, state: 'França', nationality: 'fr' },
   Grécia: { lat: 37.9838, lon: 23.7275, state: 'Grécia', nationality: 'gr' },
   Holanda: { lat: 52.3676, lon: 4.9041, state: 'Holanda', nationality: 'nl' },
@@ -928,6 +963,7 @@ const countryDialCodes: Record<string, string> = {
   Argentina: '+54',
   Armênia: '+374',
   Brasil: '+55',
+  Espanha: '+34',
   França: '+33',
   Grécia: '+30',
   Holanda: '+31',
@@ -977,9 +1013,71 @@ const happyEscortsSeeds = [
   ...parseHappyEscortsRomaProfiles(),
 ].map(buildHappyEscortsSeed);
 
+const mapOrhidiHair = (label = '') => {
+  const normalized = label.toLowerCase();
+  if (normalized.includes('loira')) return 'blonde';
+  if (normalized.includes('preto')) return 'black';
+  if (normalized.includes('ruiva')) return 'red';
+  return 'brunette';
+};
+
+const mapOrhidiEyes = (label = '') => {
+  const normalized = label.toLowerCase();
+  if (normalized.includes('verde')) return 'green';
+  if (normalized.includes('azul')) return 'blue';
+  if (normalized.includes('castanho')) return 'brown';
+  return 'black';
+};
+
+const mapOrhidiServices = (profile: OrhidiProfile, index: number) => {
+  const labels = [...(profile.services || []), ...(profile.tags || [])].join(' ').toLowerCase();
+  const services = new Set<string>(['vip', 'hotel']);
+  if (labels.includes('massagem') || labels.includes('massage')) services.add('massage');
+  if (labels.includes('gfe') || labels.includes('namorada')) services.add('girlfriend');
+  if (labels.includes('viagem') || labels.includes('travel')) services.add('travel');
+  if (labels.includes('jantar') || index % 2 === 0) services.add('dinner');
+  return Array.from(services);
+};
+
+const buildOrhidiSeed = (profile: OrhidiProfile, index: number): DemoModelSeed => {
+  const fallback = countryCoordinates.Espanha;
+  const coords = cityCoordinates[profile.city] || fallback;
+  const offset = (index % 12) * 0.0028;
+  const angle = (index * 47 * Math.PI) / 180;
+  const price = profile.price && profile.price > 0 ? profile.price : 250 + (index % 4) * 50;
+  const height = profile.heightCm ? (profile.heightCm / 100).toFixed(2) : (1.62 + (index % 14) * 0.01).toFixed(2);
+
+  return {
+    name: profile.name,
+    age: profile.age,
+    phone: `+34 000 000 000 ${String(index + 701).padStart(4, '0')}`,
+    price,
+    city: profile.city,
+    state: profile.region || coords.state,
+    lat: coords.lat + Math.sin(angle) * offset,
+    lon: coords.lon + Math.cos(angle) * offset,
+    photos: profile.photos,
+    nationality: 'es',
+    hair: mapOrhidiHair(profile.hairLabel),
+    eyes: mapOrhidiEyes(profile.eyeLabel),
+    height,
+    weight: String(50 + (index % 13)),
+    feet: String(36 + (index % 5)),
+    services: mapOrhidiServices(profile, index),
+    bio: `${profile.name} em ${profile.city}, perfil de demonstração com galeria completa importada de listagem pública do Orhidi. Dados de contato são fictícios e seguros para teste do frontend.`,
+    ratingAvg: profile.rating || 4.6 + (index % 4) * 0.1,
+    ratingCount: profile.commentsCount || 24 + index,
+    viewsToday: 130 + index * 4,
+    whatsappToday: 12 + (index % 18),
+  };
+};
+
+const orhidiSpainSeeds = parseOrhidiSpainProfiles().map(buildOrhidiSeed);
+
 const buildModel = (seed: DemoModelSeed, index: number): ModelProfileData => {
   const idNumber = String(index + 1).padStart(2, '0');
   const now = Date.now();
+  const hasEnoughPhotos = seed.photos.length > 2;
 
   return {
     id: `demo-model-${idNumber}`,
@@ -1015,9 +1113,9 @@ const buildModel = (seed: DemoModelSeed, index: number): ModelProfileData => {
     },
     photos: seed.photos,
     avatarUrl: seed.photos[0],
-    featured: index < 12,
-    isOnline: index % 7 !== 5,
-    onlineUntil: now + 1000 * 60 * 60 * 6,
+    featured: hasEnoughPhotos,
+    isOnline: hasEnoughPhotos,
+    onlineUntil: hasEnoughPhotos ? now + 1000 * 60 * 60 * 6 : null,
     currency: 'EUR',
     billing: {
       status: 'active',
@@ -1038,7 +1136,29 @@ const buildModel = (seed: DemoModelSeed, index: number): ModelProfileData => {
   };
 };
 
-export const demoModels = [...demoSeeds, ...happyEscortsSeeds].map(buildModel);
+export const demoModels = [...demoSeeds, ...happyEscortsSeeds, ...orhidiSpainSeeds].map(buildModel);
+
+const demoDisplayOrder = new Map(demoModels.map((model) => [model.id, Math.random()]));
+
+const getPhotoPriorityBucket = (model: ModelProfileData) => Math.floor((model.photos?.length || 0) / 4);
+
+export const getDemoDisplayModels = (models = demoModels) => {
+  return [...models].sort((a, b) => {
+    const aOnline = a.isOnline === false ? 0 : 1;
+    const bOnline = b.isOnline === false ? 0 : 1;
+    if (aOnline !== bOnline) return bOnline - aOnline;
+
+    const aBucket = getPhotoPriorityBucket(a);
+    const bBucket = getPhotoPriorityBucket(b);
+    if (aBucket !== bBucket) return bBucket - aBucket;
+
+    const aPhotos = a.photos?.length || 0;
+    const bPhotos = b.photos?.length || 0;
+    if (aPhotos !== bPhotos && Math.abs(aPhotos - bPhotos) > 2) return bPhotos - aPhotos;
+
+    return (demoDisplayOrder.get(a.id) || 0) - (demoDisplayOrder.get(b.id) || 0);
+  });
+};
 
 export const isDemoModelId = (id: string) => id.startsWith('demo-model-');
 

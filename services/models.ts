@@ -1,5 +1,5 @@
 import { apiFetch } from './api';
-import { demoModels, getDemoModelById, getDemoModelMetrics, isDemoModelId } from '../demo/models';
+import { demoModels, getDemoDisplayModels, getDemoModelById, getDemoModelMetrics, isDemoModelId } from '../demo/models';
 
 const INCLUDE_UNPAID_MODELS = true;
 
@@ -155,7 +155,7 @@ export const fetchFeaturedModels = async () => {
     }
     return data.models as ModelProfileData[];
   } catch {
-    return demoModels.filter((model) => model.featured && model.isOnline !== false);
+    return getDemoDisplayModels(demoModels.filter((model) => model.featured && model.isOnline !== false));
   }
 };
 
@@ -168,7 +168,7 @@ export const fetchModels = async () => {
     }
     return data.models as ModelProfileData[];
   } catch {
-    return demoModels.filter((model) => model.isOnline !== false);
+    return getDemoDisplayModels(demoModels.filter((model) => model.isOnline !== false));
   }
 };
 
@@ -182,8 +182,10 @@ export const fetchModelsByCity = async (city: string) => {
     return data.models as ModelProfileData[];
   } catch {
     const normalizedCity = city.trim().toLowerCase();
-    return demoModels.filter(
-      (model) => model.isOnline !== false && model.location?.city?.toLowerCase() === normalizedCity
+    return getDemoDisplayModels(
+      demoModels.filter(
+        (model) => model.isOnline !== false && model.location?.city?.toLowerCase() === normalizedCity
+      )
     );
   }
 };
@@ -197,7 +199,7 @@ export const fetchModelsAll = async () => {
     }
     return data.models as ModelProfileData[];
   } catch {
-    return demoModels;
+    return getDemoDisplayModels();
   }
 };
 
@@ -211,7 +213,9 @@ export const fetchModelsByCityAll = async (city: string) => {
     return data.models as ModelProfileData[];
   } catch {
     const normalizedCity = city.trim().toLowerCase();
-    return demoModels.filter((model) => model.location?.city?.toLowerCase() === normalizedCity);
+    return getDemoDisplayModels(
+      demoModels.filter((model) => model.location?.city?.toLowerCase() === normalizedCity)
+    );
   }
 };
 
