@@ -529,7 +529,7 @@ const App: React.FC = () => {
     if (pathname.startsWith('/modelo/')) {
       navigateTo(lastBasePathRef.current || '/');
     }
-    if (!isSearching) {
+    if (!isSearching && !isListingOpen) {
       document.body.style.overflow = 'auto';
     }
   };
@@ -645,7 +645,9 @@ const App: React.FC = () => {
           })
           .catch(() => undefined);
       }
-      setIsListingOpen(false);
+      if (lastBasePathRef.current !== '/todasmodelos') {
+        setIsListingOpen(false);
+      }
       setIsSearching(false);
       return;
     }

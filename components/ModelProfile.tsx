@@ -288,7 +288,38 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
       </div>
 
       <div className="max-w-4xl mx-auto w-full pb-32 md:pb-36">
-        <div className="grid grid-cols-4 grid-rows-2 gap-1 md:gap-2 h-[400px] md:h-[600px] bg-gray-100">
+        <div className="md:hidden bg-gray-100">
+          {photos.length > 0 ? (
+            <div className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth">
+              {photos.map((photo, index) => (
+                <button
+                  key={`${photo}-${index}`}
+                  type="button"
+                  onClick={() => {
+                    setHasSwiped(false);
+                    setActivePhotoIndex(index);
+                  }}
+                  className="relative min-w-full aspect-[3/4] snap-center bg-gray-100"
+                >
+                  <img
+                    src={photo}
+                    alt={`${model.name} ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  {photos.length > 1 && (
+                    <span className="absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1 text-[11px] font-bold text-white">
+                      {index + 1}/{photos.length}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="aspect-[3/4] flex items-center justify-center text-xs text-gray-400">{t('profile.noPhoto')}</div>
+          )}
+        </div>
+
+        <div className="hidden md:grid grid-cols-4 grid-rows-2 gap-2 h-[600px] bg-gray-100">
           <div className="col-span-2 row-span-2 relative overflow-hidden">
             {model.photos?.[0] ? (
               <img

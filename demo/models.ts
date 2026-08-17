@@ -1,5 +1,5 @@
 import type { ModelProfileData } from '../services/models';
-import ladysOneProfilesRaw from '../services/ladys_one_50_perfis_europeias.json?raw';
+import happyEscortsMultiProfilesRaw from '../services/happyescorts_multi_perfis.json?raw';
 import happyEscortsRomaProfilesRaw from '../services/happyescorts_roma_perfis.json?raw';
 
 type DemoModelSeed = {
@@ -26,29 +26,7 @@ type DemoModelSeed = {
   whatsappToday: number;
 };
 
-type LadysOneProfile = {
-  id: string;
-  name: string;
-  age: number;
-  city: string;
-  country: string;
-  nationality: string;
-  height: string;
-  weight: string;
-  hairColor: string;
-  eyeColor: string;
-  bio: string;
-  services: string[];
-  rates: {
-    oneHour?: string;
-    twoHours?: string;
-    dinnerDate?: string;
-    overnight?: string;
-  };
-  photos: string[];
-};
-
-type HappyEscortsRomaProfile = {
+type HappyEscortsProfile = {
   id: string;
   name: string;
   age: number;
@@ -894,10 +872,10 @@ const demoSeeds: DemoModelSeed[] = [
   },
 ];
 
-const parseLadysOneProfiles = () => {
+const parseHappyEscortsMultiProfiles = () => {
   try {
-    const parsed = JSON.parse(ladysOneProfilesRaw);
-    return Array.isArray(parsed) ? (parsed as LadysOneProfile[]) : [];
+    const parsed = JSON.parse(happyEscortsMultiProfilesRaw);
+    return Array.isArray(parsed) ? (parsed as HappyEscortsProfile[]) : [];
   } catch {
     return [];
   }
@@ -906,7 +884,7 @@ const parseLadysOneProfiles = () => {
 const parseHappyEscortsRomaProfiles = () => {
   try {
     const parsed = JSON.parse(happyEscortsRomaProfilesRaw);
-    return Array.isArray(parsed) ? (parsed as HappyEscortsRomaProfile[]) : [];
+    return Array.isArray(parsed) ? (parsed as HappyEscortsProfile[]) : [];
   } catch {
     return [];
   }
@@ -932,122 +910,42 @@ const cityCoordinates: Record<string, { lat: number; lon: number; state: string 
   Funchal: { lat: 32.6669, lon: -16.9241, state: 'Madeira' },
 };
 
-const nationalityCodes: Record<string, string> = {
-  Alemanha: 'de',
-  Bielorrússia: 'by',
-  Eslováquia: 'sk',
-  França: 'fr',
-  Hungria: 'hu',
-  Itália: 'it',
-  Polônia: 'pl',
-  Romênia: 'ro',
-  Rússia: 'ru',
-  Ucrânia: 'ua',
+const countryCoordinates: Record<string, { lat: number; lon: number; state: string; nationality: string }> = {
+  Argentina: { lat: -34.6037, lon: -58.3816, state: 'Buenos Aires', nationality: 'ar' },
+  Brasil: { lat: -23.5505, lon: -46.6333, state: 'Brasil', nationality: 'br' },
+  França: { lat: 48.8566, lon: 2.3522, state: 'França', nationality: 'fr' },
+  Grécia: { lat: 37.9838, lon: 23.7275, state: 'Grécia', nationality: 'gr' },
+  Itália: { lat: 45.4642, lon: 9.19, state: 'Lombardia', nationality: 'it' },
+  Portugal: { lat: 38.7223, lon: -9.1393, state: 'Portugal', nationality: 'pt' },
 };
 
-const normalizePrimaryCity = (city: string) => city.replace(/\s*\(.+\)\s*$/, '').trim();
-
-const mapHair = (value: string) => {
-  const normalized = value.toLowerCase();
-  if (normalized.includes('ruivo')) return 'red';
-  if (normalized.includes('loiro')) return 'blonde';
-  if (normalized.includes('morena') || normalized.includes('café')) return 'black';
-  return 'brunette';
-};
-
-const mapEyes = (value: string) => {
-  const normalized = value.toLowerCase();
-  if (normalized.includes('azuis')) return 'blue';
-  if (normalized.includes('verdes')) return 'green';
-  if (normalized.includes('escuro')) return 'black';
-  return 'brown';
-};
-
-const mapService = (value: string) => {
-  const normalized = value.toLowerCase();
-  if (normalized.includes('massag')) return 'massage';
-  if (normalized.includes('viagem') || normalized.includes('turístico')) return 'travel';
-  if (normalized.includes('jantar') || normalized.includes('gastron')) return 'dinner';
-  if (normalized.includes('pernoite')) return 'overnight';
-  if (normalized.includes('hotel')) return 'hotel';
-  if (normalized.includes('domicílio')) return 'outcall';
-  if (normalized.includes('vip') || normalized.includes('evento') || normalized.includes('social')) return 'vip';
-  return 'girlfriend';
-};
-
-const parseEuroRate = (value?: string) => {
-  if (!value) return 150;
-  const parsed = Number(value.replace(/[^\d]/g, ''));
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 150;
-};
-
-const parseMetric = (value: string, suffix: string) => value.replace(suffix, '').trim();
-
-const buildSafePortugalPhone = (index: number) => {
-  const padded = String(index + 51).padStart(4, '0');
-  return `+351 000 000 000 ${padded}`;
-};
-
-const buildLadysOneSeed = (profile: LadysOneProfile, index: number): DemoModelSeed => {
-  const primaryCity = normalizePrimaryCity(profile.city);
-  const coords = cityCoordinates[primaryCity] || cityCoordinates.Lisboa;
-  const offset = (index % 11) * 0.004;
-  const angle = (index * 47 * Math.PI) / 180;
-  const services = Array.from(new Set(profile.services.map(mapService))).slice(0, 4);
-
-  return {
-    name: profile.name,
-    age: profile.age,
-    phone: buildSafePortugalPhone(index),
-    price: parseEuroRate(profile.rates.oneHour),
-    city: primaryCity,
-    state: profile.city.includes('(') ? profile.city : coords.state,
-    lat: coords.lat + Math.sin(angle) * offset,
-    lon: coords.lon + Math.cos(angle) * offset,
-    photos: profile.photos,
-    nationality: nationalityCodes[profile.nationality] || 'pt',
-    hair: mapHair(profile.hairColor),
-    eyes: mapEyes(profile.eyeColor),
-    height: (Number(parseMetric(profile.height, 'cm')) / 100).toFixed(2),
-    weight: parseMetric(profile.weight, 'kg'),
-    feet: String(36 + (index % 5)),
-    services: services.length ? services : ['girlfriend', 'dinner', 'vip'],
-    bio: profile.bio,
-    ratingAvg: 4.5 + (index % 5) * 0.1,
-    ratingCount: 24 + index * 3,
-    viewsToday: 80 + index * 4,
-    whatsappToday: 8 + (index % 18),
-  };
-};
-
-const ladysOneSeeds = parseLadysOneProfiles().map(buildLadysOneSeed);
-
-const buildHappyEscortsRomaSeed = (profile: HappyEscortsRomaProfile, index: number): DemoModelSeed => {
-  const coords = cityCoordinates.Roma;
+const buildHappyEscortsSeed = (profile: HappyEscortsProfile, index: number): DemoModelSeed => {
+  const coords = cityCoordinates[profile.city] || countryCoordinates[profile.country] || cityCoordinates.Roma;
   const offset = (index % 10) * 0.0035;
   const angle = (index * 53 * Math.PI) / 180;
   const services = index % 4 === 0
     ? ['vip', 'hotel', 'dinner', 'travel']
     : ['vip', 'hotel', 'dinner'];
+  const dial = profile.country === 'Brasil' ? '+55' : profile.country === 'Argentina' ? '+54' : profile.country === 'Portugal' ? '+351' : profile.country === 'França' ? '+33' : profile.country === 'Grécia' ? '+30' : '+39';
 
   return {
     name: profile.name,
     age: profile.age,
-    phone: `+39 000 000 000 ${String(index + 201).padStart(4, '0')}`,
+    phone: `${dial} 000 000 000 ${String(index + 201).padStart(4, '0')}`,
     price: 200 + (index % 4) * 50,
     city: profile.city,
     state: coords.state,
     lat: coords.lat + Math.sin(angle) * offset,
     lon: coords.lon + Math.cos(angle) * offset,
     photos: profile.photos,
-    nationality: 'it',
+    nationality: 'nationality' in coords ? coords.nationality : countryCoordinates[profile.country]?.nationality || 'it',
     hair: index % 3 === 0 ? 'brunette' : index % 3 === 1 ? 'blonde' : 'black',
     eyes: index % 4 === 0 ? 'brown' : index % 4 === 1 ? 'green' : index % 4 === 2 ? 'blue' : 'black',
     height: (1.62 + (index % 12) * 0.01).toFixed(2),
     weight: String(50 + (index % 12)),
     feet: String(36 + (index % 5)),
     services,
-    bio: `${profile.name} em Roma, perfil importado da tela inicial pública do HappyEscorts com fotos e URL de referência. Atendimento discreto em hotel e companhia VIP.`,
+    bio: `${profile.name} em ${profile.city}, perfil importado de listagem pública do HappyEscorts com fotos e URL de referência. Atendimento discreto em hotel e companhia VIP.`,
     ratingAvg: 4.5 + (index % 5) * 0.1,
     ratingCount: 30 + index * 2,
     viewsToday: 110 + index * 5,
@@ -1055,7 +953,10 @@ const buildHappyEscortsRomaSeed = (profile: HappyEscortsRomaProfile, index: numb
   };
 };
 
-const happyEscortsRomaSeeds = parseHappyEscortsRomaProfiles().map(buildHappyEscortsRomaSeed);
+const happyEscortsSeeds = [
+  ...parseHappyEscortsMultiProfiles(),
+  ...parseHappyEscortsRomaProfiles(),
+].map(buildHappyEscortsSeed);
 
 const buildModel = (seed: DemoModelSeed, index: number): ModelProfileData => {
   const idNumber = String(index + 1).padStart(2, '0');
@@ -1118,7 +1019,7 @@ const buildModel = (seed: DemoModelSeed, index: number): ModelProfileData => {
   };
 };
 
-export const demoModels = [...demoSeeds, ...ladysOneSeeds, ...happyEscortsRomaSeeds].map(buildModel);
+export const demoModels = [...demoSeeds, ...happyEscortsSeeds].map(buildModel);
 
 export const isDemoModelId = (id: string) => id.startsWith('demo-model-');
 

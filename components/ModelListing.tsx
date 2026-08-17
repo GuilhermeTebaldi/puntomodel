@@ -1,10 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, Heart, Search, SlidersHorizontal } from 'lucide-react';
 import { ModelProfileData, isBillingActive } from '../services/models';
 import { getSavedModelIds, isSavedModelsStorageKey, toggleSavedModel } from '../services/savedModels';
 import { useI18n } from '../translations/i18n';
 import { getIdentityLabel } from '../translations';
 import ModelCard from './ModelCard';
+
+const listingScrollState = {
+  top: 0,
+};
 
 interface ModelListingProps {
   models: ModelProfileData[];
@@ -30,6 +34,7 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
     maxAge: '',
   });
   const [savedIds, setSavedIds] = useState<string[]>(() => getSavedModelIds());
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const refresh = () => setSavedIds(getSavedModelIds());
@@ -137,18 +142,31 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
     setSearchQuery('');
     setShowSavedOnly(false);
     setSelectedServices([]);
-      setFilters({
-        onlineOnly: false,
-        premiumOnly: false,
-        city: '',
-        state: '',
-        hair: '',
-        eyes: '',
-        identity: '',
-        minAge: '',
-        maxAge: '',
-      });
-    };
+    setFilters({
+      onlineOnly: false,
+      premiumOnly: false,
+      city: '',
+      state: '',
+      hair: '',
+      eyes: '',
+      identity: '',
+      minAge: '',
+      maxAge: '',
+    });
+  };
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || listingScrollState.top <= 0) return;
+    const frameId = window.requestAnimationFrame(() => {
+      container.scrollTop = listingScrollState.top;
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, []);
+
+  const handleListScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    listingScrollState.top = event.currentTarget.scrollTop;
+  };
 
   return (
     <div className="fixed inset-0 z-[300] bg-gray-50 flex flex-col animate-in fade-in slide-in-from-right-10 duration-500 overflow-hidden">
@@ -368,7 +386,11 @@ const ModelListing: React.FC<ModelListingProps> = ({ models, onClose, onViewProf
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-8">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleListScroll}
+        className="flex-1 overflow-y-auto p-4 md:p-8"
+      >
         <div className="max-w-7xl mx-auto">
           {filteredModels.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
