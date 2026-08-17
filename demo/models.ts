@@ -912,11 +912,30 @@ const cityCoordinates: Record<string, { lat: number; lon: number; state: string 
 
 const countryCoordinates: Record<string, { lat: number; lon: number; state: string; nationality: string }> = {
   Argentina: { lat: -34.6037, lon: -58.3816, state: 'Buenos Aires', nationality: 'ar' },
+  Armênia: { lat: 40.1792, lon: 44.4991, state: 'Armênia', nationality: 'am' },
   Brasil: { lat: -23.5505, lon: -46.6333, state: 'Brasil', nationality: 'br' },
   França: { lat: 48.8566, lon: 2.3522, state: 'França', nationality: 'fr' },
   Grécia: { lat: 37.9838, lon: 23.7275, state: 'Grécia', nationality: 'gr' },
+  Holanda: { lat: 52.3676, lon: 4.9041, state: 'Holanda', nationality: 'nl' },
   Itália: { lat: 45.4642, lon: 9.19, state: 'Lombardia', nationality: 'it' },
+  Japão: { lat: 35.6762, lon: 139.6503, state: 'Japão', nationality: 'jp' },
+  Kosovo: { lat: 42.6629, lon: 21.1655, state: 'Kosovo', nationality: 'xk' },
   Portugal: { lat: 38.7223, lon: -9.1393, state: 'Portugal', nationality: 'pt' },
+  Venezuela: { lat: 10.4806, lon: -66.9036, state: 'Venezuela', nationality: 've' },
+};
+
+const countryDialCodes: Record<string, string> = {
+  Argentina: '+54',
+  Armênia: '+374',
+  Brasil: '+55',
+  França: '+33',
+  Grécia: '+30',
+  Holanda: '+31',
+  Itália: '+39',
+  Japão: '+81',
+  Kosovo: '+383',
+  Portugal: '+351',
+  Venezuela: '+58',
 };
 
 const buildHappyEscortsSeed = (profile: HappyEscortsProfile, index: number): DemoModelSeed => {
@@ -926,7 +945,7 @@ const buildHappyEscortsSeed = (profile: HappyEscortsProfile, index: number): Dem
   const services = index % 4 === 0
     ? ['vip', 'hotel', 'dinner', 'travel']
     : ['vip', 'hotel', 'dinner'];
-  const dial = profile.country === 'Brasil' ? '+55' : profile.country === 'Argentina' ? '+54' : profile.country === 'Portugal' ? '+351' : profile.country === 'França' ? '+33' : profile.country === 'Grécia' ? '+30' : '+39';
+  const dial = countryDialCodes[profile.country] || '+39';
 
   return {
     name: profile.name,
