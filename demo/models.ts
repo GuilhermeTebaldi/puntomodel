@@ -2,6 +2,7 @@ import type { ModelProfileData } from '../services/models';
 import happyEscortsMultiProfilesRaw from '../services/happyescorts_multi_perfis.json?raw';
 import happyEscortsRomaProfilesRaw from '../services/happyescorts_roma_perfis.json?raw';
 import orhidiSpainProfilesRaw from '../services/orhidi_es_perfis.json?raw';
+import orhidiItalyProfilesRaw from '../services/orhidi_it_perfis.json?raw';
 
 type DemoModelSeed = {
   name: string;
@@ -914,6 +915,15 @@ const parseOrhidiSpainProfiles = () => {
   }
 };
 
+const parseOrhidiItalyProfiles = () => {
+  try {
+    const parsed = JSON.parse(orhidiItalyProfilesRaw);
+    return Array.isArray(parsed) ? (parsed as OrhidiProfile[]) : [];
+  } catch {
+    return [];
+  }
+};
+
 const cityCoordinates: Record<string, { lat: number; lon: number; state: string }> = {
   Roma: { lat: 41.9028, lon: 12.4964, state: 'Lazio' },
   Lisboa: { lat: 38.7223, lon: -9.1393, state: 'Lisboa' },
@@ -932,6 +942,19 @@ const cityCoordinates: Record<string, { lat: number; lon: number; state: string 
   Évora: { lat: 38.5714, lon: -7.9135, state: 'Évora' },
   Portimão: { lat: 37.1366, lon: -8.5377, state: 'Algarve' },
   Funchal: { lat: 32.6669, lon: -16.9241, state: 'Madeira' },
+  Milão: { lat: 45.4642, lon: 9.19, state: 'Lombardia' },
+  Bologna: { lat: 44.4949, lon: 11.3426, state: 'Emília-Romanha' },
+  Verona: { lat: 45.4384, lon: 10.9916, state: 'Vêneto' },
+  Turim: { lat: 45.0703, lon: 7.6869, state: 'Piemonte' },
+  Nápoles: { lat: 40.8518, lon: 14.2681, state: 'Campânia' },
+  Palermo: { lat: 38.1157, lon: 13.3615, state: 'Sicília' },
+  Florença: { lat: 43.7696, lon: 11.2558, state: 'Toscana' },
+  Génova: { lat: 44.4056, lon: 8.9463, state: 'Ligúria' },
+  Bari: { lat: 41.1171, lon: 16.8719, state: 'Apúlia' },
+  Pádua: { lat: 45.4064, lon: 11.8768, state: 'Vêneto' },
+  Veneza: { lat: 45.4408, lon: 12.3155, state: 'Vêneto' },
+  Trieste: { lat: 45.6495, lon: 13.7768, state: 'Friuli-Venezia Giulia' },
+  Parma: { lat: 44.8015, lon: 10.3279, state: 'Emília-Romanha' },
   Madrid: { lat: 40.4168, lon: -3.7038, state: 'Comunidade de Madrid' },
   Barcelona: { lat: 41.3874, lon: 2.1686, state: 'Catalunha' },
   Valencia: { lat: 39.4699, lon: -0.3763, state: 'Valência' },
@@ -1040,31 +1063,32 @@ const mapOrhidiServices = (profile: OrhidiProfile, index: number) => {
 };
 
 const buildOrhidiSeed = (profile: OrhidiProfile, index: number): DemoModelSeed => {
-  const fallback = countryCoordinates.Espanha;
+  const fallback = countryCoordinates[profile.country] || countryCoordinates.Itália;
   const coords = cityCoordinates[profile.city] || fallback;
   const offset = (index % 12) * 0.0028;
   const angle = (index * 47 * Math.PI) / 180;
   const price = profile.price && profile.price > 0 ? profile.price : 250 + (index % 4) * 50;
   const height = profile.heightCm ? (profile.heightCm / 100).toFixed(2) : (1.62 + (index % 14) * 0.01).toFixed(2);
+  const dial = countryDialCodes[profile.country] || '+39';
 
   return {
     name: profile.name,
     age: profile.age,
-    phone: `+34 000 000 000 ${String(index + 701).padStart(4, '0')}`,
+    phone: `${dial} 000 000 000 ${String(index + 701).padStart(4, '0')}`,
     price,
     city: profile.city,
     state: profile.region || coords.state,
     lat: coords.lat + Math.sin(angle) * offset,
     lon: coords.lon + Math.cos(angle) * offset,
     photos: profile.photos,
-    nationality: 'es',
+    nationality: fallback.nationality,
     hair: mapOrhidiHair(profile.hairLabel),
     eyes: mapOrhidiEyes(profile.eyeLabel),
     height,
     weight: String(50 + (index % 13)),
     feet: String(36 + (index % 5)),
     services: mapOrhidiServices(profile, index),
-    bio: `${profile.name} em ${profile.city}, perfil de demonstração com galeria completa importada de listagem pública do Orhidi. Dados de contato são fictícios e seguros para teste do frontend.`,
+    bio: `${profile.name} em ${profile.city}, ${profile.country}, perfil de demonstração com galeria completa importada de listagem pública do Orhidi. Dados de contato são fictícios e seguros para teste do frontend.`,
     ratingAvg: profile.rating || 4.6 + (index % 4) * 0.1,
     ratingCount: profile.commentsCount || 24 + index,
     viewsToday: 130 + index * 4,
@@ -1072,7 +1096,10 @@ const buildOrhidiSeed = (profile: OrhidiProfile, index: number): DemoModelSeed =
   };
 };
 
-const orhidiSpainSeeds = parseOrhidiSpainProfiles().map(buildOrhidiSeed);
+const orhidiSeeds = [
+  ...parseOrhidiSpainProfiles(),
+  ...parseOrhidiItalyProfiles(),
+].map(buildOrhidiSeed);
 
 const buildModel = (seed: DemoModelSeed, index: number): ModelProfileData => {
   const idNumber = String(index + 1).padStart(2, '0');
@@ -1136,7 +1163,7 @@ const buildModel = (seed: DemoModelSeed, index: number): ModelProfileData => {
   };
 };
 
-export const demoModels = [...demoSeeds, ...happyEscortsSeeds, ...orhidiSpainSeeds].map(buildModel);
+export const demoModels = [...demoSeeds, ...happyEscortsSeeds, ...orhidiSeeds].map(buildModel);
 
 const demoDisplayOrder = new Map(demoModels.map((model) => [model.id, Math.random()]));
 
