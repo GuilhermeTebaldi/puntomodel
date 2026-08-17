@@ -28,7 +28,7 @@ const LOCATION_PERMISSION_KEY = 'punto_location_permission';
 const LANGUAGE_PROMPT_KEY = 'punto_language_prompt';
 
 const App: React.FC = () => {
-  const { t, translateError, setLanguage, setLanguageAuto, languageSource, languageOptions, translateStatLabel } = useI18n();
+  const { t, translateError, setLanguage, setLanguageAuto, languageSource, languageOptions } = useI18n();
   const [showSticky, setShowSticky] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
@@ -808,26 +808,9 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-6 text-center md:text-left">
-          {[
-            { value: '+3', label: 'de usuários' },
-            { value: '+3', label: 'acompanhantes' },
-            { value: '+12', label: 'de imagens' },
-            { value: '+0', label: 'avaliações' },
-          ].map((stat) => (
-            <div key={stat.label} className="flex flex-col items-center md:items-start">
-              <span className="text-lg md:text-xl font-bold text-white">{stat.value}</span>
-              <span className="text-xs md:text-sm text-gray-400 font-medium whitespace-nowrap">
-                {translateStatLabel(stat.label)}
-              </span>
-            </div>
-          ))}
-        </div>
-
         <div className="border-t border-gray-800 pt-8 text-xs text-center md:text-left flex flex-col md:row justify-between gap-4">
           <p>{t('footer.rights')}</p>
           <p className="flex gap-4 justify-center md:justify-end">
-            <span>{t('footer.cnpj')}</span>
             <span>{t('footer.country')}</span>
           </p>
         </div>
