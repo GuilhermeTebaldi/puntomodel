@@ -1,4 +1,5 @@
 import type { ModelProfileData } from '../services/models';
+import ladysOneProfilesRaw from '../services/ladys_one_50_perfis_europeias.json?raw';
 
 type DemoModelSeed = {
   name: string;
@@ -22,6 +23,28 @@ type DemoModelSeed = {
   ratingCount: number;
   viewsToday: number;
   whatsappToday: number;
+};
+
+type LadysOneProfile = {
+  id: string;
+  name: string;
+  age: number;
+  city: string;
+  country: string;
+  nationality: string;
+  height: string;
+  weight: string;
+  hairColor: string;
+  eyeColor: string;
+  bio: string;
+  services: string[];
+  rates: {
+    oneHour?: string;
+    twoHours?: string;
+    dinnerDate?: string;
+    overnight?: string;
+  };
+  photos: string[];
 };
 
 const demoSeeds: DemoModelSeed[] = [
@@ -860,6 +883,124 @@ const demoSeeds: DemoModelSeed[] = [
   },
 ];
 
+const parseLadysOneProfiles = () => {
+  try {
+    const parsed = JSON.parse(ladysOneProfilesRaw);
+    return Array.isArray(parsed) ? (parsed as LadysOneProfile[]) : [];
+  } catch {
+    return [];
+  }
+};
+
+const cityCoordinates: Record<string, { lat: number; lon: number; state: string }> = {
+  Lisboa: { lat: 38.7223, lon: -9.1393, state: 'Lisboa' },
+  Porto: { lat: 41.1579, lon: -8.6291, state: 'Porto' },
+  Cascais: { lat: 38.6968, lon: -9.4215, state: 'Lisboa' },
+  Faro: { lat: 37.0194, lon: -7.9304, state: 'Algarve' },
+  Vilamoura: { lat: 37.077, lon: -8.1178, state: 'Algarve' },
+  Coimbra: { lat: 40.2033, lon: -8.4103, state: 'Coimbra' },
+  Braga: { lat: 41.5454, lon: -8.4265, state: 'Braga' },
+  Setúbal: { lat: 38.5244, lon: -8.8882, state: 'Setúbal' },
+  Aveiro: { lat: 40.6405, lon: -8.6538, state: 'Aveiro' },
+  Guimarães: { lat: 41.4444, lon: -8.2962, state: 'Braga' },
+  Sintra: { lat: 38.8029, lon: -9.3817, state: 'Lisboa' },
+  Leiria: { lat: 39.7436, lon: -8.8071, state: 'Leiria' },
+  Viseu: { lat: 40.6566, lon: -7.9125, state: 'Viseu' },
+  Évora: { lat: 38.5714, lon: -7.9135, state: 'Évora' },
+  Portimão: { lat: 37.1366, lon: -8.5377, state: 'Algarve' },
+  Funchal: { lat: 32.6669, lon: -16.9241, state: 'Madeira' },
+};
+
+const nationalityCodes: Record<string, string> = {
+  Alemanha: 'de',
+  Bielorrússia: 'by',
+  Eslováquia: 'sk',
+  França: 'fr',
+  Hungria: 'hu',
+  Itália: 'it',
+  Polônia: 'pl',
+  Romênia: 'ro',
+  Rússia: 'ru',
+  Ucrânia: 'ua',
+};
+
+const normalizePrimaryCity = (city: string) => city.replace(/\s*\(.+\)\s*$/, '').trim();
+
+const mapHair = (value: string) => {
+  const normalized = value.toLowerCase();
+  if (normalized.includes('ruivo')) return 'red';
+  if (normalized.includes('loiro')) return 'blonde';
+  if (normalized.includes('morena') || normalized.includes('café')) return 'black';
+  return 'brunette';
+};
+
+const mapEyes = (value: string) => {
+  const normalized = value.toLowerCase();
+  if (normalized.includes('azuis')) return 'blue';
+  if (normalized.includes('verdes')) return 'green';
+  if (normalized.includes('escuro')) return 'black';
+  return 'brown';
+};
+
+const mapService = (value: string) => {
+  const normalized = value.toLowerCase();
+  if (normalized.includes('massag')) return 'massage';
+  if (normalized.includes('viagem') || normalized.includes('turístico')) return 'travel';
+  if (normalized.includes('jantar') || normalized.includes('gastron')) return 'dinner';
+  if (normalized.includes('pernoite')) return 'overnight';
+  if (normalized.includes('hotel')) return 'hotel';
+  if (normalized.includes('domicílio')) return 'outcall';
+  if (normalized.includes('vip') || normalized.includes('evento') || normalized.includes('social')) return 'vip';
+  return 'girlfriend';
+};
+
+const parseEuroRate = (value?: string) => {
+  if (!value) return 150;
+  const parsed = Number(value.replace(/[^\d]/g, ''));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 150;
+};
+
+const parseMetric = (value: string, suffix: string) => value.replace(suffix, '').trim();
+
+const buildSafePortugalPhone = (index: number) => {
+  const padded = String(index + 51).padStart(4, '0');
+  return `+351 000 000 000 ${padded}`;
+};
+
+const buildLadysOneSeed = (profile: LadysOneProfile, index: number): DemoModelSeed => {
+  const primaryCity = normalizePrimaryCity(profile.city);
+  const coords = cityCoordinates[primaryCity] || cityCoordinates.Lisboa;
+  const offset = (index % 11) * 0.004;
+  const angle = (index * 47 * Math.PI) / 180;
+  const services = Array.from(new Set(profile.services.map(mapService))).slice(0, 4);
+
+  return {
+    name: profile.name,
+    age: profile.age,
+    phone: buildSafePortugalPhone(index),
+    price: parseEuroRate(profile.rates.oneHour),
+    city: primaryCity,
+    state: profile.city.includes('(') ? profile.city : coords.state,
+    lat: coords.lat + Math.sin(angle) * offset,
+    lon: coords.lon + Math.cos(angle) * offset,
+    photos: profile.photos,
+    nationality: nationalityCodes[profile.nationality] || 'pt',
+    hair: mapHair(profile.hairColor),
+    eyes: mapEyes(profile.eyeColor),
+    height: (Number(parseMetric(profile.height, 'cm')) / 100).toFixed(2),
+    weight: parseMetric(profile.weight, 'kg'),
+    feet: String(36 + (index % 5)),
+    services: services.length ? services : ['girlfriend', 'dinner', 'vip'],
+    bio: profile.bio,
+    ratingAvg: 4.5 + (index % 5) * 0.1,
+    ratingCount: 24 + index * 3,
+    viewsToday: 80 + index * 4,
+    whatsappToday: 8 + (index % 18),
+  };
+};
+
+const ladysOneSeeds = parseLadysOneProfiles().map(buildLadysOneSeed);
+
 const buildModel = (seed: DemoModelSeed, index: number): ModelProfileData => {
   const idNumber = String(index + 1).padStart(2, '0');
   const now = Date.now();
@@ -921,7 +1062,7 @@ const buildModel = (seed: DemoModelSeed, index: number): ModelProfileData => {
   };
 };
 
-export const demoModels = demoSeeds.map(buildModel);
+export const demoModels = [...demoSeeds, ...ladysOneSeeds].map(buildModel);
 
 export const isDemoModelId = (id: string) => id.startsWith('demo-model-');
 

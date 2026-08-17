@@ -1,0 +1,1615 @@
+[
+  {
+    "id": "lady-01",
+    "name": "Elena Rostova",
+    "age": 23,
+    "city": "Lisboa",
+    "country": "Portugal",
+    "nationality": "Rússia",
+    "height": "174 cm",
+    "weight": "53 kg",
+    "hairColor": "Loiro Claro",
+    "eyeColor": "Azuis",
+    "bio": "Modelo fotográfica e universitária em Lisboa. Elegante, carinhosa e ótima companhia para jantares, eventos sociais e momentos a dois inesquecíveis.",
+    "services": [
+      "Jantares",
+      "Eventos",
+      "Viagens",
+      "Massagem Relaxante",
+      "Companhia VIP"
+    ],
+    "rates": {
+      "oneHour": "150€",
+      "twoHours": "250€",
+      "dinnerDate": "400€",
+      "overnight": "800€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-02",
+    "name": "Anastasia Volkova",
+    "age": 25,
+    "city": "Porto",
+    "country": "Portugal",
+    "nationality": "Ucrânia",
+    "height": "176 cm",
+    "weight": "55 kg",
+    "hairColor": "Castanho Claro",
+    "eyeColor": "Verdes",
+    "bio": "Presença sofisticada e olhar penetrante. Apaixonada por gastronomia, arte e conversas inteligentes. Atendo com total discrição e requinte no Porto.",
+    "services": [
+      "Jantares Exclusivos",
+      "Eventos Privados",
+      "Viagens de Luxo",
+      "Companhia Social"
+    ],
+    "rates": {
+      "oneHour": "180€",
+      "twoHours": "300€",
+      "dinnerDate": "450€",
+      "overnight": "900€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-03",
+    "name": "Sofia Moretti",
+    "age": 22,
+    "city": "Lisboa (Cascais)",
+    "country": "Portugal",
+    "nationality": "Itália",
+    "height": "170 cm",
+    "weight": "52 kg",
+    "hairColor": "Castanho Escuro",
+    "eyeColor": "Castanhos",
+    "bio": "Italiana recém-chegada a Cascais. Sorriso encantador, naturalidade e paixão por bons momentos. Disponível para recepção em hotel de 5 estrelas ou domicílio.",
+    "services": [
+      "Encontros Casuais",
+      "Jantares Românticos",
+      "Passeios Turísticos",
+      "Acompanhamento VIP"
+    ],
+    "rates": {
+      "oneHour": "160€",
+      "twoHours": "280€",
+      "dinnerDate": "420€",
+      "overnight": "850€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-04",
+    "name": "Katarzyna 'Kasia' Nowak",
+    "age": 26,
+    "city": "Faro (Algarve)",
+    "country": "Portugal",
+    "nationality": "Polônia",
+    "height": "178 cm",
+    "weight": "56 kg",
+    "hairColor": "Loiro Dourado",
+    "eyeColor": "Azuis Claros",
+    "bio": "Beleza eslava radiante em pleno Algarve. Silhueta perfeita, atenciosa e simpática. Perfeita para férias no mar, iates e encontros luxuosos.",
+    "services": [
+      "Passeios de Barco",
+      "Resorts e Spas",
+      "Jantares Exclusivos",
+      "Eventos Noturnos"
+    ],
+    "rates": {
+      "oneHour": "200€",
+      "twoHours": "350€",
+      "dinnerDate": "500€",
+      "overnight": "1000€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1514315384763-ba401779410f?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1548142813-c348350df52b?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-05",
+    "name": "Daria Kovalenko",
+    "age": 24,
+    "city": "Lisboa (Parque das Nações)",
+    "country": "Portugal",
+    "nationality": "Ucrânia",
+    "height": "173 cm",
+    "weight": "51 kg",
+    "hairColor": "Morena",
+    "eyeColor": "Avelã",
+    "bio": "Formada em moda e design. Corpo esbelto, postura impecável e doçura em cada detalhe. Local privado e climatizado no Parque das Nações.",
+    "services": [
+      "Recepção Privada",
+      "Companhia Social",
+      "Massagens Terapêuticas",
+      "Jantares"
+    ],
+    "rates": {
+      "oneHour": "150€",
+      "twoHours": "260€",
+      "dinnerDate": "380€",
+      "overnight": "750€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1496440737103-cd596325d314?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-06",
+    "name": "Irina Popescu",
+    "age": 27,
+    "city": "Coimbra",
+    "country": "Portugal",
+    "nationality": "Romênia",
+    "height": "169 cm",
+    "weight": "54 kg",
+    "hairColor": "Castanho Chocolate",
+    "eyeColor": "Verdes",
+    "bio": "Mulher madura, carinhosa e comunicativa. Adoro conhecer pessoas novas e proporcionar conversas leves e momentos especiais.",
+    "services": [
+      "Companhia Casual",
+      "Massagem Sensorial",
+      "Jantares",
+      "Encontros Íntimos"
+    ],
+    "rates": {
+      "oneHour": "130€",
+      "twoHours": "230€",
+      "dinnerDate": "350€",
+      "overnight": "650€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1546961329-78bef0414d7c?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1535295972055-1c762f4483e5?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1512485694743-9c9538b4e6e0?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-07",
+    "name": "Viktoria Sidorova",
+    "age": 21,
+    "city": "Lisboa (Saldanha)",
+    "country": "Portugal",
+    "nationality": "Bielorrússia",
+    "height": "172 cm",
+    "weight": "50 kg",
+    "hairColor": "Loiro Platinado",
+    "eyeColor": "Azuis",
+    "bio": "Jovem estudante em intercâmbio. Doce, tímida no início e muito espontânea. Fotos 100% reais tiradas esta semana.",
+    "services": [
+      "Passeios",
+      "Cinema",
+      "Jantares",
+      "Companhia Universitária"
+    ],
+    "rates": {
+      "oneHour": "140€",
+      "twoHours": "240€",
+      "dinnerDate": "360€",
+      "overnight": "700€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1485875437342-9b39470b3d95?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-08",
+    "name": "Camilla Rossi",
+    "age": 24,
+    "city": "Braga",
+    "country": "Portugal",
+    "nationality": "Itália",
+    "height": "168 cm",
+    "weight": "53 kg",
+    "hairColor": "Morena",
+    "eyeColor": "Castanho Âmbar",
+    "bio": "Estilo mediterrânico, calorosa e com gosto apurado para vinhos e conversas envolventes. Disponível em Braga e arredores.",
+    "services": [
+      "Acompanhamento Festas",
+      "Degustação de Vinhos",
+      "Jantares",
+      "Fins de Semana"
+    ],
+    "rates": {
+      "oneHour": "150€",
+      "twoHours": "270€",
+      "dinnerDate": "400€",
+      "overnight": "800€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-09",
+    "name": "Polina Petrenko",
+    "age": 23,
+    "city": "Porto (Foz do Douro)",
+    "country": "Portugal",
+    "nationality": "Ucrânia",
+    "height": "175 cm",
+    "weight": "54 kg",
+    "hairColor": "Loiro Mel",
+    "eyeColor": "Azuis",
+    "bio": "Olhar expressivo, pernas longas e postura elegante. Trabalho com máxima discrição para cavalheiros educados.",
+    "services": [
+      "Encontros Privados",
+      "Viagens",
+      "Passeios na Praia",
+      "Massagem Relaxante"
+    ],
+    "rates": {
+      "oneHour": "170€",
+      "twoHours": "300€",
+      "dinnerDate": "450€",
+      "overnight": "850€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-10",
+    "name": "Alina Dubois",
+    "age": 26,
+    "city": "Lisboa (Chiado)",
+    "country": "Portugal",
+    "nationality": "França",
+    "height": "171 cm",
+    "weight": "52 kg",
+    "hairColor": "Castanho Acobreado",
+    "eyeColor": "Castanhos Claros",
+    "bio": "Charme parisiense no coração de Lisboa. Apaixonada por cinema cult, arte contemporânea e jantares intimistas.",
+    "services": [
+      "Acompanhamento VIP",
+      "Eventos Culturais",
+      "Jantares Gourmet",
+      "Viagens Executivas"
+    ],
+    "rates": {
+      "oneHour": "190€",
+      "twoHours": "320€",
+      "dinnerDate": "480€",
+      "overnight": "950€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-11",
+    "name": "Natalia Ivanova",
+    "age": 28,
+    "city": "Vilamoura (Algarve)",
+    "country": "Portugal",
+    "nationality": "Rússia",
+    "height": "177 cm",
+    "weight": "57 kg",
+    "hairColor": "Morena",
+    "eyeColor": "Verdes",
+    "bio": "Mulher estonteante e com experiência internacional. Ideal para eventos de negócios, iates em Vilamoura e momentos de descontração.",
+    "services": [
+      "Passeios de Iate",
+      "Companhia Executiva",
+      "Jantares de Gala",
+      "Fins de Semana"
+    ],
+    "rates": {
+      "oneHour": "220€",
+      "twoHours": "380€",
+      "dinnerDate": "550€",
+      "overnight": "1100€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1514315384763-ba401779410f?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-12",
+    "name": "Eva Nemeth",
+    "age": 22,
+    "city": "Lisboa (Avenidas Novas)",
+    "country": "Portugal",
+    "nationality": "Hungria",
+    "height": "173 cm",
+    "weight": "52 kg",
+    "hairColor": "Ruivo Natural",
+    "eyeColor": "Verdes Esmeralda",
+    "bio": "Ruiva autêntica com olhos esmeralda. Personalidade meiga, divertida e muito atenciosa. Apartamento privado em Lisboa centro.",
+    "services": [
+      "Encontros Românticos",
+      "Massagem Tântrica",
+      "Cinema e Passeios",
+      "Companhia Doce"
+    ],
+    "rates": {
+      "oneHour": "150€",
+      "twoHours": "260€",
+      "dinnerDate": "400€",
+      "overnight": "780€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1548142813-c348350df52b?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-13",
+    "name": "Oksana Bondar",
+    "age": 25,
+    "city": "Setúbal",
+    "country": "Portugal",
+    "nationality": "Ucrânia",
+    "height": "170 cm",
+    "weight": "53 kg",
+    "hairColor": "Loiro Claro",
+    "eyeColor": "Azuis",
+    "bio": "Simpática, descontraída e apaixonada pelas praias da Arrábida. Proporciono momentos únicos com simpatia e boa energia.",
+    "services": [
+      "Passeios na Natureza",
+      "Jantares à Beira-Mar",
+      "Companhia Afetuosa",
+      "Relaxamento"
+    ],
+    "rates": {
+      "oneHour": "130€",
+      "twoHours": "220€",
+      "dinnerDate": "340€",
+      "overnight": "650€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-14",
+    "name": "Yulia Smirnova",
+    "age": 24,
+    "city": "Porto (Boavista)",
+    "country": "Portugal",
+    "nationality": "Rússia",
+    "height": "174 cm",
+    "weight": "54 kg",
+    "hairColor": "Castanho",
+    "eyeColor": "Azuis Acinzentados",
+    "bio": "Elegância pura na Boavista. Higiene irrepreensível, ambiente aromático e tranquilo. Só atendo com marcação prévia.",
+    "services": [
+      "Encontros Discretos",
+      "Jantares Românticos",
+      "Companhia VIP",
+      "Relax Total"
+    ],
+    "rates": {
+      "oneHour": "160€",
+      "twoHours": "280€",
+      "dinnerDate": "420€",
+      "overnight": "800€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-15",
+    "name": "Martina Varga",
+    "age": 27,
+    "city": "Aveiro",
+    "country": "Portugal",
+    "nationality": "Eslováquia",
+    "height": "176 cm",
+    "weight": "56 kg",
+    "hairColor": "Loiro Escuro",
+    "eyeColor": "Verdes",
+    "bio": "Mulher culta, viajada e com muito charme. Pronta para acompanhar em passeios pelos canais de Aveiro e momentos de carinho.",
+    "services": [
+      "Passeios Românticos",
+      "Jantares Especiais",
+      "Companhia Social",
+      "Massagens"
+    ],
+    "rates": {
+      "oneHour": "140€",
+      "twoHours": "250€",
+      "dinnerDate": "380€",
+      "overnight": "720€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-16",
+    "name": "Diana Popa",
+    "age": 23,
+    "city": "Lisboa (Campo de Ourique)",
+    "country": "Portugal",
+    "nationality": "Romênia",
+    "height": "167 cm",
+    "weight": "50 kg",
+    "hairColor": "Morena",
+    "eyeColor": "Castanho Escuro",
+    "bio": "Corpo delicado, sorriso fácil e carinho sem pressa. Crio uma atmosfera acolhedora onde pode esquecer o estresse do dia a dia.",
+    "services": [
+      "Encontros Sem Pressa",
+      "Massagem Corporal",
+      "Jantares",
+      "Pernoite"
+    ],
+    "rates": {
+      "oneHour": "130€",
+      "twoHours": "230€",
+      "dinnerDate": "350€",
+      "overnight": "680€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1535295972055-1c762f4483e5?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1512485694743-9c9538b4e6e0?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1546961329-78bef0414d7c?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-17",
+    "name": "Svetlana Morozova",
+    "age": 26,
+    "city": "Lisboa (Estoril)",
+    "country": "Portugal",
+    "nationality": "Rússia",
+    "height": "177 cm",
+    "weight": "55 kg",
+    "hairColor": "Loiro Areia",
+    "eyeColor": "Azuis",
+    "bio": "Ex-dançarina profissional. Flexível, graciosa e atenta aos desejos de quem procura exclusividade na Costa do Estoril.",
+    "services": [
+      "Encontros Exclusivos",
+      "Eventos Casino Estoril",
+      "Jantares de Gala",
+      "Viagens Internacionais"
+    ],
+    "rates": {
+      "oneHour": "200€",
+      "twoHours": "350€",
+      "dinnerDate": "500€",
+      "overnight": "1000€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-18",
+    "name": "Klara Fischer",
+    "age": 25,
+    "city": "Lisboa (Belém)",
+    "country": "Portugal",
+    "nationality": "Alemanha",
+    "height": "175 cm",
+    "weight": "54 kg",
+    "hairColor": "Loiro Natural",
+    "eyeColor": "Azuis",
+    "bio": "Estilo sofisticado e pontualidade germânica com o calor lisboeta. Disponível para cavalheiros que apreciam classe.",
+    "services": [
+      "Companhia de Negócios",
+      "Jantares Executivos",
+      "Eventos",
+      "Encontros de Luxo"
+    ],
+    "rates": {
+      "oneHour": "180€",
+      "twoHours": "320€",
+      "dinnerDate": "450€",
+      "overnight": "900€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-19",
+    "name": "Alisa Chernova",
+    "age": 21,
+    "city": "Porto (Matosinhos)",
+    "country": "Portugal",
+    "nationality": "Ucrânia",
+    "height": "169 cm",
+    "weight": "49 kg",
+    "hairColor": "Castanho Dourado",
+    "eyeColor": "Verdes Claros",
+    "bio": "Olhos de boneca e sorriso angelical. Muito doce, atenciosa e apaixonada por frutos do mar em Matosinhos.",
+    "services": [
+      "Jantares em Matosinhos",
+      "Passeios à Beira-Mar",
+      "Momentos Íntimos",
+      "Massagem Suave"
+    ],
+    "rates": {
+      "oneHour": "150€",
+      "twoHours": "260€",
+      "dinnerDate": "390€",
+      "overnight": "750€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-20",
+    "name": "Zofia Kowalska",
+    "age": 24,
+    "city": "Guimarães",
+    "country": "Portugal",
+    "nationality": "Polônia",
+    "height": "172 cm",
+    "weight": "53 kg",
+    "hairColor": "Loiro Claro",
+    "eyeColor": "Azuis",
+    "bio": "Beleza natural polonesa, cheia de vitalidade e conversa agradável. Excelente companhia na região do Minho.",
+    "services": [
+      "Passeios Históricos",
+      "Jantares Íntimos",
+      "Companhia Social",
+      "Relaxamento"
+    ],
+    "rates": {
+      "oneHour": "140€",
+      "twoHours": "240€",
+      "dinnerDate": "360€",
+      "overnight": "700€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1514315384763-ba401779410f?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1548142813-c348350df52b?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-21",
+    "name": "Valeria Kozlova",
+    "age": 22,
+    "city": "Lisboa (Alvalade)",
+    "country": "Portugal",
+    "nationality": "Rússia",
+    "height": "171 cm",
+    "weight": "51 kg",
+    "hairColor": "Morena",
+    "eyeColor": "Verdes Acastanhados",
+    "bio": "Morena de traços marcantes e olhar cativante. Muito comunicativa, simpática e pontual.",
+    "services": [
+      "Encontros Casuais",
+      "Massagem Relaxante",
+      "Jantares Românticos",
+      "Companhia"
+    ],
+    "rates": {
+      "oneHour": "140€",
+      "twoHours": "250€",
+      "dinnerDate": "380€",
+      "overnight": "700€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-22",
+    "name": "Cristina Ionescu",
+    "age": 26,
+    "city": "Sintra",
+    "country": "Portugal",
+    "nationality": "Romênia",
+    "height": "170 cm",
+    "weight": "54 kg",
+    "hairColor": "Castanho Escuro",
+    "eyeColor": "Castanhos",
+    "bio": "Amante da natureza, dos palácios de Sintra e de noites tranquilas regadas a bom vinho e carinho.",
+    "services": [
+      "Passeios Românticos em Sintra",
+      "Jantares à Luz de Velas",
+      "Companhia Íntima",
+      "Massagem"
+    ],
+    "rates": {
+      "oneHour": "140€",
+      "twoHours": "240€",
+      "dinnerDate": "360€",
+      "overnight": "700€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1546961329-78bef0414d7c?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1535295972055-1c762f4483e5?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1512485694743-9c9538b4e6e0?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-23",
+    "name": "Veronika Horvath",
+    "age": 23,
+    "city": "Lisboa (Marquês de Pombal)",
+    "country": "Portugal",
+    "nationality": "Hungria",
+    "height": "174 cm",
+    "weight": "53 kg",
+    "hairColor": "Loiro Champagne",
+    "eyeColor": "Azuis",
+    "bio": "Pele macia, corpo escultural e dedicação máxima ao bem-estar do cliente. Recepção em suíte privada no Marquês.",
+    "services": [
+      "Encontros em Hotéis 5*",
+      "Massagem Relaxante",
+      "Acompanhamento VIP",
+      "Pernoite Luxuosa"
+    ],
+    "rates": {
+      "oneHour": "180€",
+      "twoHours": "320€",
+      "dinnerDate": "450€",
+      "overnight": "900€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-24",
+    "name": "Marina Shevchenko",
+    "age": 25,
+    "city": "Porto (Cedofeita)",
+    "country": "Portugal",
+    "nationality": "Ucrânia",
+    "height": "176 cm",
+    "weight": "55 kg",
+    "hairColor": "Castanho Claro",
+    "eyeColor": "Azuis Claros",
+    "bio": "Arquiteta de formação, apaixonada por design e boa gastronomia. Elegância natural e conversa estimulante.",
+    "services": [
+      "Jantares Artísticos",
+      "Companhia Social",
+      "Encontros Privados",
+      "Viagens Curtas"
+    ],
+    "rates": {
+      "oneHour": "160€",
+      "twoHours": "280€",
+      "dinnerDate": "400€",
+      "overnight": "800€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-25",
+    "name": "Giulia Ricci",
+    "age": 24,
+    "city": "Lisboa (Príncipe Real)",
+    "country": "Portugal",
+    "nationality": "Itália",
+    "height": "169 cm",
+    "weight": "52 kg",
+    "hairColor": "Morena Iluminada",
+    "eyeColor": "Castanhos Quentes",
+    "bio": "Charme de Milão com coração latino. Adoro cocktails nos rooftops de Lisboa e encontros sem pressa.",
+    "services": [
+      "Rooftop & Drinks",
+      "Eventos de Moda",
+      "Companhia Íntima",
+      "Massagem Corporal"
+    ],
+    "rates": {
+      "oneHour": "170€",
+      "twoHours": "300€",
+      "dinnerDate": "420€",
+      "overnight": "850€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-26",
+    "name": "Aleksandra 'Ola' Mazur",
+    "age": 22,
+    "city": "Leiria",
+    "country": "Portugal",
+    "nationality": "Polônia",
+    "height": "173 cm",
+    "weight": "51 kg",
+    "hairColor": "Loiro Claro",
+    "eyeColor": "Azuis Claros",
+    "bio": "Delicadeza e frescor. Perfeita para quem procura fugir da rotina com uma companhia carinhosa e descomplicada.",
+    "services": [
+      "Encontros Descontraídos",
+      "Jantares Românticos",
+      "Massagem Sensível",
+      "Fins de Semana"
+    ],
+    "rates": {
+      "oneHour": "130€",
+      "twoHours": "220€",
+      "dinnerDate": "340€",
+      "overnight": "650€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1514315384763-ba401779410f?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1548142813-c348350df52b?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-27",
+    "name": "Ekaterina Romanova",
+    "age": 27,
+    "city": "Lisboa (Amoreiras)",
+    "country": "Portugal",
+    "nationality": "Rússia",
+    "height": "178 cm",
+    "weight": "56 kg",
+    "hairColor": "Castanho Escuro",
+    "eyeColor": "Azuis Safira",
+    "bio": "Mulher de alta classe para homens exigentes. Discrição absoluta garantida em ambiente de prestígio.",
+    "services": [
+      "Acompanhamento VIP",
+      "Jantares Executivos",
+      "Eventos de Gala",
+      "Viagens Internacionais"
+    ],
+    "rates": {
+      "oneHour": "220€",
+      "twoHours": "380€",
+      "dinnerDate": "550€",
+      "overnight": "1100€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-28",
+    "name": "Tetyana Kravchenko",
+    "age": 23,
+    "city": "Porto (Campanhã)",
+    "country": "Portugal",
+    "nationality": "Ucrânia",
+    "height": "172 cm",
+    "weight": "52 kg",
+    "hairColor": "Loiro Dourado",
+    "eyeColor": "Verdes",
+    "bio": "Sorriso acolhedor e personalidade apaixonante. Trato cada encontro com carinho genuíno e atenção única.",
+    "services": [
+      "Encontros Afetuosos",
+      "Massagens Terapêuticas",
+      "Jantares Íntimos",
+      "Pernoite"
+    ],
+    "rates": {
+      "oneHour": "150€",
+      "twoHours": "260€",
+      "dinnerDate": "380€",
+      "overnight": "750€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-29",
+    "name": "Chloe Mercier",
+    "age": 25,
+    "city": "Lisboa (Santos)",
+    "country": "Portugal",
+    "nationality": "França",
+    "height": "170 cm",
+    "weight": "51 kg",
+    "hairColor": "Castanho Café",
+    "eyeColor": "Avelã",
+    "bio": "Sensualidade e delicadeza francesa. Apaixonada por jazz, noites calmas e boa companhia em Lisboa.",
+    "services": [
+      "Bares de Jazz",
+      "Jantares Privados",
+      "Massagem Sensorial",
+      "Companhia Noturna"
+    ],
+    "rates": {
+      "oneHour": "170€",
+      "twoHours": "300€",
+      "dinnerDate": "430€",
+      "overnight": "850€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-30",
+    "name": "Andreea Balan",
+    "age": 24,
+    "city": "Viseu",
+    "country": "Portugal",
+    "nationality": "Romênia",
+    "height": "168 cm",
+    "weight": "52 kg",
+    "hairColor": "Morena",
+    "eyeColor": "Castanhos",
+    "bio": "Simpática, atenciosa e muito carinhosa. Atendimento em local tranquilo e reservado em Viseu.",
+    "services": [
+      "Encontros Íntimos",
+      "Massagem Corporal",
+      "Companhia Doce",
+      "Jantares"
+    ],
+    "rates": {
+      "oneHour": "130€",
+      "twoHours": "230€",
+      "dinnerDate": "350€",
+      "overnight": "650€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1546961329-78bef0414d7c?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1535295972055-1c762f4483e5?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-31",
+    "name": "Yana Melnyk",
+    "age": 22,
+    "city": "Lisboa (Terreiro do Paço)",
+    "country": "Portugal",
+    "nationality": "Ucrânia",
+    "height": "174 cm",
+    "weight": "51 kg",
+    "hairColor": "Loiro Platinado",
+    "eyeColor": "Azuis Céu",
+    "bio": "Beleza estonteante e maneiras impecáveis. Amo o pôr do sol no Rio Tejo e momentos especiais.",
+    "services": [
+      "Passeios Tejo",
+      "Jantares Românticos",
+      "Companhia VIP",
+      "Pernoite Especial"
+    ],
+    "rates": {
+      "oneHour": "160€",
+      "twoHours": "280€",
+      "dinnerDate": "420€",
+      "overnight": "800€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-32",
+    "name": "Laura Bianchessi",
+    "age": 26,
+    "city": "Cascais",
+    "country": "Portugal",
+    "nationality": "Itália",
+    "height": "171 cm",
+    "weight": "53 kg",
+    "hairColor": "Castanho Quente",
+    "eyeColor": "Castanhos Claros",
+    "bio": "Exclusividade e charme italiano em Cascais. Gosto de homens galantes e conversas sobre viagens e lifestyle.",
+    "services": [
+      "Eventos em Cascais",
+      "Companhia de Iate",
+      "Jantares Gourmet",
+      "Escapadelas de Fim de Semana"
+    ],
+    "rates": {
+      "oneHour": "180€",
+      "twoHours": "320€",
+      "dinnerDate": "480€",
+      "overnight": "950€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-33",
+    "name": "Maja Wisniewska",
+    "age": 23,
+    "city": "Porto (Vila Nova de Gaia)",
+    "country": "Portugal",
+    "nationality": "Polônia",
+    "height": "175 cm",
+    "weight": "54 kg",
+    "hairColor": "Loiro Areia",
+    "eyeColor": "Azuis",
+    "bio": "Alta, curvilínea e sempre bem-humorada. Perfeita para relaxar após um dia intenso de trabalho.",
+    "services": [
+      "Caves do Vinho do Porto",
+      "Jantares Panorâmicos",
+      "Massagem Suave",
+      "Companhia VIP"
+    ],
+    "rates": {
+      "oneHour": "150€",
+      "twoHours": "270€",
+      "dinnerDate": "400€",
+      "overnight": "780€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1514315384763-ba401779410f?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1548142813-c348350df52b?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-34",
+    "name": "Polina Voronova",
+    "age": 25,
+    "city": "Lisboa (Rato)",
+    "country": "Portugal",
+    "nationality": "Rússia",
+    "height": "173 cm",
+    "weight": "52 kg",
+    "hairColor": "Castanho Claro",
+    "eyeColor": "Verdes",
+    "bio": "Doçura e sensualidade combinadas em sintonia perfeita. Ambiente seguro, climatizado e discreto.",
+    "services": [
+      "Encontros Exclusivos",
+      "Massagens Aromáticas",
+      "Jantares à Noite",
+      "Pernoite Aconchegante"
+    ],
+    "rates": {
+      "oneHour": "150€",
+      "twoHours": "260€",
+      "dinnerDate": "390€",
+      "overnight": "760€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-35",
+    "name": "Simona Dumitru",
+    "age": 27,
+    "city": "Évora",
+    "country": "Portugal",
+    "nationality": "Romênia",
+    "height": "169 cm",
+    "weight": "53 kg",
+    "hairColor": "Morena",
+    "eyeColor": "Castanhos Escuros",
+    "bio": "Presença calorosa no Alentejo. Carinho autêntico, massagem relaxante e conversas envolventes.",
+    "services": [
+      "Encontros Calmos",
+      "Massagem Alentejana",
+      "Jantares Típicos",
+      "Companhia Agradável"
+    ],
+    "rates": {
+      "oneHour": "130€",
+      "twoHours": "230€",
+      "dinnerDate": "340€",
+      "overnight": "650€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1546961329-78bef0414d7c?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1535295972055-1c762f4483e5?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1512485694743-9c9538b4e6e0?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-36",
+    "name": "Olena Polishchuk",
+    "age": 24,
+    "city": "Lisboa (Cais do Sodré)",
+    "country": "Portugal",
+    "nationality": "Ucrânia",
+    "height": "172 cm",
+    "weight": "50 kg",
+    "hairColor": "Loiro Claro",
+    "eyeColor": "Azuis",
+    "bio": "Juventude, frescor e muita animação. Gosto da vida noturna de Lisboa, bons coquetéis e momentos especiais a dois.",
+    "services": [
+      "Vida Noturna",
+      "Rooftops",
+      "Companhia Social",
+      "Massagem Descontraída"
+    ],
+    "rates": {
+      "oneHour": "150€",
+      "twoHours": "260€",
+      "dinnerDate": "380€",
+      "overnight": "750€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1496440737103-cd596325d314?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-37",
+    "name": "Clara Weber",
+    "age": 26,
+    "city": "Porto (Aliados)",
+    "country": "Portugal",
+    "nationality": "Alemanha",
+    "height": "176 cm",
+    "weight": "55 kg",
+    "hairColor": "Loiro Dourado",
+    "eyeColor": "Azuis",
+    "bio": "Classe, serenidade e alto padrão de atendimento. Para clientes que valorizam elegância sem vulgaridade.",
+    "services": [
+      "Companhia Executiva",
+      "Jantares de Negócios",
+      "Encontros de Luxo",
+      "Viagens"
+    ],
+    "rates": {
+      "oneHour": "190€",
+      "twoHours": "330€",
+      "dinnerDate": "470€",
+      "overnight": "920€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-38",
+    "name": "Tatiana Kozlova",
+    "age": 25,
+    "city": "Lisboa (Campo Grande)",
+    "country": "Portugal",
+    "nationality": "Bielorrússia",
+    "height": "174 cm",
+    "weight": "53 kg",
+    "hairColor": "Castanho Claro",
+    "eyeColor": "Verdes Claros",
+    "bio": "Pele suave, curvas harmoniosas e toque extremamente delicado. Massagem revigorante e conversa descontraída.",
+    "services": [
+      "Massagem Sensorial",
+      "Companhia Afetuosa",
+      "Jantares Íntimos",
+      "Encontros Discretos"
+    ],
+    "rates": {
+      "oneHour": "150€",
+      "twoHours": "260€",
+      "dinnerDate": "380€",
+      "overnight": "750€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-39",
+    "name": "Francesca De Luca",
+    "age": 23,
+    "city": "Portimão (Algarve)",
+    "country": "Portugal",
+    "nationality": "Itália",
+    "height": "170 cm",
+    "weight": "52 kg",
+    "hairColor": "Morena",
+    "eyeColor": "Castanhos",
+    "bio": "Charme do sul italiano na Praia da Rocha. Alegre, extrovertida e com muito carinho para compartilhar.",
+    "services": [
+      "Passeios de Praia",
+      "Jantares Algarvios",
+      "Companhia Romântica",
+      "Massagem"
+    ],
+    "rates": {
+      "oneHour": "160€",
+      "twoHours": "280€",
+      "dinnerDate": "400€",
+      "overnight": "800€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-40",
+    "name": "Alena Sokolova",
+    "age": 26,
+    "city": "Lisboa (Telheiras)",
+    "country": "Portugal",
+    "nationality": "Rússia",
+    "height": "175 cm",
+    "weight": "54 kg",
+    "hairColor": "Loiro Mel",
+    "eyeColor": "Azuis",
+    "bio": "Silhueta estilosa, atitude confiante e muita empatia. Total discrição e higiene de topo.",
+    "services": [
+      "Encontros Confortáveis",
+      "Massagem Corporativa",
+      "Jantares",
+      "Pernoite VIP"
+    ],
+    "rates": {
+      "oneHour": "160€",
+      "twoHours": "280€",
+      "dinnerDate": "410€",
+      "overnight": "820€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-41",
+    "name": "Weronika Dabrowska",
+    "age": 24,
+    "city": "Braga (Centro)",
+    "country": "Portugal",
+    "nationality": "Polônia",
+    "height": "172 cm",
+    "weight": "53 kg",
+    "hairColor": "Castanho Dourado",
+    "eyeColor": "Verdes",
+    "bio": "Sorriso simpático, olhar cativante e total entrega nos momentos a dois. Atendimento VIP em Braga.",
+    "services": [
+      "Jantares",
+      "Passeios Culturais",
+      "Massagens",
+      "Companhia Social"
+    ],
+    "rates": {
+      "oneHour": "140€",
+      "twoHours": "240€",
+      "dinnerDate": "360€",
+      "overnight": "700€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1548142813-c348350df52b?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1514315384763-ba401779410f?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-42",
+    "name": "Iryna Lysenko",
+    "age": 21,
+    "city": "Lisboa (Entrecampos)",
+    "country": "Portugal",
+    "nationality": "Ucrânia",
+    "height": "171 cm",
+    "weight": "49 kg",
+    "hairColor": "Loiro Natural",
+    "eyeColor": "Azuis Claros",
+    "bio": "Jovem e radiante, cheia de carinho e meiguice. Proporciono momentos de puro relaxamento e conforto.",
+    "services": [
+      "Encontros Doces",
+      "Massagem Leve",
+      "Jantares Românticos",
+      "Companhia"
+    ],
+    "rates": {
+      "oneHour": "140€",
+      "twoHours": "240€",
+      "dinnerDate": "360€",
+      "overnight": "700€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1496440737103-cd596325d314?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-43",
+    "name": "Ioana Radu",
+    "age": 28,
+    "city": "Coimbra (Solum)",
+    "country": "Portugal",
+    "nationality": "Romênia",
+    "height": "170 cm",
+    "weight": "55 kg",
+    "hairColor": "Castanho Escuro",
+    "eyeColor": "Castanhos",
+    "bio": "Experiente, elegante e carinhosa. Trato com respeito e busco cavalheiros educados para bons momentos.",
+    "services": [
+      "Encontros com Discrição",
+      "Jantares Tranquilos",
+      "Massagens Corporais",
+      "Pernoite"
+    ],
+    "rates": {
+      "oneHour": "130€",
+      "twoHours": "220€",
+      "dinnerDate": "340€",
+      "overnight": "650€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1546961329-78bef0414d7c?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1535295972055-1c762f4483e5?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1512485694743-9c9538b4e6e0?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-44",
+    "name": "Veronika Kuzmina",
+    "age": 25,
+    "city": "Porto (Marquês)",
+    "country": "Portugal",
+    "nationality": "Rússia",
+    "height": "176 cm",
+    "weight": "54 kg",
+    "hairColor": "Loiro Platina",
+    "eyeColor": "Azuis Escuros",
+    "bio": "Porte de passarela, muito educada e de fino trato. Ideal para cavalheiros que buscam o melhor do Porto.",
+    "services": [
+      "Acompanhamento VIP",
+      "Jantares Românticos",
+      "Massagem Relaxante",
+      "Viagens"
+    ],
+    "rates": {
+      "oneHour": "170€",
+      "twoHours": "300€",
+      "dinnerDate": "450€",
+      "overnight": "850€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-45",
+    "name": "Beata Zielinska",
+    "age": 26,
+    "city": "Lisboa (Benfica)",
+    "country": "Portugal",
+    "nationality": "Polônia",
+    "height": "174 cm",
+    "weight": "55 kg",
+    "hairColor": "Castanho",
+    "eyeColor": "Azuis",
+    "bio": "Mulher carismática, alegre e com curvas perfeitas. Dedico meu tempo para tornar o encontro memorável.",
+    "services": [
+      "Encontros Carinhosos",
+      "Massagens Íntimas",
+      "Jantares Descontraídos",
+      "Companhia"
+    ],
+    "rates": {
+      "oneHour": "140€",
+      "twoHours": "250€",
+      "dinnerDate": "370€",
+      "overnight": "720€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1514315384763-ba401779410f?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1548142813-c348350df52b?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-46",
+    "name": "Kateryna Boyko",
+    "age": 23,
+    "city": "Lisboa (Avenidas Novas)",
+    "country": "Portugal",
+    "nationality": "Ucrânia",
+    "height": "173 cm",
+    "weight": "52 kg",
+    "hairColor": "Loiro Champagne",
+    "eyeColor": "Verdes",
+    "bio": "Olhos expressivos e personalidade cativante. Amo conversas inspiradoras e criar uma conexão genuína.",
+    "services": [
+      "Encontros com Ternura",
+      "Massagem Revitalizante",
+      "Jantares Especiais",
+      "Acompanhamento"
+    ],
+    "rates": {
+      "oneHour": "150€",
+      "twoHours": "270€",
+      "dinnerDate": "400€",
+      "overnight": "780€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-47",
+    "name": "Federica Conti",
+    "age": 25,
+    "city": "Cascais (Guincho)",
+    "country": "Portugal",
+    "nationality": "Itália",
+    "height": "171 cm",
+    "weight": "53 kg",
+    "hairColor": "Morena",
+    "eyeColor": "Castanhos",
+    "bio": "Paixão mediterrânea à beira-mar no Guincho. Companhia perfeita para jantares com vista para o oceano.",
+    "services": [
+      "Jantares no Guincho",
+      "Passeios na Costa",
+      "Companhia Romântica",
+      "Massagens"
+    ],
+    "rates": {
+      "oneHour": "170€",
+      "twoHours": "300€",
+      "dinnerDate": "450€",
+      "overnight": "850€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-48",
+    "name": "Nadezhda Lebedeva",
+    "age": 24,
+    "city": "Lisboa (Restauradores)",
+    "country": "Portugal",
+    "nationality": "Rússia",
+    "height": "175 cm",
+    "weight": "53 kg",
+    "hairColor": "Loiro Areia",
+    "eyeColor": "Azuis",
+    "bio": "Presença iluminada no coração histórico de Lisboa. Atendimento carinhoso, dedicado e sem pressa.",
+    "services": [
+      "Encontros Históricos",
+      "Jantares no Chiado",
+      "Massagem Tântrica",
+      "Pernoite Confortável"
+    ],
+    "rates": {
+      "oneHour": "160€",
+      "twoHours": "280€",
+      "dinnerDate": "420€",
+      "overnight": "820€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-49",
+    "name": "Karolina Kaminska",
+    "age": 22,
+    "city": "Porto (Ribeira)",
+    "country": "Portugal",
+    "nationality": "Polônia",
+    "height": "172 cm",
+    "weight": "51 kg",
+    "hairColor": "Loiro Claro",
+    "eyeColor": "Azuis Claros",
+    "bio": "Encanto da Ribeira do Porto. Companhia alegre, doce e carinhosa para momentos inesquecíveis.",
+    "services": [
+      "Passeios na Ribeira",
+      "Cruzeiros no Douro",
+      "Jantares à Luz de Velas",
+      "Companhia"
+    ],
+    "rates": {
+      "oneHour": "150€",
+      "twoHours": "260€",
+      "dinnerDate": "390€",
+      "overnight": "760€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1514315384763-ba401779410f?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1548142813-c348350df52b?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-50",
+    "name": "Sofiia Savchenko",
+    "age": 24,
+    "city": "Lisboa (Parque Eduardo VII)",
+    "country": "Portugal",
+    "nationality": "Ucrânia",
+    "height": "175 cm",
+    "weight": "53 kg",
+    "hairColor": "Castanho Claro",
+    "eyeColor": "Verdes",
+    "bio": "Charme irresistível, olhar misterioso e carinho sem limites. Local reservado e requintado com estacionamento fácil.",
+    "services": [
+      "Encontros com Requinte",
+      "Massagem Relaxante Especial",
+      "Jantares Românticos",
+      "Companhia VIP"
+    ],
+    "rates": {
+      "oneHour": "160€",
+      "twoHours": "290€",
+      "dinnerDate": "430€",
+      "overnight": "850€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-51",
+    "name": "Elena Gabor",
+    "age": 26,
+    "city": "Funchal (Madeira)",
+    "country": "Portugal",
+    "nationality": "Romênia",
+    "height": "172 cm",
+    "weight": "54 kg",
+    "hairColor": "Morena",
+    "eyeColor": "Castanhos Quentes",
+    "bio": "Beleza e aconchego na Ilha da Madeira. Disponível para acompanhar em passeios, restaurantes e momentos exclusivos.",
+    "services": [
+      "Passeios na Madeira",
+      "Jantares no Funchal",
+      "Companhia VIP",
+      "Massagem"
+    ],
+    "rates": {
+      "oneHour": "150€",
+      "twoHours": "260€",
+      "dinnerDate": "380€",
+      "overnight": "750€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1546961329-78bef0414d7c?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1535295972055-1c762f4483e5?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1512485694743-9c9538b4e6e0?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    "id": "lady-52",
+    "name": "Viktoriya Kozur",
+    "age": 23,
+    "city": "Lisboa (Alcântara / Docas)",
+    "country": "Portugal",
+    "nationality": "Ucrânia",
+    "height": "174 cm",
+    "weight": "52 kg",
+    "hairColor": "Loiro Claro",
+    "eyeColor": "Azuis",
+    "bio": "Doçura eslava e presença radiante nas Docas de Alcântara. Perfeita para fins de tarde à beira do rio e noites memoráveis.",
+    "services": [
+      "Encontros nas Docas",
+      "Jantares à Beira-Rio",
+      "Massagens",
+      "Pernoite Luxuosa"
+    ],
+    "rates": {
+      "oneHour": "160€",
+      "twoHours": "280€",
+      "dinnerDate": "420€",
+      "overnight": "820€"
+    },
+    "photos": [
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80"
+    ]
+  }
+]
