@@ -11,6 +11,24 @@ import { getTranslationTarget } from '../services/translate';
 const toWhatsappDigits = (phone?: string) => (phone ? phone.replace(/\D/g, '') : '');
 const toTelDigits = (phone?: string) => (phone ? phone.replace(/[^\d+]/g, '') : '');
 const isDemoProfile = (id?: string) => Boolean(id?.startsWith('demo-model-'));
+const preloadPhoto = (src?: string) => {
+  if (!src || typeof window === 'undefined') return;
+  const image = new Image();
+  image.decoding = 'async';
+  image.src = src;
+};
+
+const schedulePhotoPreload = (photos: string[], startIndex = 0, limit = 6) => {
+  if (typeof window === 'undefined' || !photos.length) return;
+  const selectedPhotos = photos.slice(startIndex, startIndex + limit);
+  const load = () => selectedPhotos.forEach(preloadPhoto);
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(load, { timeout: 1200 });
+    return;
+  }
+  window.setTimeout(load, 200);
+};
+
 const getBioTranslationText = (value?: unknown) => {
   if (typeof value === 'string') return value.trim();
   if (value && typeof value === 'object') {
@@ -229,6 +247,17 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
     }
   }, [activePhotoIndex]);
 
+  useEffect(() => {
+    schedulePhotoPreload(photos, 1, 8);
+  }, [model.id, photos]);
+
+  useEffect(() => {
+    if (activePhotoIndex === null || photos.length < 2) return;
+    preloadPhoto(photos[(activePhotoIndex + 1) % photos.length]);
+    preloadPhoto(photos[(activePhotoIndex - 1 + photos.length) % photos.length]);
+    schedulePhotoPreload(photos, activePhotoIndex + 2, 4);
+  }, [activePhotoIndex, photos]);
+
   const displayBio = rawBio
     ? (shouldTranslate && cachedBio ? cachedBio : rawBio)
     : t('dashboard.form.bioMissing');
@@ -307,6 +336,8 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
                   <img
                     src={photo}
                     alt={`${model.name} ${index + 1}`}
+                    loading={index < 4 ? 'eager' : 'lazy'}
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                   {photos.length > 1 && (
@@ -328,6 +359,8 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
               <img
                 src={model.photos[0]}
                 alt={model.name}
+                loading="eager"
+                decoding="async"
                 onClick={() => {
                   setHasSwiped(false);
                   setActivePhotoIndex(0);
@@ -342,6 +375,9 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
             {model.photos?.[1] ? (
               <img
                 src={model.photos[1]}
+                alt={`${model.name} 2`}
+                loading="eager"
+                decoding="async"
                 onClick={() => {
                   setHasSwiped(false);
                   setActivePhotoIndex(1);
@@ -356,6 +392,9 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
             {model.photos?.[2] ? (
               <img
                 src={model.photos[2]}
+                alt={`${model.name} 3`}
+                loading="eager"
+                decoding="async"
                 onClick={() => {
                   setHasSwiped(false);
                   setActivePhotoIndex(2);
@@ -370,6 +409,9 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
             {model.photos?.[3] ? (
               <img
                 src={model.photos[3]}
+                alt={`${model.name} 4`}
+                loading="eager"
+                decoding="async"
                 onClick={() => {
                   setHasSwiped(false);
                   setActivePhotoIndex(3);
@@ -640,6 +682,8 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
           <img
             src={activePhoto}
             alt={model.name}
+            loading="eager"
+            decoding="async"
             className="relative max-h-[85vh] max-w-[90vw] rounded-2xl shadow-2xl object-contain"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
