@@ -1,5 +1,12 @@
 import { apiFetch } from './api';
-import { demoModels, getDemoDisplayModels, getDemoModelById, getDemoModelMetrics, isDemoModelId } from '../demo/models';
+import {
+  demoModels,
+  getDemoDisplayModels,
+  getDemoModelById,
+  getDemoModelMetrics,
+  isDemoModelId,
+  markDemoModelOpenedOffline,
+} from '../demo/models';
 
 const INCLUDE_UNPAID_MODELS = true;
 
@@ -146,6 +153,16 @@ export const isBillingActive = (billing?: ModelBilling | null) => {
   return Boolean(expiresAt && expiresAt > Date.now());
 };
 
+export const markDemoModelOfflineAfterOpen = (id: string) => markDemoModelOpenedOffline(id);
+
+const realModelsFirst = (models: ModelProfileData[]) => {
+  return [...models].sort((a, b) => {
+    const aDemo = isDemoModelId(a.id) ? 1 : 0;
+    const bDemo = isDemoModelId(b.id) ? 1 : 0;
+    return aDemo - bDemo;
+  });
+};
+
 export const fetchFeaturedModels = async () => {
   try {
     const response = await apiFetch(withIncludeUnpaid('/api/models?featured=true&online=true'));
@@ -153,7 +170,7 @@ export const fetchFeaturedModels = async () => {
     if (!response.ok) {
       throw new Error(data?.error || 'Não foi possível carregar modelos.');
     }
-    return data.models as ModelProfileData[];
+    return realModelsFirst(data.models as ModelProfileData[]);
   } catch {
     return getDemoDisplayModels(demoModels.filter((model) => model.featured && model.isOnline !== false));
   }
@@ -166,7 +183,7 @@ export const fetchModels = async () => {
     if (!response.ok) {
       throw new Error(data?.error || 'Não foi possível carregar modelos.');
     }
-    return data.models as ModelProfileData[];
+    return realModelsFirst(data.models as ModelProfileData[]);
   } catch {
     return getDemoDisplayModels(demoModels.filter((model) => model.isOnline !== false));
   }
@@ -179,7 +196,7 @@ export const fetchModelsByCity = async (city: string) => {
     if (!response.ok) {
       throw new Error(data?.error || 'Não foi possível carregar modelos.');
     }
-    return data.models as ModelProfileData[];
+    return realModelsFirst(data.models as ModelProfileData[]);
   } catch {
     const normalizedCity = city.trim().toLowerCase();
     return getDemoDisplayModels(
@@ -197,7 +214,7 @@ export const fetchModelsAll = async () => {
     if (!response.ok) {
       throw new Error(data?.error || 'Não foi possível carregar modelos.');
     }
-    return data.models as ModelProfileData[];
+    return realModelsFirst(data.models as ModelProfileData[]);
   } catch {
     return getDemoDisplayModels();
   }
@@ -210,7 +227,7 @@ export const fetchModelsByCityAll = async (city: string) => {
     if (!response.ok) {
       throw new Error(data?.error || 'Não foi possível carregar modelos.');
     }
-    return data.models as ModelProfileData[];
+    return realModelsFirst(data.models as ModelProfileData[]);
   } catch {
     const normalizedCity = city.trim().toLowerCase();
     return getDemoDisplayModels(

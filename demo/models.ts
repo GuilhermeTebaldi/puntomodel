@@ -3,6 +3,9 @@ import happyEscortsMultiProfilesRaw from '../services/happyescorts_multi_perfis.
 import happyEscortsRomaProfilesRaw from '../services/happyescorts_roma_perfis.json?raw';
 import orhidiSpainProfilesRaw from '../services/orhidi_es_perfis.json?raw';
 import orhidiItalyProfilesRaw from '../services/orhidi_it_perfis.json?raw';
+import orhidiMoreProfilesRaw from '../services/orhidi_more_perfis.json?raw';
+import orhidiMore2ProfilesRaw from '../services/orhidi_more2_perfis.json?raw';
+import orhidiMore3ProfilesRaw from '../services/orhidi_more3_perfis.json?raw';
 
 type DemoModelSeed = {
   name: string;
@@ -924,17 +927,57 @@ const parseOrhidiItalyProfiles = () => {
   }
 };
 
+const parseOrhidiMoreProfiles = () => {
+  try {
+    const parsed = JSON.parse(orhidiMoreProfilesRaw);
+    return Array.isArray(parsed) ? (parsed as OrhidiProfile[]) : [];
+  } catch {
+    return [];
+  }
+};
+
+const parseOrhidiMore2Profiles = () => {
+  try {
+    const parsed = JSON.parse(orhidiMore2ProfilesRaw);
+    return Array.isArray(parsed) ? (parsed as OrhidiProfile[]) : [];
+  } catch {
+    return [];
+  }
+};
+
+const parseOrhidiMore3Profiles = () => {
+  try {
+    const parsed = JSON.parse(orhidiMore3ProfilesRaw);
+    return Array.isArray(parsed) ? (parsed as OrhidiProfile[]) : [];
+  } catch {
+    return [];
+  }
+};
+
 const cityCoordinates: Record<string, { lat: number; lon: number; state: string }> = {
   Roma: { lat: 41.9028, lon: 12.4964, state: 'Lazio' },
   Lisboa: { lat: 38.7223, lon: -9.1393, state: 'Lisboa' },
   Porto: { lat: 41.1579, lon: -8.6291, state: 'Porto' },
   Cascais: { lat: 38.6968, lon: -9.4215, state: 'Lisboa' },
   Faro: { lat: 37.0194, lon: -7.9304, state: 'Algarve' },
+  'Faro (Sé e São Pedro)': { lat: 37.0194, lon: -7.9304, state: 'Algarve' },
   Vilamoura: { lat: 37.077, lon: -8.1178, state: 'Algarve' },
   Coimbra: { lat: 40.2033, lon: -8.4103, state: 'Coimbra' },
+  'Coimbra (Sé Nova, Santa Cruz, Almedina e São Bartolomeu)': { lat: 40.2033, lon: -8.4103, state: 'Coimbra' },
   Braga: { lat: 41.5454, lon: -8.4265, state: 'Braga' },
+  'Braga (Maximinos, Sé e Cividade)': { lat: 41.5454, lon: -8.4265, state: 'Braga' },
   Setúbal: { lat: 38.5244, lon: -8.8882, state: 'Setúbal' },
+  'Setúbal (São Julião, Nossa Senhora da Anunciada e Santa Maria da Graça)': { lat: 38.5244, lon: -8.8882, state: 'Setúbal' },
   Aveiro: { lat: 40.6405, lon: -8.6538, state: 'Aveiro' },
+  Amora: { lat: 38.6296, lon: -9.1156, state: 'Setúbal' },
+  'Ponte de Lima': { lat: 41.7676, lon: -8.5833, state: 'Viana do Castelo' },
+  'São Gonçalo de Lagos': { lat: 37.102, lon: -8.6742, state: 'Algarve' },
+  'Cascais e Estoril': { lat: 38.6968, lon: -9.4215, state: 'Lisboa' },
+  'Vila Nova de Gaia': { lat: 41.1239, lon: -8.6118, state: 'Porto' },
+  'Santa Maria Maior': { lat: 38.7114, lon: -9.1368, state: 'Lisboa' },
+  Loulé: { lat: 37.1377, lon: -8.0197, state: 'Algarve' },
+  Albufeira: { lat: 37.0891, lon: -8.2479, state: 'Algarve' },
+  Óbidos: { lat: 39.3606, lon: -9.1567, state: 'Leiria' },
   Guimarães: { lat: 41.4444, lon: -8.2962, state: 'Braga' },
   Sintra: { lat: 38.8029, lon: -9.3817, state: 'Lisboa' },
   Leiria: { lat: 39.7436, lon: -8.8071, state: 'Leiria' },
@@ -942,6 +985,22 @@ const cityCoordinates: Record<string, { lat: number; lon: number; state: string 
   Évora: { lat: 38.5714, lon: -7.9135, state: 'Évora' },
   Portimão: { lat: 37.1366, lon: -8.5377, state: 'Algarve' },
   Funchal: { lat: 32.6669, lon: -16.9241, state: 'Madeira' },
+  Paris: { lat: 48.8566, lon: 2.3522, state: 'Île-de-France' },
+  Marselha: { lat: 43.2965, lon: 5.3698, state: 'Provença-Alpes-Costa Azul' },
+  Nice: { lat: 43.7102, lon: 7.262, state: 'Provença-Alpes-Costa Azul' },
+  Ajaccio: { lat: 41.9192, lon: 8.7386, state: 'Córsega' },
+  Cannes: { lat: 43.5528, lon: 7.0174, state: 'Provença-Alpes-Costa Azul' },
+  Toulouse: { lat: 43.6047, lon: 1.4442, state: 'Occitânia' },
+  Lião: { lat: 45.764, lon: 4.8357, state: 'Auvérnia-Ródano-Alpes' },
+  Lille: { lat: 50.6292, lon: 3.0573, state: 'Hauts-de-France' },
+  Bordéus: { lat: 44.8378, lon: -0.5792, state: 'Nova Aquitânia' },
+  Atenas: { lat: 37.9838, lon: 23.7275, state: 'Ática' },
+  'Municipality of Piraeus': { lat: 37.942, lon: 23.6469, state: 'Ática' },
+  'Municipality of Thessaloniki': { lat: 40.6401, lon: 22.9444, state: 'Macedônia Central' },
+  'Municipality of Mykonos': { lat: 37.4467, lon: 25.3289, state: 'Egeu Meridional' },
+  'Municipality of Thira': { lat: 36.3932, lon: 25.4615, state: 'Egeu Meridional' },
+  'Municipality of Larissa': { lat: 39.639, lon: 22.4191, state: 'Tessália' },
+  'Loutraki-Perachora-Agioi Theodoroi Municipality': { lat: 37.9783, lon: 22.9778, state: 'Peloponeso' },
   Milão: { lat: 45.4642, lon: 9.19, state: 'Lombardia' },
   Bologna: { lat: 44.4949, lon: 11.3426, state: 'Emília-Romanha' },
   Verona: { lat: 45.4384, lon: 10.9916, state: 'Vêneto' },
@@ -1099,12 +1158,16 @@ const buildOrhidiSeed = (profile: OrhidiProfile, index: number): DemoModelSeed =
 const orhidiSeeds = [
   ...parseOrhidiSpainProfiles(),
   ...parseOrhidiItalyProfiles(),
+  ...parseOrhidiMoreProfiles(),
+  ...parseOrhidiMore2Profiles(),
+  ...parseOrhidiMore3Profiles(),
 ].map(buildOrhidiSeed);
 
 const buildModel = (seed: DemoModelSeed, index: number): ModelProfileData => {
   const idNumber = String(index + 1).padStart(2, '0');
   const now = Date.now();
   const hasEnoughPhotos = seed.photos.length > 2;
+  const isDemoOnlinePreview = hasEnoughPhotos && index % 20 === 0;
 
   return {
     id: `demo-model-${idNumber}`,
@@ -1141,8 +1204,8 @@ const buildModel = (seed: DemoModelSeed, index: number): ModelProfileData => {
     photos: seed.photos,
     avatarUrl: seed.photos[0],
     featured: hasEnoughPhotos,
-    isOnline: hasEnoughPhotos,
-    onlineUntil: hasEnoughPhotos ? now + 1000 * 60 * 60 * 6 : null,
+    isOnline: isDemoOnlinePreview,
+    onlineUntil: isDemoOnlinePreview ? now + 1000 * 60 * 60 * 6 : null,
     currency: 'EUR',
     billing: {
       status: 'active',
@@ -1165,12 +1228,35 @@ const buildModel = (seed: DemoModelSeed, index: number): ModelProfileData => {
 
 export const demoModels = [...demoSeeds, ...happyEscortsSeeds, ...orhidiSeeds].map(buildModel);
 
+const DEMO_OFFLINE_STORAGE_KEY = 'punto_demo_models_opened_offline';
 const demoDisplayOrder = new Map(demoModels.map((model) => [model.id, Math.random()]));
+
+const getOpenedOfflineDemoIds = () => {
+  if (typeof window === 'undefined') return new Set<string>();
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(DEMO_OFFLINE_STORAGE_KEY) || '[]');
+    return new Set(Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string') : []);
+  } catch {
+    return new Set<string>();
+  }
+};
+
+export const markDemoModelOpenedOffline = (id: string) => {
+  if (!isDemoModelId(id) || typeof window === 'undefined') return;
+  const ids = getOpenedOfflineDemoIds();
+  ids.add(id);
+  window.localStorage.setItem(DEMO_OFFLINE_STORAGE_KEY, JSON.stringify(Array.from(ids)));
+};
+
+const applyDemoRuntimeState = (model: ModelProfileData): ModelProfileData => {
+  if (!isDemoModelId(model.id) || !getOpenedOfflineDemoIds().has(model.id)) return model;
+  return { ...model, isOnline: false, onlineUntil: null };
+};
 
 const getPhotoPriorityBucket = (model: ModelProfileData) => Math.floor((model.photos?.length || 0) / 4);
 
 export const getDemoDisplayModels = (models = demoModels) => {
-  return [...models].sort((a, b) => {
+  return models.map(applyDemoRuntimeState).sort((a, b) => {
     const aOnline = a.isOnline === false ? 0 : 1;
     const bOnline = b.isOnline === false ? 0 : 1;
     if (aOnline !== bOnline) return bOnline - aOnline;
@@ -1189,7 +1275,10 @@ export const getDemoDisplayModels = (models = demoModels) => {
 
 export const isDemoModelId = (id: string) => id.startsWith('demo-model-');
 
-export const getDemoModelById = (id: string) => demoModels.find((model) => model.id === id) || null;
+export const getDemoModelById = (id: string) => {
+  const model = demoModels.find((model) => model.id === id);
+  return model ? applyDemoRuntimeState(model) : null;
+};
 
 export const getDemoModelMetrics = (id: string) => {
   const model = getDemoModelById(id);

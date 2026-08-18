@@ -13,7 +13,7 @@ import ModelProfile from './components/ModelProfile';
 import BlogSection from './components/BlogSection';
 import SourceDiscoveryBanner from './components/SourceDiscoveryBanner';
 import { AuthUser, clearCurrentUser, getCurrentUser, getPendingModelProfile, PendingModelProfile } from './services/auth';
-import { fetchModelByEmail, fetchModelById, fetchModelsAll, ModelProfileData } from './services/models';
+import { fetchModelByEmail, fetchModelById, fetchModelsAll, markDemoModelOfflineAfterOpen, ModelProfileData } from './services/models';
 import { getSavedModelIds, isSavedModelsStorageKey, pruneSavedModels } from './services/savedModels';
 import AdminPage from './components/AdminPage';
 import ModelDashboard from './components/ModelDashboard';
@@ -26,6 +26,22 @@ import { useI18n } from './translations/i18n';
 const LOCATION_PROMPT_KEY = 'punto_location_prompt';
 const LOCATION_PERMISSION_KEY = 'punto_location_permission';
 const LANGUAGE_PROMPT_KEY = 'punto_language_prompt';
+
+const isDemoModel = (model: ModelProfileData) => model.id.startsWith('demo-model-');
+
+const sortModelsForHome = (models: ModelProfileData[]) => {
+  return [...models].sort((a, b) => {
+    const aDemo = isDemoModel(a) ? 1 : 0;
+    const bDemo = isDemoModel(b) ? 1 : 0;
+    if (aDemo !== bDemo) return aDemo - bDemo;
+
+    const aOnline = a.isOnline === false ? 0 : 1;
+    const bOnline = b.isOnline === false ? 0 : 1;
+    if (aOnline !== bOnline) return bOnline - aOnline;
+
+    return 0;
+  });
+};
 
 const App: React.FC = () => {
   const { t, translateError, setLanguage, setLanguageAuto, languageSource, languageOptions } = useI18n();
@@ -167,13 +183,7 @@ const App: React.FC = () => {
   const loadFeatured = () => {
     fetchModelsAll()
       .then((models) => {
-        const sorted = [...models].sort((a, b) => {
-          const aOnline = a.isOnline === false ? 0 : 1;
-          const bOnline = b.isOnline === false ? 0 : 1;
-          if (aOnline !== bOnline) return bOnline - aOnline;
-          return 0;
-        });
-        setFeaturedModels(sorted);
+        setFeaturedModels(sortModelsForHome(models));
         setFeaturedError('');
       })
       .catch((error) => {
@@ -199,13 +209,7 @@ const App: React.FC = () => {
       fetchModelsAll()
         .then((models) => {
           if (!mounted) return;
-          const sorted = [...models].sort((a, b) => {
-            const aOnline = a.isOnline === false ? 0 : 1;
-            const bOnline = b.isOnline === false ? 0 : 1;
-            if (aOnline !== bOnline) return bOnline - aOnline;
-            return 0;
-          });
-          setFeaturedModels(sorted);
+          setFeaturedModels(sortModelsForHome(models));
           setFeaturedError('');
         })
         .catch((error) => {
@@ -517,10 +521,17 @@ const App: React.FC = () => {
   };
 
   const openProfile = (model: ModelProfileData) => {
-    setSelectedProfileModel(model);
+    const openedModel = isDemoModel(model) ? { ...model, isOnline: false, onlineUntil: null } : model;
+    if (isDemoModel(model)) {
+      markDemoModelOfflineAfterOpen(model.id);
+      setFeaturedModels((prev) =>
+        prev.map((item) => (item.id === model.id ? { ...item, isOnline: false, onlineUntil: null } : item))
+      );
+    }
+    setSelectedProfileModel(openedModel);
     document.body.style.overflow = 'hidden';
     if (pathname !== '/dashboard' && pathname !== '/admin') {
-      navigateTo(buildProfilePath(model));
+      navigateTo(buildProfilePath(openedModel));
     }
   };
 

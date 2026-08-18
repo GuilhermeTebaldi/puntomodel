@@ -10,6 +10,7 @@ import { getTranslationTarget } from '../services/translate';
 
 const toWhatsappDigits = (phone?: string) => (phone ? phone.replace(/\D/g, '') : '');
 const toTelDigits = (phone?: string) => (phone ? phone.replace(/[^\d+]/g, '') : '');
+const isDemoProfile = (id?: string) => Boolean(id?.startsWith('demo-model-'));
 const getBioTranslationText = (value?: unknown) => {
   if (typeof value === 'string') return value.trim();
   if (value && typeof value === 'object') {
@@ -96,6 +97,8 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
     if (!value) return t('profile.notInformed');
     return getIdentityLabel(value, language);
   }, [language, model.attributes?.profileIdentity, t]);
+  const isFakeProfile = isDemoProfile(model.id);
+  const isContactAvailable = Boolean(model.phone && !isFakeProfile);
   const telDigits = toTelDigits(model.phone);
   const whatsappDigits = toWhatsappDigits(model.phone);
 
@@ -267,9 +270,9 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
         <div className="text-center">
           <h2 className="text-sm font-black text-gray-900 uppercase tracking-tighter">{model.name}</h2>
           <div className="flex items-center justify-center gap-1">
-            <span className={`w-1.5 h-1.5 rounded-full ${model.isOnline === false ? 'bg-red-500' : 'bg-green-500'}`}></span>
+            <span className={`w-1.5 h-1.5 rounded-full ${isContactAvailable && model.isOnline !== false ? 'bg-green-500' : 'bg-red-500'}`}></span>
             <span className="text-[10px] font-bold text-gray-500 uppercase">
-              {model.isOnline === false ? t('common.offlineNow') : t('common.onlineNow')}
+              {isContactAvailable && model.isOnline !== false ? t('common.onlineNow') : t('common.offlineNow')}
             </span>
           </div>
         </div>
@@ -570,7 +573,7 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
 
       {/* Fixed Footer Contact Actions */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-gray-100 p-4 md:p-6 flex items-center justify-center gap-3 z-[410]">
-        {model.phone ? (
+        {isContactAvailable ? (
           <>
             <a 
               href={`tel:${telDigits}`}
@@ -591,7 +594,9 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
             </a>
           </>
         ) : (
-          <span className="text-xs text-gray-400 font-semibold">{t('profile.contactMissing')}</span>
+          <span className="text-xs text-gray-400 font-semibold">
+            {isFakeProfile ? t('common.offlineNow') : t('profile.contactMissing')}
+          </span>
         )}
       </div>
 

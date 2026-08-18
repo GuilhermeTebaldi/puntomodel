@@ -7,6 +7,7 @@ import { fetchModelsAll, fetchModelsByCityAll, ModelProfileData } from '../servi
 import { useI18n } from '../translations/i18n';
 
 const toWhatsappDigits = (phone?: string) => (phone ? phone.replace(/\D/g, '') : '');
+const isDemoProfile = (id?: string) => Boolean(id?.startsWith('demo-model-'));
 
 interface MapViewProps {
   onClose: () => void;
@@ -346,6 +347,11 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
       }`}>
         {selectedModel && (
           <div className="p-6 md:p-8 max-w-4xl mx-auto">
+            {(() => {
+              const selectedIsFake = isDemoProfile(selectedModel.id);
+              const selectedIsOnline = !selectedIsFake && selectedModel.isOnline !== false;
+
+              return (
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="relative">
@@ -358,7 +364,7 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
                   ) : (
                     <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-3xl bg-gray-100" />
                   )}
-                  <div className={`absolute -bottom-2 -right-2 w-6 h-6 rounded-full border-4 border-white ${selectedModel.isOnline === false ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                  <div className={`absolute -bottom-2 -right-2 w-6 h-6 rounded-full border-4 border-white ${selectedIsOnline ? 'bg-green-500' : 'bg-red-500'}`}></div>
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -375,14 +381,14 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
                   <p className="text-gray-500 font-medium flex items-center gap-1 mt-1">
                     <MapPin size={14} /> {selectedModel.location?.city ? `${selectedModel.location.city}, ${selectedModel.location.state || ''}` : t('featured.locationMissing')}
                   </p>
-                  {selectedModel.phone && (
+                  {selectedModel.phone && !selectedIsFake && (
                     <p className="text-gray-400 text-xs font-bold mt-2 uppercase tracking-widest">{selectedModel.phone}</p>
                   )}
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
-                {selectedModel.phone && (
+                {selectedModel.phone && selectedIsOnline && (
                   <a 
                     href={`https://wa.me/${toWhatsappDigits(selectedModel.phone)}`}
                     target="_blank"
@@ -402,6 +408,8 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
                 </button>
               </div>
             </div>
+              );
+            })()}
             
             <button 
               onClick={() => setSelectedModel(null)}
