@@ -521,18 +521,19 @@ const App: React.FC = () => {
   };
 
   const openProfile = (model: ModelProfileData) => {
-    const openedModel = isDemoModel(model) ? { ...model, isOnline: false, onlineUntil: null } : model;
-    if (isDemoModel(model)) {
-      markDemoModelOfflineAfterOpen(model.id);
-      setFeaturedModels((prev) =>
-        prev.map((item) => (item.id === model.id ? { ...item, isOnline: false, onlineUntil: null } : item))
-      );
-    }
-    setSelectedProfileModel(openedModel);
+    setSelectedProfileModel(model);
     document.body.style.overflow = 'hidden';
     if (pathname !== '/dashboard' && pathname !== '/admin') {
-      navigateTo(buildProfilePath(openedModel));
+      navigateTo(buildProfilePath(model));
     }
+  };
+
+  const markDemoWhatsappAttempt = (modelId: string) => {
+    markDemoModelOfflineAfterOpen(modelId);
+    const offlineModel = (item: ModelProfileData) =>
+      item.id === modelId ? { ...item, isOnline: false, onlineUntil: null } : item;
+    setFeaturedModels((prev) => prev.map(offlineModel));
+    setSelectedProfileModel((prev) => (prev?.id === modelId ? offlineModel(prev) : prev));
   };
 
   const closeProfile = () => {
@@ -1149,6 +1150,7 @@ const App: React.FC = () => {
         <ModelProfile 
           model={selectedProfileModel} 
           onClose={closeProfile} 
+          onDemoWhatsappAttempt={markDemoWhatsappAttempt}
         />
       )}
       {staticPage && (

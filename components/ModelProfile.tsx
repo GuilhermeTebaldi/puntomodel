@@ -75,9 +75,10 @@ interface ModelProfileProps {
     currency?: string;
   };
   onClose: () => void;
+  onDemoWhatsappAttempt?: (modelId: string) => void;
 }
 
-const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
+const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose, onDemoWhatsappAttempt }) => {
   const { t, translateError, translateService, translateHair, translateEyes, locale, language } = useI18n();
   const [metrics, setMetrics] = useState({
     viewsToday: 0,
@@ -116,7 +117,9 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
     return getIdentityLabel(value, language);
   }, [language, model.attributes?.profileIdentity, t]);
   const isFakeProfile = isDemoProfile(model.id);
-  const isContactAvailable = Boolean(model.phone && !isFakeProfile);
+  const [demoForcedOffline, setDemoForcedOffline] = useState(() => Boolean(isFakeProfile && model.isOnline === false));
+  const isVisiblyOnline = !demoForcedOffline && model.isOnline !== false;
+  const isContactAvailable = Boolean(model.phone && isVisiblyOnline);
   const telDigits = toTelDigits(model.phone);
   const whatsappDigits = toWhatsappDigits(model.phone);
 
@@ -189,6 +192,10 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
   useEffect(() => {
     setIsSaved(isModelSaved(model.id));
   }, [model.id]);
+
+  useEffect(() => {
+    setDemoForcedOffline(Boolean(isFakeProfile && model.isOnline === false));
+  }, [isFakeProfile, model.id, model.isOnline]);
 
   useEffect(() => {
     const refresh = () => setIsSaved(isModelSaved(model.id));
@@ -286,6 +293,16 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
     setIsSaved(result.saved);
   };
 
+  const handleWhatsappClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (isFakeProfile) {
+      event.preventDefault();
+      setDemoForcedOffline(true);
+      onDemoWhatsappAttempt?.(model.id);
+      return;
+    }
+    trackModelEvent(model.id, 'whatsapp').catch(() => undefined);
+  };
+
   return (
     <div className="fixed inset-0 z-[400] bg-white flex flex-col animate-in fade-in slide-in-from-bottom-8 duration-500 overflow-y-auto">
       {/* Profile Header Navigation */}
@@ -299,9 +316,9 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
         <div className="text-center">
           <h2 className="text-sm font-black text-gray-900 uppercase tracking-tighter">{model.name}</h2>
           <div className="flex items-center justify-center gap-1">
-            <span className={`w-1.5 h-1.5 rounded-full ${isContactAvailable && model.isOnline !== false ? 'bg-green-500' : 'bg-red-500'}`}></span>
+            <span className={`w-1.5 h-1.5 rounded-full ${isContactAvailable ? 'bg-green-500' : 'bg-red-500'}`}></span>
             <span className="text-[10px] font-bold text-gray-500 uppercase">
-              {isContactAvailable && model.isOnline !== false ? t('common.onlineNow') : t('common.offlineNow')}
+              {isContactAvailable ? t('common.onlineNow') : t('common.offlineNow')}
             </span>
           </div>
         </div>
@@ -628,7 +645,7 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose }) => {
               href={`https://wa.me/${whatsappDigits}`}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => trackModelEvent(model.id, 'whatsapp').catch(() => undefined)}
+              onClick={handleWhatsappClick}
               className="flex-1 max-w-xs bg-[#25D366] text-white py-4 md:py-5 rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-xl shadow-green-100 uppercase text-xs md:text-sm tracking-widest"
             >
               <MessageCircle size={18} />
