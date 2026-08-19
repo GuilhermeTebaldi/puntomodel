@@ -23,6 +23,7 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
   const [error, setError] = useState('');
   const [searchCenter, setSearchCenter] = useState<[number, number] | null>(null);
   const [mapZoom, setMapZoom] = useState(4);
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
   const searchCircleRef = useRef<L.Circle | null>(null);
@@ -85,6 +86,7 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
 
   useEffect(() => {
     if (!mapRef.current || !searchCenter) return;
+    mapRef.current.invalidateSize();
     if (userInteractedRef.current) return;
     const key = `${searchCenter[0].toFixed(6)},${searchCenter[1].toFixed(6)}`;
     if (lastCenteredRef.current === key) return;
@@ -164,8 +166,8 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
     });
 
   useEffect(() => {
-    if (mapRef.current) return;
-    const map = L.map('punto-map', {
+    if (mapRef.current || !mapContainerRef.current) return;
+    const map = L.map(mapContainerRef.current, {
       center: [-14.235, -51.9253],
       zoom: 4,
       zoomControl: true,
@@ -189,6 +191,36 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
       map.remove();
       mapRef.current = null;
       markersRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const container = mapContainerRef.current;
+    if (!map || !container) return;
+
+    const refreshSize = () => {
+      window.requestAnimationFrame(() => {
+        map.invalidateSize();
+      });
+    };
+
+    refreshSize();
+    const timers = [120, 360, 700].map((delay) => window.setTimeout(refreshSize, delay));
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined' ? new ResizeObserver(refreshSize) : null;
+    resizeObserver?.observe(container);
+
+    window.addEventListener('resize', refreshSize);
+    window.addEventListener('orientationchange', refreshSize);
+    document.addEventListener('visibilitychange', refreshSize);
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', refreshSize);
+      window.removeEventListener('orientationchange', refreshSize);
+      document.removeEventListener('visibilitychange', refreshSize);
     };
   }, []);
 
@@ -333,7 +365,7 @@ const MapView: React.FC<MapViewProps> = ({ onClose, onViewProfile, query, search
       </div>
 
       <div className="flex-1 relative overflow-hidden bg-gray-200 z-10">
-        <div id="punto-map" className="w-full h-full" />
+        <div ref={mapContainerRef} className="w-full h-full" />
         {modelsWithLocation.length === 0 && !error && (
           <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500 font-semibold pointer-events-none">
             {t('map.noLocations')}

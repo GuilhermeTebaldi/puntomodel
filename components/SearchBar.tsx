@@ -93,8 +93,10 @@ const SearchBar: React.FC<SearchBarProps> = ({ compact = false, onSearch }) => {
         onBlur={() => {
           blurTimerRef.current = window.setTimeout(() => setIsFocused(false), 120);
         }}
-        className={`w-full bg-white border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#e3262e]/20 transition-all text-gray-700 placeholder-gray-400 shadow-xl ${
-          compact ? 'px-6 py-3 pr-14 text-sm' : 'px-8 py-5 pr-16 text-base'
+        className={`w-full border rounded-full focus:outline-none focus:ring-2 transition-all shadow-xl ${
+          compact
+            ? 'bg-white border-red-100 px-5 py-2.5 pr-14 text-sm font-semibold text-gray-800 placeholder-gray-500 focus:ring-[#e3262e]/15 md:border-gray-200 md:px-6 md:py-3 md:pr-14 md:text-gray-700 md:placeholder-gray-400 md:focus:ring-[#e3262e]/20'
+            : 'bg-white border-gray-200 px-8 py-5 pr-16 text-base text-gray-700 placeholder-gray-400 focus:ring-[#e3262e]/20'
         }`}
       />
       {isFocused && filteredHistory.length > 0 && (
@@ -116,8 +118,10 @@ const SearchBar: React.FC<SearchBarProps> = ({ compact = false, onSearch }) => {
       )}
       <button 
         type="submit"
-        className={`absolute bg-[#e3262e] text-white rounded-full hover:bg-red-700 transition-colors flex items-center justify-center shadow-md ${
-          compact ? 'right-1.5 top-1.5 bottom-1.5 px-4' : 'right-2 top-2 bottom-2 p-3'
+        className={`absolute rounded-full transition-colors flex items-center justify-center shadow-md ${
+          compact
+            ? 'right-1.5 top-1.5 bottom-1.5 px-3 bg-[#e3262e] text-white hover:bg-red-700 md:px-4'
+            : 'right-2 top-2 bottom-2 p-3 bg-[#e3262e] text-white hover:bg-red-700'
         }`}
       >
         <Search size={compact ? 18 : 24} />

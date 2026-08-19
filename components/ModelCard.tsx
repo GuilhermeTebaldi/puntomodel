@@ -66,19 +66,19 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onClick, showSave = false,
           </div>
         </div>
       </div>
-      <div className="p-4">
+      <div className="p-3 sm:p-4">
         <div className="flex justify-between items-center mb-1">
-          <h4 className="font-bold text-lg">
+          <h4 className="font-bold text-sm sm:text-lg leading-tight">
             {model.name}
             {model.age ? `, ${model.age}` : ''}
           </h4>
         </div>
-        <p className="text-gray-500 text-sm mb-3">
+        <p className="text-gray-500 text-xs sm:text-sm mb-3">
           {model.location?.city ? `${model.location.city}, ${model.location.state || ''}` : t('featured.locationMissing')}
         </p>
         <div className="flex gap-2 flex-wrap">
           {model.services?.slice(0, 2).map((service) => (
-            <span key={service} className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">
+            <span key={service} className="bg-gray-100 text-gray-600 text-[10px] sm:text-xs px-2 py-1 rounded-full">
               {translateService(service)}
             </span>
           ))}

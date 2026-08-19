@@ -75,6 +75,8 @@ const App: React.FC = () => {
   type StaticPageKey = 'about' | 'blog' | 'help' | 'ethics' | 'terms' | 'privacy' | 'cookies' | 'report';
   const [staticPage, setStaticPage] = useState<null | { key: StaticPageKey }>(null);
   const lastBasePathRef = useRef('/');
+  const homeScrollBeforeOverlayRef = useRef(0);
+  const skipNextRouteScrollRef = useRef(false);
   const locationPromptDeferredRef = useRef(false);
 
   useEffect(() => {
@@ -103,12 +105,20 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const handleRoute = () => setPathname(window.location.pathname);
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
     window.addEventListener('popstate', handleRoute);
     return () => window.removeEventListener('popstate', handleRoute);
   }, [t, translateError]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (skipNextRouteScrollRef.current) {
+      skipNextRouteScrollRef.current = false;
+      return;
+    }
+    if (pathname === '/todasmodelos' || pathname.startsWith('/modelo/')) return;
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [pathname]);
 
@@ -428,8 +438,10 @@ const App: React.FC = () => {
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        const lat = position.coords.latitude.toFixed(6);
-        const lon = position.coords.longitude.toFixed(6);
+        const rawLat = position.coords.latitude;
+        const rawLon = position.coords.longitude;
+        const lat = rawLat.toFixed(6);
+        const lon = rawLon.toFixed(6);
         try {
           const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
@@ -440,10 +452,20 @@ const App: React.FC = () => {
             data?.address?.town ||
             data?.address?.village ||
             data?.address?.state ||
-            '';
-          handleSearch(city);
+            t('featured.nearMe');
+          setSearchQuery(city);
+          setSearchCoords([rawLat, rawLon]);
+          setIsSearching(true);
+          document.body.style.overflow = 'hidden';
+          const nextPath = buildSearchPath(city);
+          if (nextPath !== pathname) {
+            navigateTo(nextPath);
+          }
         } catch {
-          handleSearch('', { updatePath: false });
+          setSearchQuery(t('featured.nearMe'));
+          setSearchCoords([rawLat, rawLon]);
+          setIsSearching(true);
+          document.body.style.overflow = 'hidden';
         }
       },
       () => handleSearch('', { updatePath: false })
@@ -547,6 +569,9 @@ const App: React.FC = () => {
   };
 
   const openListing = () => {
+    if (!isListingOpen && !selectedProfileModel) {
+      homeScrollBeforeOverlayRef.current = window.scrollY;
+    }
     setIsListingOpen(true);
     document.body.style.overflow = 'hidden';
     if (pathname !== '/dashboard' && pathname !== '/admin') {
@@ -557,10 +582,14 @@ const App: React.FC = () => {
   const closeListing = () => {
     setIsListingOpen(false);
     if (pathname === '/todasmodelos') {
+      skipNextRouteScrollRef.current = true;
       navigateTo('/');
     }
     if (!isSearching && !selectedProfileModel) {
       document.body.style.overflow = 'auto';
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: homeScrollBeforeOverlayRef.current, left: 0, behavior: 'auto' });
+      });
     }
   };
 

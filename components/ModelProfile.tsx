@@ -93,6 +93,7 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose, onDemoWhats
   const [isSaved, setIsSaved] = useState(() => isModelSaved(model.id));
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const profileSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const [hasSwiped, setHasSwiped] = useState(false);
   const nationalityLabel = useMemo(() => {
     const code = model.attributes?.nationality;
@@ -182,6 +183,26 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose, onDemoWhats
       goNextPhoto();
     } else {
       goPrevPhoto();
+    }
+  };
+
+  const handleProfileTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (activePhotoIndex !== null) return;
+    const touch = event.touches[0];
+    if (!touch || touch.clientX > 72) return;
+    profileSwipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleProfileTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    const start = profileSwipeStartRef.current;
+    profileSwipeStartRef.current = null;
+    if (!start || activePhotoIndex !== null) return;
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (dx > 90 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+      onClose();
     }
   };
 
@@ -304,7 +325,11 @@ const ModelProfile: React.FC<ModelProfileProps> = ({ model, onClose, onDemoWhats
   };
 
   return (
-    <div className="fixed inset-0 z-[400] bg-white flex flex-col animate-in fade-in slide-in-from-bottom-8 duration-500 overflow-y-auto">
+    <div
+      className="fixed inset-0 z-[400] bg-white flex flex-col animate-in fade-in slide-in-from-bottom-8 duration-500 overflow-y-auto"
+      onTouchStart={handleProfileTouchStart}
+      onTouchEnd={handleProfileTouchEnd}
+    >
       {/* Profile Header Navigation */}
       <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex items-center justify-between">
         <button 
