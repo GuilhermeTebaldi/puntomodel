@@ -6,6 +6,8 @@ import orhidiItalyProfilesRaw from '../services/orhidi_it_perfis.json?raw';
 import orhidiMoreProfilesRaw from '../services/orhidi_more_perfis.json?raw';
 import orhidiMore2ProfilesRaw from '../services/orhidi_more2_perfis.json?raw';
 import orhidiMore3ProfilesRaw from '../services/orhidi_more3_perfis.json?raw';
+import orhidiMore4ProfilesRaw from '../services/orhidi_more4_perfis.json?raw';
+import orhidiMore5ProfilesRaw from '../services/orhidi_more5_perfis.json?raw';
 
 type DemoModelSeed = {
   name: string;
@@ -954,6 +956,24 @@ const parseOrhidiMore3Profiles = () => {
   }
 };
 
+const parseOrhidiMore4Profiles = () => {
+  try {
+    const parsed = JSON.parse(orhidiMore4ProfilesRaw);
+    return Array.isArray(parsed) ? (parsed as OrhidiProfile[]) : [];
+  } catch {
+    return [];
+  }
+};
+
+const parseOrhidiMore5Profiles = () => {
+  try {
+    const parsed = JSON.parse(orhidiMore5ProfilesRaw);
+    return Array.isArray(parsed) ? (parsed as OrhidiProfile[]) : [];
+  } catch {
+    return [];
+  }
+};
+
 const cityCoordinates: Record<string, { lat: number; lon: number; state: string }> = {
   Roma: { lat: 41.9028, lon: 12.4964, state: 'Lazio' },
   Lisboa: { lat: 38.7223, lon: -9.1393, state: 'Lisboa' },
@@ -1029,6 +1049,8 @@ const cityCoordinates: Record<string, { lat: number; lon: number; state: string 
 const countryCoordinates: Record<string, { lat: number; lon: number; state: string; nationality: string }> = {
   Argentina: { lat: -34.6037, lon: -58.3816, state: 'Buenos Aires', nationality: 'ar' },
   Armênia: { lat: 40.1792, lon: 44.4991, state: 'Armênia', nationality: 'am' },
+  Alemanha: { lat: 52.52, lon: 13.405, state: 'Alemanha', nationality: 'de' },
+  Áustria: { lat: 48.2082, lon: 16.3738, state: 'Áustria', nationality: 'at' },
   Brasil: { lat: -23.5505, lon: -46.6333, state: 'Brasil', nationality: 'br' },
   Espanha: { lat: 40.4168, lon: -3.7038, state: 'Espanha', nationality: 'es' },
   França: { lat: 48.8566, lon: 2.3522, state: 'França', nationality: 'fr' },
@@ -1038,12 +1060,18 @@ const countryCoordinates: Record<string, { lat: number; lon: number; state: stri
   Japão: { lat: 35.6762, lon: 139.6503, state: 'Japão', nationality: 'jp' },
   Kosovo: { lat: 42.6629, lon: 21.1655, state: 'Kosovo', nationality: 'xk' },
   Portugal: { lat: 38.7223, lon: -9.1393, state: 'Portugal', nationality: 'pt' },
+  'Reino Unido': { lat: 51.5072, lon: -0.1276, state: 'Reino Unido', nationality: 'gb' },
+  Suécia: { lat: 59.3293, lon: 18.0686, state: 'Suécia', nationality: 'se' },
+  Suíça: { lat: 47.3769, lon: 8.5417, state: 'Suíça', nationality: 'ch' },
+  Tcheca: { lat: 50.0755, lon: 14.4378, state: 'Tcheca', nationality: 'cz' },
   Venezuela: { lat: 10.4806, lon: -66.9036, state: 'Venezuela', nationality: 've' },
 };
 
 const countryDialCodes: Record<string, string> = {
   Argentina: '+54',
   Armênia: '+374',
+  Alemanha: '+49',
+  Áustria: '+43',
   Brasil: '+55',
   Espanha: '+34',
   França: '+33',
@@ -1053,6 +1081,10 @@ const countryDialCodes: Record<string, string> = {
   Japão: '+81',
   Kosovo: '+383',
   Portugal: '+351',
+  'Reino Unido': '+44',
+  Suécia: '+46',
+  Suíça: '+41',
+  Tcheca: '+420',
   Venezuela: '+58',
 };
 
@@ -1161,6 +1193,8 @@ const orhidiSeeds = [
   ...parseOrhidiMoreProfiles(),
   ...parseOrhidiMore2Profiles(),
   ...parseOrhidiMore3Profiles(),
+  ...parseOrhidiMore4Profiles(),
+  ...parseOrhidiMore5Profiles(),
 ].map(buildOrhidiSeed);
 
 const buildModel = (seed: DemoModelSeed, index: number): ModelProfileData => {
